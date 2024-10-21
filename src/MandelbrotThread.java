@@ -1,6 +1,8 @@
 import java.awt.image.BufferedImage;
 
 /**
+ * @author @dankotyt Danil Kotlyarov
+ *
  * Класс MandelbrotThread реализует интерфейс Runnable и используется для генерации части изображения множества Мандельброта
  * в отдельном потоке.
  */
@@ -40,13 +42,16 @@ public class MandelbrotThread implements Runnable {
 
     /**
      * Метод run выполняет генерацию части изображения множества Мандельброта.
+     * Для каждой точки (x, y) на изображении вычисляется количество итераций,
+     * необходимых для определения, принадлежит ли точка множеству Мандельброта.
+     * Результат записывается в соответствующую точку изображения.
      */
     @Override
     public void run() {
         for (int y = 0; y < getHeight; y++) {
             double zx = 0, zy = 0;
-            double cX = (x - getWidth / 2) / ZOOM + offsetX;
-            double cY = (y - getHeight / 2) / ZOOM + offsetY;
+            double cX = (x - getWidth / 1.75) / ZOOM + offsetX;
+            double cY = (y - getHeight / 1.75) / ZOOM + offsetY;
             int i = MAX_ITER;
             while (zx * zx + zy * zy < 4 && i > 0) {
                 double tmp = zx * zx - zy * zy + cX;
@@ -54,7 +59,7 @@ public class MandelbrotThread implements Runnable {
                 zx = tmp;
                 i--;
             }
-            int color = i | (i << 10);
+            int color = i | (i << 10) | (i << 14);
             image.setRGB(x, y, i > 0 ? color : 0);
         }
     }

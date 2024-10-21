@@ -14,11 +14,11 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 /**
+ * @author dankotyt
+ *
  * Класс Mandelbrot представляет собой графический компонент Swing, который генерирует изображение множества Мандельброта
  * и позволяет пользователю сохранять сгенерированные изображения на рабочий стол. Класс использует многопоточность для
  * ускорения генерации изображения и проверки его разнообразия.
- *
- * @author dankotyt
  */
 public class Mandelbrot extends JPanel {
     private int MAX_ITER = 150; // Максимальное количество итераций для генерации фрактала
@@ -62,12 +62,12 @@ public class Mandelbrot extends JPanel {
     public void randomPositionOnPlenty() {
         Random random = new Random();
 
-        MAX_ITER = 300 + (random.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
+        MAX_ITER = 500 + (random.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
 
         // Рандомизация offsetX и offsetY от -0.9998 до 0.9998
         offsetX = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
         offsetY = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
-        ZOOM = 1500 + (random.nextInt(44) * 50); /*Чем больше начальный зум, тем дольше будет генерироваться картинка
+        ZOOM = 50000 + (random.nextInt(44) * 1000); /*Чем больше начальный зум, тем дольше будет генерироваться картинка
                                                         однако информация зашифрована будет лучше из-за большого кол-ва
                                                         элементов фрактала */
         repaint();
@@ -134,10 +134,11 @@ public class Mandelbrot extends JPanel {
             }
         }
 
+        int uniqueColors = colorCount.size();
         int maxCount = colorCount.values().stream().max(Integer::compare).orElse(0);
         double percentage = (double) maxCount / totalPixels;
 
-        return (percentage < 0.28 && percentage > 0.2); // Условие: более 20% и менее 28% одного из цветов RGB или чёрного
+        return (uniqueColors > 500 && percentage < 0.25);
     }
 
     /**
@@ -146,7 +147,7 @@ public class Mandelbrot extends JPanel {
      * @param image Изображение для сохранения.
      */
     private void saveImageToDesktop(BufferedImage image) {
-        String desktopPath = System.getProperty("user.home") + File.separator + "Desktop";
+        String desktopPath = "resources";
         numberSave++;
         File file = new File(desktopPath + File.separator + "mandelbrot" + numberSave +".png");
 
