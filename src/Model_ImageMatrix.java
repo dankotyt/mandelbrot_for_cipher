@@ -32,29 +32,29 @@ public class Model_ImageMatrix {
         this.imageMatrix = new double[my_height][my_width];
     }
 
-    /**
-     * pixels field setter
-     * @param my_pixels image as a vector of pixels
-     */
-    public void setPixels(int[] my_pixels) {
-        this.pixels = my_pixels;
-    }
+//    /**
+//     * pixels field setter
+//     * @param my_pixels image as a vector of pixels
+//     */
+//    public void setPixels(int[] my_pixels) {
+//        this.pixels = my_pixels;
+//    }
 
-    /**
-     * pixels field getter
-     * @return pixels field with type int[]
-     */
-    public int[] getPixels() {
-        return this.pixels;
-    }
+//    /**
+//     * pixels field getter
+//     * @return pixels field with type int[]
+//     */
+//    public int[] getPixels() {
+//        return this.pixels;
+//    }
 
-    /**
-     * imageMatrix field setter
-     * @param my_imageMatrix matrix of numbers which are translation of pixels in image
-     */
-    public void setImageMatrix(double[][] my_imageMatrix) {
-        this.imageMatrix = my_imageMatrix;
-    }
+//    /**
+//     * imageMatrix field setter
+//     * @param my_imageMatrix matrix of numbers which are translation of pixels in image
+//     */
+//    public void setImageMatrix(double[][] my_imageMatrix) {
+//        this.imageMatrix = my_imageMatrix;
+//    }
 
     /**
      * imageMatrix field getter
@@ -207,30 +207,30 @@ public class Model_ImageMatrix {
         return shiftedMatrix;
     }
 
-    /**
-     * Смешивает цвета двух изображений.
-     *
-     * @param fractalColor Цвет из фрактального изображения.
-     * @param imageColor Цвет из исходного изображения.
-     * @return Смешанный цвет.
-     *
-     * @author andrey
-     */
-    private int mixColors(int fractalColor, int imageColor) {
-        int fractalRed = (fractalColor << 16) & 0xFF;
-        int fractalGreen = (fractalColor << 8) & 0xFF;
-        int fractalBlue = fractalColor & 0xFF;
-
-        int imageRed = (imageColor >> 16) & 0xFF;
-        int imageGreen = (imageColor >> 8) & 0xFF;
-        int imageBlue = imageColor & 0xFF;
-
-        int mixedRed = (fractalRed + imageRed) / 2;
-        int mixedGreen = (fractalGreen + imageGreen) / 2;
-        int mixedBlue = (fractalBlue + imageBlue) / 2;
-
-        return (mixedRed << 16) & (mixedGreen << 8) & mixedBlue;
-    }
+//    /**
+//     * Смешивает цвета двух изображений.
+//     *
+//     * @param fractalColor Цвет из фрактального изображения.
+//     * @param imageColor Цвет из исходного изображения.
+//     * @return Смешанный цвет.
+//     *
+//     * @author andrey
+//     */
+//    private int mixColors(int fractalColor, int imageColor) {
+//        int fractalRed = (fractalColor << 16) & 0xFF;
+//        int fractalGreen = (fractalColor << 8) & 0xFF;
+//        int fractalBlue = fractalColor & 0xFF;
+//
+//        int imageRed = (imageColor >> 16) & 0xFF;
+//        int imageGreen = (imageColor >> 8) & 0xFF;
+//        int imageBlue = imageColor & 0xFF;
+//
+//        int mixedRed = (fractalRed + imageRed) / 2;
+//        int mixedGreen = (fractalGreen + imageGreen) / 2;
+//        int mixedBlue = (fractalBlue + imageBlue) / 2;
+//
+//        return (mixedRed << 16) & (mixedGreen << 8) & mixedBlue;
+//    }
 
     /**
      * Разбивает изображение на сегменты и перемешивает их случайным образом.
@@ -238,9 +238,9 @@ public class Model_ImageMatrix {
      * @param image Изображение для разбиения.
      * @param segmentWidthSize Количество сегментов по ширине.
      * @param segmentHeightSize Количество сегментов по высоте.
-     * @return Зашифрованное изображение.
+     * @return Зашифрованное изображение и массив индексов сегментов.
      */
-    public BufferedImage shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
+    public Pair<BufferedImage, int[]> shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
         int width = image.getWidth();
         int height = image.getHeight();
         int segmentWidth = width / segmentWidthSize;
@@ -276,6 +276,36 @@ public class Model_ImageMatrix {
         }
 
         g2d.dispose();
-        return shuffledImage;
+        return new Pair<>(shuffledImage, segmentIndices);
+    }
+
+    /**
+     * Возвращает сегменты изображения на прежние места.
+     *
+     * @param shuffledImage Перемешанное изображение.
+     * @param segmentIndices Массив индексов сегментов.
+     * @param segmentWidthSize Количество сегментов по ширине.
+     * @param segmentHeightSize Количество сегментов по высоте.
+     * @return Восстановленное изображение.
+     */
+    public BufferedImage unshuffledSegments(BufferedImage shuffledImage, int[] segmentIndices, int segmentWidthSize, int segmentHeightSize) {
+        int width = shuffledImage.getWidth();
+        int height = shuffledImage.getHeight();
+        int segmentWidth = width / segmentWidthSize;
+        int segmentHeight = height / segmentHeightSize;
+
+        BufferedImage unshuffledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = unshuffledImage.createGraphics();
+
+        for (int i = 0; i < segmentIndices.length; i++) {
+            int segmentIndex = segmentIndices[i];
+            int segmentX = (i % segmentWidthSize) * segmentWidth;
+            int segmentY = (i / segmentWidthSize) * segmentHeight;
+            g2d.drawImage(shuffledImage.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
+                    (segmentIndex % segmentWidthSize) * segmentWidth, (segmentIndex / segmentWidthSize) * segmentHeight, null);
+        }
+
+        g2d.dispose();
+        return unshuffledImage;
     }
 }

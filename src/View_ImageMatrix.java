@@ -22,53 +22,53 @@ public class View_ImageMatrix {
         matrix = my_matrix;
     }
 
-    /**
-     * title field setter
-     * @param my_title String containing the title of window
-     */
-    public void setTitle(String my_title) {
-        this.title = my_title;
-    }
-
-    /**
-     * title field getter
-     * @return field title of type String which is a window title
-     */
-    public String getTitle() {
-        return this.title;
-    }
-
-    /**
-     * image field setter
-     * @param my_image BufferedImage from input which will be shown in window
-     */
-    public void setImage(BufferedImage my_image) {
-        this.image = my_image;
-    }
-
-    /**
-     * image field getter
-     * @return value of image which is a BufferedImage and shown in window
-     */
-    public BufferedImage getImage() {
-        return this.image;
-    }
-
-    /**
-     * matrix field setter
-     * @param my_matrix matrix of type double[][] which contains every pixel of image in int type
-     */
-    public void setMatrix(double[][] my_matrix) {
-        this.matrix = my_matrix;
-    }
-
-    /**
-     * matrix field getter
-     * @return matrix of type double[][] which contains every pixel of image in int type
-     */
-    public double[][] getMatrix() {
-        return this.matrix;
-    }
+//    /**
+//     * title field setter
+//     * @param my_title String containing the title of window
+//     */
+//    public void setTitle(String my_title) {
+//        this.title = my_title;
+//    }
+//
+//    /**
+//     * title field getter
+//     * @return field title of type String which is a window title
+//     */
+//    public String getTitle() {
+//        return this.title;
+//    }
+//
+//    /**
+//     * image field setter
+//     * @param my_image BufferedImage from input which will be shown in window
+//     */
+//    public void setImage(BufferedImage my_image) {
+//        this.image = my_image;
+//    }
+//
+//    /**
+//     * image field getter
+//     * @return value of image which is a BufferedImage and shown in window
+//     */
+//    public BufferedImage getImage() {
+//        return this.image;
+//    }
+//
+//    /**
+//     * matrix field setter
+//     * @param my_matrix matrix of type double[][] which contains every pixel of image in int type
+//     */
+//    public void setMatrix(double[][] my_matrix) {
+//        this.matrix = my_matrix;
+//    }
+//
+//    /**
+//     * matrix field getter
+//     * @return matrix of type double[][] which contains every pixel of image in int type
+//     */
+//    public double[][] getMatrix() {
+//        return this.matrix;
+//    }
 
     /**
      * Method to display images in window

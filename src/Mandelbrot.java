@@ -1,24 +1,26 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.Graphics;
+import java.io.DataOutputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
 
 /**
- * @author dankotyt
- *
- * Класс Mandelbrot представляет собой графический компонент Swing, который генерирует изображение множества Мандельброта
- * и позволяет пользователю сохранять сгенерированные изображения на рабочий стол. Класс использует многопоточность для
- * ускорения генерации изображения и проверки его разнообразия.
+ * Класс Mandelbrot представляет собой графический компонент Swing, который генерирует изображение множества Мандельброта.
+ * Он позволяет пользователю сохранять сгенерированные изображения на рабочий стол и использует многопоточность для ускорения
+ * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
     private int MAX_ITER = 150; // Максимальное количество итераций для генерации фрактала
@@ -30,7 +32,7 @@ public class Mandelbrot extends JPanel {
 
     /**
      * Конструктор класса Mandelbrot.
-     * Добавляет обработчик событий мыши для повторной генерации изображения.
+     * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
      */
     public Mandelbrot() {
         addMouseListener(new MouseAdapter() {
@@ -61,15 +63,10 @@ public class Mandelbrot extends JPanel {
      */
     public void randomPositionOnPlenty() {
         Random random = new Random();
-
         MAX_ITER = 500 + (random.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
-
-        // Рандомизация offsetX и offsetY от -0.9998 до 0.9998
         offsetX = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
         offsetY = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
-        ZOOM = 50000 + (random.nextInt(44) * 1000); /*Чем больше начальный зум, тем дольше будет генерироваться картинка
-                                                        однако информация зашифрована будет лучше из-за большого кол-ва
-                                                        элементов фрактала */
+        ZOOM = 50000 + (random.nextInt(44) * 1000);
         repaint();
     }
 
@@ -84,10 +81,8 @@ public class Mandelbrot extends JPanel {
 
         while (!validImage) {
             attempt++;
-            // Генерация изображения
             randomPositionOnPlenty();
             image = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
-            //используем пул потоков для выполнения генерации изображения
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             for (int x = 0; x < getWidth(); x++) {
                 executor.submit(new MandelbrotThread(x, getWidth(), getHeight(), ZOOM, MAX_ITER, offsetX, offsetY, image));
@@ -100,7 +95,6 @@ public class Mandelbrot extends JPanel {
                 e.printStackTrace();
             }
 
-            // Проверка на разнообразие пикселей
             validImage = checkImageDiversity(image);
             if (!validImage) {
                 System.out.println("Попытка №" + attempt + ". Изображение не удовлетворяет условиям, повторная рандомизация...");
@@ -108,12 +102,16 @@ public class Mandelbrot extends JPanel {
         }
         repaint();
 
-        // Запрашиваем пользователя о сохранении изображения
-        int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение на рабочий стол?", "Сохранить изображение", JOptionPane.YES_NO_OPTION);
-        if (option == JOptionPane.YES_OPTION) {
-            saveImageToDesktop(image);
-        } else {
-            generateImage(); // Генерируем новое изображение, если пользователь отказался
+        while (true) {
+            int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_OPTION);
+            if (option == JOptionPane.YES_OPTION) {
+                saveImageToResources(image);
+                saveParametersToBinaryFile("resources/mandelbrot_params.bin");
+                break;
+            } else if (option == JOptionPane.NO_OPTION) {
+                generateImage(); // Пересоздание изображения
+                break;
+            }
         }
     }
 
@@ -142,20 +140,71 @@ public class Mandelbrot extends JPanel {
     }
 
     /**
-     * Сохраняет изображение на рабочий стол пользователя.
+     * Сохраняет изображение в папку resources в корне проекта.
      *
      * @param image Изображение для сохранения.
      */
-    private void saveImageToDesktop(BufferedImage image) {
-        String desktopPath = "resources";
+    private void saveImageToResources(BufferedImage image) {
+        String savePath = "resources";
         numberSave++;
-        File file = new File(desktopPath + File.separator + "mandelbrot" + numberSave +".png");
+        File file = new File(savePath + File.separator + "mandelbrot" + numberSave + ".png");
 
         try {
             ImageIO.write(image, "png", file);
-            JOptionPane.showMessageDialog(this, "Изображение сохранено на рабочий стол: " + file.getAbsolutePath());
+            JOptionPane.showMessageDialog(this, "Изображение сохранено в папку resources: " + file.getAbsolutePath());
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Ошибка при сохранении изображения: " + e.getMessage());
         }
+    }
+
+    /**
+     * Сохраняет значения ZOOM, offsetX, offsetY и MAX_ITER в двоичный файл.
+     *
+     * @param filePath Путь к файлу для сохранения параметров.
+     */
+    private void saveParametersToBinaryFile(String filePath) {
+        try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
+            dos.writeDouble(ZOOM);
+            dos.writeDouble(offsetX);
+            dos.writeDouble(offsetY);
+            dos.writeInt(MAX_ITER);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Загружает значения ZOOM, offsetX, offsetY и MAX_ITER из двоичного файла.
+     *
+     * @param filePath Путь к файлу для загрузки параметров.
+     * @return Массив значений [ZOOM, offsetX, offsetY, MAX_ITER].
+     */
+    public double[] loadParametersFromBinaryFile(String filePath) {
+        double[] params = new double[4];
+        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            params[0] = dis.readDouble();
+            params[1] = dis.readDouble();
+            params[2] = dis.readDouble();
+            params[3] = dis.readInt();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return params;
+    }
+
+    /**
+     * Основной метод для запуска приложения.
+     *
+     * @param args Аргументы командной строки.
+     */
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Mandelbrot Set");
+        Mandelbrot mandelbrot = new Mandelbrot();
+        frame.add(mandelbrot);
+        frame.setSize(800, 600);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+
+        mandelbrot.generateImage();
     }
 }
