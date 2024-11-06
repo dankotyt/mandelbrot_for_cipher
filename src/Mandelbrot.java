@@ -30,6 +30,8 @@ public class Mandelbrot extends JPanel {
     private BufferedImage image; // Хранение изображения
     private int numberSave = 0; // Номер сохраняемого изображения
 
+    private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+
     /**
      * Конструктор класса Mandelbrot.
      * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
@@ -106,7 +108,7 @@ public class Mandelbrot extends JPanel {
             int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_OPTION);
             if (option == JOptionPane.YES_OPTION) {
                 saveImageToResources(image);
-                saveParametersToBinaryFile("resources/mandelbrot_params.bin");
+                saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
                 break;
             } else if (option == JOptionPane.NO_OPTION) {
                 generateImage(); // Пересоздание изображения
@@ -145,7 +147,7 @@ public class Mandelbrot extends JPanel {
      * @param image Изображение для сохранения.
      */
     private void saveImageToResources(BufferedImage image) {
-        String savePath = "resources";
+        String savePath = PROJECT_PATH + "/resources";
         numberSave++;
         File file = new File(savePath + File.separator + "mandelbrot" + numberSave + ".png");
 
@@ -201,7 +203,7 @@ public class Mandelbrot extends JPanel {
         JFrame frame = new JFrame("Mandelbrot Set");
         Mandelbrot mandelbrot = new Mandelbrot();
         frame.add(mandelbrot);
-        frame.setSize(800, 600);
+        frame.setSize(1024, 720);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
