@@ -13,10 +13,12 @@ public class Main {
     private static int startX, startY, endX, endY;
     private static boolean selecting = false;
 
+    private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+
     public static void main(String[] args) {
         try {
             // Загрузка изображения
-            originalImage = ImageIO.read(new File("resources/input.jpg"));
+            originalImage = ImageIO.read(new File(PROJECT_PATH + "resources/input.jpg"));
             int width = originalImage.getWidth();
             int height = originalImage.getHeight();
 
@@ -103,9 +105,8 @@ public class Main {
         int selectedHeight = selectedImage.getHeight();
 
         // Проверка и корректировка размеров для сегментации
-        int segmentWidthSize = 32; // Например, 32 сегмента по ширине
-        int segmentHeightSize = 16; // Например, 16 сегментов по высоте
-
+        int segmentWidthSize = 16; // Например, 32 сегмента по ширине
+        int segmentHeightSize = 8; // Например, 16 сегментов по высоте
         if (selectedWidth % segmentWidthSize != 0) {
             selectedWidth = (selectedWidth / segmentWidthSize + 1) * segmentWidthSize;
         }
@@ -125,7 +126,7 @@ public class Main {
         // Загружаем изображение множества Мандельброта
         BufferedImage mandelbrotImage = null;
         try {
-            mandelbrotImage = ImageIO.read(new File("resources/mandelbrot1.png"));
+            mandelbrotImage = ImageIO.read(new File(PROJECT_PATH + "/resources/mandelbrot1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -190,12 +191,12 @@ public class Main {
         // Загружаем изображение множества Мандельброта
         BufferedImage mandelbrotImage = null;
         try {
-            mandelbrotImage = ImageIO.read(new File("resources/mandelbrot1.png"));
+            mandelbrotImage = ImageIO.read(new File(PROJECT_PATH + "resources/mandelbrot1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
+//        // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
         if (mandelbrotImage.getWidth() != width || mandelbrotImage.getHeight() != height) {
             mandelbrotImage = Model_ImageMatrix.resizeImage(mandelbrotImage, width, height);
         }
