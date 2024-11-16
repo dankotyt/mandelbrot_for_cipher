@@ -3,8 +3,11 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import javax.imageio.ImageIO;
 
 public class Main {
@@ -156,6 +159,10 @@ public class Main {
         View_ImageMatrix originalView = new View_ImageMatrix("Original Image with Encrypted Area", originalImage, null);
         originalView.showImage();
 
+        // Сохраняем зашифрованное изображение и параметры
+        saveEncryptedImage(originalImage); // Сохраняем всю картинку с зашифрованной областью
+        saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", segmentWidthSize, segmentHeightSize, segmentIndices);
+
         // Предлагаем дешифровать картинку
         if (JOptionPane.showConfirmDialog(null, "Хотите дешифровать картинку?", "Дешифрование", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
             decryptSelectedArea(shuffledImage, mandelbrotModel.getImageMatrix(), segmentWidthSize, segmentHeightSize, segmentIndices);
@@ -194,7 +201,7 @@ public class Main {
             e.printStackTrace();
         }
 
-//        // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
+        // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
         if (mandelbrotImage.getWidth() != width || mandelbrotImage.getHeight() != height) {
             mandelbrotImage = Model_ImageMatrix.resizeImage(mandelbrotImage, width, height);
         }
@@ -215,6 +222,10 @@ public class Main {
         // Отображаем зашифрованное изображение
         View_ImageMatrix encryptedView = new View_ImageMatrix("Encrypted Image", shuffledImage, encryptedMatrix);
         encryptedView.showImage();
+
+        // Сохраняем зашифрованное изображение и параметры
+        saveEncryptedImage(shuffledImage); // Сохраняем всю картинку с зашифрованной областью
+        saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", segmentWidthSize, segmentHeightSize, segmentIndices);
 
         // Предлагаем дешифровать картинку
         if (JOptionPane.showConfirmDialog(null, "Хотите дешифровать картинку?", "Дешифрование", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
@@ -246,6 +257,9 @@ public class Main {
         // Отображаем исходное изображение с дешифрованной областью
         View_ImageMatrix originalView = new View_ImageMatrix("Original Image with Decrypted Area", originalImage, null);
         originalView.showImage();
+
+        // Сохраняем дешифрованное изображение
+        saveDecryptedImage(originalImage);
     }
 
     private static void decryptWholeImage(BufferedImage encryptedImage, double[][] mandelbrotMatrix, int segmentWidthSize, int segmentHeightSize, int[] segmentIndices) {
@@ -267,6 +281,9 @@ public class Main {
         // Отображаем дешифрованное изображение
         View_ImageMatrix decryptedView = new View_ImageMatrix("Decrypted Image", decryptedImage, decryptedMatrix);
         decryptedView.showImage();
+
+        // Сохраняем дешифрованное изображение
+        saveDecryptedImage(decryptedImage);
     }
 
     private static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
@@ -275,5 +292,60 @@ public class Main {
         graphics2D.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
         graphics2D.dispose();
         return resizedImage;
+    }
+
+    /**
+     * Сохраняет зашифрованное изображение в файл.
+     *
+     * @param encryptedImage Зашифрованное изображение для сохранения.
+     */
+    private static void saveEncryptedImage(BufferedImage encryptedImage) {
+        try {
+            ImageIO.write(encryptedImage, "png", new File(PROJECT_PATH + "resources/encrypted_image.png"));
+            System.out.println("Зашифрованное изображение сохранено как encrypted_image.png");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Сохраняет дешифрованное изображение в файл.
+     *
+     * @param decryptedImage Дешифрованное изображение для сохранения.
+     */
+    private static void saveDecryptedImage(BufferedImage decryptedImage) {
+        try {
+            ImageIO.write(decryptedImage, "png", new File(PROJECT_PATH + "resources/decrypted_image.png"));
+            System.out.println("Дешифрованное изображение сохранено как decrypted_image.png");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Сохраняет параметры в бинарный файл.
+     *
+     * @param filePath         Путь к файлу для сохранения параметров.
+     * @param segmentWidthSize Ширина сегмента.
+     * @param segmentHeightSize Высота сегмента.
+     * @param segmentIndices   Индексы сегментов.
+     */
+    private static void saveParametersToBinaryFile(String filePath, int segmentWidthSize, int segmentHeightSize, int[] segmentIndices) {
+        try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
+            Mandelbrot mandelbrot = new Mandelbrot();
+            dos.writeDouble(mandelbrot.getZOOM());
+            dos.writeDouble(mandelbrot.getOffsetX());
+            dos.writeDouble(mandelbrot.getOffsetY());
+            dos.writeInt(mandelbrot.getMAX_ITER());
+            dos.writeInt(segmentWidthSize);
+            dos.writeInt(segmentHeightSize);
+            dos.writeInt(segmentIndices.length);
+            for (int index : segmentIndices) {
+                dos.writeInt(index);
+            }
+            System.out.println("Параметры сохранены в файл " + filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -23,14 +23,19 @@ import java.util.concurrent.TimeUnit;
  * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
-    private int MAX_ITER = 150; // Максимальное количество итераций для генерации фрактала
-    private double ZOOM = 1500; // Начальный уровень масштабирования
-    private double offsetX = 0; // Смещение по оси X
-    private double offsetY = 0; // Смещение по оси Y
-    private BufferedImage image; // Хранение изображения
-    private int numberSave = 0; // Номер сохраняемого изображения
+    private int x; // Координата X для генерации
+    private int width; // Ширина изображения
+    private int height; // Высота изображения
+    private double ZOOM; // Уровень масштабирования
+    private int MAX_ITER; // Максимальное количество итераций
+    private double offsetX; // Смещение по оси X
+    private double offsetY; // Смещение по оси Y
+    private BufferedImage image; // Изображение для записи результатов
+    private int segmentWidthSize; // Ширина сегмента
+    private int segmentHeightSize; // Высота сегмента
+    private int[] segmentIndices; // Индексы сегментов изображения
+    private int numberSave = 0;
 
-    //private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
     private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
 
     /**
@@ -38,6 +43,8 @@ public class Mandelbrot extends JPanel {
      * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
      */
     public Mandelbrot() {
+        this.width = 1024; // Устанавливаем начальные значения ширины и высоты
+        this.height = 720;
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -85,10 +92,10 @@ public class Mandelbrot extends JPanel {
         while (!validImage) {
             attempt++;
             randomPositionOnPlenty();
-            image = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB);
+            image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            for (int x = 0; x < getWidth(); x++) {
-                executor.submit(new MandelbrotThread(x, getWidth(), getHeight(), ZOOM, MAX_ITER, offsetX, offsetY, image));
+            for (int x = 0; x < width; x++) {
+                executor.submit(new MandelbrotThread(x, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
             }
 
             executor.shutdown();
@@ -105,14 +112,19 @@ public class Mandelbrot extends JPanel {
         }
         repaint();
 
+        showImageInNewWindow(); // Отображаем изображение в новом окне
+
         while (true) {
-            int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_OPTION);
+            int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_CANCEL_OPTION);
             if (option == JOptionPane.YES_OPTION) {
                 saveImageToResources(image);
                 saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
                 break;
             } else if (option == JOptionPane.NO_OPTION) {
                 generateImage(); // Пересоздание изображения
+                break;
+            } else if (option == JOptionPane.CANCEL_OPTION) {
+                // Возвращаемся в меню
                 break;
             }
         }
@@ -142,6 +154,14 @@ public class Mandelbrot extends JPanel {
         return (uniqueColors > 500 && percentage < 0.25);
     }
 
+    public void showImageInNewWindow() {
+        JFrame frame = new JFrame("Generated Mandelbrot Set");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setSize(width, height);
+        frame.add(this);
+        frame.setVisible(true);
+    }
+
     /**
      * Сохраняет изображение в папку resources в корне проекта.
      *
@@ -161,38 +181,85 @@ public class Mandelbrot extends JPanel {
     }
 
     /**
-     * Сохраняет значения ZOOM, offsetX, offsetY и MAX_ITER в двоичный файл.
+     * Сохраняет значения ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize и segmentIndices в двоичный файл.
      *
      * @param filePath Путь к файлу для сохранения параметров.
      */
     private void saveParametersToBinaryFile(String filePath) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            dos.writeDouble(ZOOM);
-            dos.writeDouble(offsetX);
-            dos.writeDouble(offsetY);
-            dos.writeInt(MAX_ITER);
+            dos.writeDouble(getZOOM());
+            dos.writeDouble(getOffsetX());
+            dos.writeDouble(getOffsetY());
+            dos.writeInt(getMAX_ITER());
+            dos.writeInt(getSegmentWidthSize());
+            dos.writeInt(getSegmentHeightSize());
+            dos.writeInt(getSegmentIndices().length);
+            for (int index : getSegmentIndices()) {
+                dos.writeInt(index);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * Загружает значения ZOOM, offsetX, offsetY и MAX_ITER из двоичного файла.
+     * Загружает значения ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize и segmentIndices из двоичного файла.
      *
      * @param filePath Путь к файлу для загрузки параметров.
-     * @return Массив значений [ZOOM, offsetX, offsetY, MAX_ITER].
+     * @return Массив значений [ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentIndices].
      */
-    public double[] loadParametersFromBinaryFile(String filePath) {
-        double[] params = new double[4];
+    public Object[] loadParametersFromBinaryFile(String filePath) {
+        Object[] params = new Object[7];
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
             params[0] = dis.readDouble();
             params[1] = dis.readDouble();
             params[2] = dis.readDouble();
             params[3] = dis.readInt();
+            params[4] = dis.readInt();
+            params[5] = dis.readInt();
+            int segmentCount = dis.readInt();
+            int[] segmentIndices = new int[segmentCount];
+            for (int i = 0; i < segmentCount; i++) {
+                segmentIndices[i] = dis.readInt();
+            }
+            params[6] = segmentIndices;
         } catch (IOException e) {
             e.printStackTrace();
         }
         return params;
+    }
+
+    // Геттеры для переменных
+    public double getZOOM() {
+        return ZOOM;
+    }
+
+    public BufferedImage getImage() {
+        return image;
+    }
+
+    public int getMAX_ITER() {
+        return MAX_ITER;
+    }
+
+    public double getOffsetX() {
+        return offsetX;
+    }
+
+    public double getOffsetY() {
+        return offsetY;
+    }
+
+    public int getSegmentWidthSize() {
+        return segmentWidthSize;
+    }
+
+    public int getSegmentHeightSize() {
+        return segmentHeightSize;
+    }
+
+    public int[] getSegmentIndices() {
+        return segmentIndices;
     }
 
     /**
