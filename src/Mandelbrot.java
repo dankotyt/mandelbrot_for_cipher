@@ -24,13 +24,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class Mandelbrot extends JPanel {
     private int MAX_ITER = 150; // Максимальное количество итераций для генерации фрактала
-    private double ZOOM = 800; // Начальный уровень масштабирования
+    private double ZOOM = 1500; // Начальный уровень масштабирования
     private double offsetX = 0; // Смещение по оси X
     private double offsetY = 0; // Смещение по оси Y
     private BufferedImage image; // Хранение изображения
     private int numberSave = 0; // Номер сохраняемого изображения
 
-    private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+    //private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+    private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
 
     /**
      * Конструктор класса Mandelbrot.
@@ -68,7 +69,7 @@ public class Mandelbrot extends JPanel {
         MAX_ITER = 500 + (random.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
         offsetX = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
         offsetY = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
-        ZOOM = 50000 + (random.nextInt(44) * 1000);
+        ZOOM = 70000 + (random.nextInt(44) * 1000);
         repaint();
     }
 

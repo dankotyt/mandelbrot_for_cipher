@@ -13,7 +13,8 @@ public class Main {
     private static int startX, startY, endX, endY;
     private static boolean selecting = false;
 
-    private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+    //private static final String PROJECT_PATH = "C:/Users/r10021998/ideaProjects/mandelbrot_for_cipher-master/";
+    private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
 
     public static void main(String[] args) {
         try {
@@ -107,16 +108,13 @@ public class Main {
         // Проверка и корректировка размеров для сегментации
         int segmentWidthSize = 16; // Например, 32 сегмента по ширине
         int segmentHeightSize = 8; // Например, 16 сегментов по высоте
-        if (selectedWidth % segmentWidthSize != 0) {
-            selectedWidth = (selectedWidth / segmentWidthSize + 1) * segmentWidthSize;
-        }
-        if (selectedHeight % segmentHeightSize != 0) {
-            selectedHeight = (selectedHeight / segmentHeightSize + 1) * segmentHeightSize;
-        }
 
-        // Изменение размера выделенной области, если необходимо
-        if (selectedImage.getWidth() != selectedWidth || selectedImage.getHeight() != selectedHeight) {
-            selectedImage = resizeImage(selectedImage, selectedWidth, selectedHeight);
+        // Уменьшаем размеры сегментов, если они не делят размеры выделенной области без остатка
+        while (selectedWidth % segmentWidthSize != 0) {
+            segmentWidthSize--;
+        }
+        while (selectedHeight % segmentHeightSize != 0) {
+            segmentHeightSize--;
         }
 
         // Создаем модель для выделенной области
