@@ -4,6 +4,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.DataOutputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -137,9 +138,23 @@ public class Main {
             mandelbrotImage = Model_ImageMatrix.resizeImage(mandelbrotImage, selectedWidth, selectedHeight);
         }
 
+        // Сохраняем изображение Мандельброта для выделенной области
+        try {
+            ImageIO.write(mandelbrotImage, "png", new File(PROJECT_PATH + "/resources/mandelbrot1_selectedArea.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // Создаем модель для изображения множества Мандельброта
         Model_ImageMatrix mandelbrotModel = new Model_ImageMatrix(mandelbrotImage, selectedHeight, selectedWidth);
         mandelbrotModel.translatePixelsToNumbers(selectedHeight, selectedWidth);
+
+        // Загружаем параметры из mandelbrot_params
+        Object[] mandelbrotParams = loadMandelbrotParamsFromBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
+        double ZOOM = (double) mandelbrotParams[0];
+        double offsetX = (double) mandelbrotParams[1];
+        double offsetY = (double) mandelbrotParams[2];
+        int MAX_ITER = (int) mandelbrotParams[3];
 
         // Шифруем выделенную область
         double[][] encryptedMatrix = selectedModel.encryptImage(mandelbrotModel.getImageMatrix(), 320);
@@ -161,7 +176,7 @@ public class Main {
 
         // Сохраняем зашифрованное изображение и параметры
         saveEncryptedImage(originalImage); // Сохраняем всю картинку с зашифрованной областью
-        saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", segmentWidthSize, segmentHeightSize, segmentIndices);
+        saveKeyDecoderToBinaryFile(PROJECT_PATH + "resources/key_decoder.bin", ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentIndices, Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
 
         // Предлагаем дешифровать картинку
         if (JOptionPane.showConfirmDialog(null, "Хотите дешифровать картинку?", "Дешифрование", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
@@ -210,6 +225,9 @@ public class Main {
         Model_ImageMatrix mandelbrotModel = new Model_ImageMatrix(mandelbrotImage, height, width);
         mandelbrotModel.translatePixelsToNumbers(height, width);
 
+        //Создаем конструктор для геттеров
+        Mandelbrot mandelbrot = new Mandelbrot();
+
         // Шифруем все изображение
         double[][] encryptedMatrix = originalModel.encryptImage(mandelbrotModel.getImageMatrix(), 320);
         BufferedImage encryptedImage = originalModel.matrixToImage(encryptedMatrix, width, height);
@@ -224,8 +242,8 @@ public class Main {
         encryptedView.showImage();
 
         // Сохраняем зашифрованное изображение и параметры
-        saveEncryptedImage(shuffledImage); // Сохраняем всю картинку с зашифрованной областью
-        saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", segmentWidthSize, segmentHeightSize, segmentIndices);
+        saveEncryptedImage(originalImage); // Сохраняем всю картинку с зашифрованной областью
+        saveKeyDecoderToBinaryFile(PROJECT_PATH + "resources/key_decoder.bin", mandelbrot.getZOOM(), mandelbrot.getOffsetX(), mandelbrot.getOffsetY(), mandelbrot.getMAX_ITER(), segmentWidthSize, segmentHeightSize, segmentIndices, Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
 
         // Предлагаем дешифровать картинку
         if (JOptionPane.showConfirmDialog(null, "Хотите дешифровать картинку?", "Дешифрование", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
@@ -245,8 +263,20 @@ public class Main {
         encryptedModel = new Model_ImageMatrix(unshuffledImage, height, width);
         encryptedModel.translatePixelsToNumbers(height, width);
 
+        // Загружаем изображение множества Мандельброта для выделенной области
+        BufferedImage mandelbrotImage = null;
+        try {
+            mandelbrotImage = ImageIO.read(new File(PROJECT_PATH + "/resources/mandelbrot1_selectedArea.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Создаем модель для изображения множества Мандельброта
+        Model_ImageMatrix mandelbrotModel = new Model_ImageMatrix(mandelbrotImage, height, width);
+        mandelbrotModel.translatePixelsToNumbers(height, width);
+
         // Дешифруем выделенную область
-        double[][] decryptedMatrix = encryptedModel.decryptImage(encryptedModel.getImageMatrix(), mandelbrotMatrix);
+        double[][] decryptedMatrix = encryptedModel.decryptImage(encryptedModel.getImageMatrix(), mandelbrotModel.getImageMatrix());
         BufferedImage decryptedImage = encryptedModel.matrixToImage(decryptedMatrix, width, height);
 
         // Заменяем зашифрованную область на дешифрованную в исходном изображении
@@ -322,6 +352,81 @@ public class Main {
         }
     }
 
+
+
+    private static Object[] loadMandelbrotParamsFromBinaryFile(String filePath) {
+        Object[] params = new Object[4];
+        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            params[0] = dis.readDouble(); // ZOOM
+            params[1] = dis.readDouble(); // offsetX
+            params[2] = dis.readDouble(); // offsetY
+            params[3] = dis.readInt();    // MAX_ITER
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return params;
+    }
+
+    private static void saveKeyDecoderToBinaryFile(String filePath, double ZOOM, double offsetX, double offsetY, int MAX_ITER, int segmentWidthSize, int segmentHeightSize, int[] segmentIndices, int startX, int startY, int width, int height) {
+        try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
+            dos.writeDouble(ZOOM);
+            dos.writeDouble(offsetX);
+            dos.writeDouble(offsetY);
+            dos.writeInt(MAX_ITER);
+            dos.writeInt(segmentWidthSize);
+            dos.writeInt(segmentHeightSize);
+            dos.writeInt(segmentIndices.length);
+            for (int index : segmentIndices) {
+                dos.writeInt(index);
+            }
+            dos.writeInt(startX);
+            dos.writeInt(startY);
+            dos.writeInt(width);
+            dos.writeInt(height);
+            System.out.println("Параметры сохранены в файл " + filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // Вывод параметров шифрования
+        System.out.println("Параметры шифрования:");
+        System.out.println("ZOOM: " + ZOOM);
+        System.out.println("offsetX: " + offsetX);
+        System.out.println("offsetY: " + offsetY);
+        System.out.println("MAX_ITER: " + MAX_ITER);
+        System.out.println("segmentWidthSize: " + segmentWidthSize);
+        System.out.println("segmentHeightSize: " + segmentHeightSize);
+        System.out.println("segmentIndices length: " + segmentIndices.length);
+        System.out.println("startX: " + startX);
+        System.out.println("startY: " + startY);
+        System.out.println("width: " + width);
+        System.out.println("height: " + height);
+    }
+
+    private static Object[] loadKeyDecoderFromBinaryFile(String filePath) {
+        Object[] params = new Object[11];
+        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            params[0] = dis.readDouble();
+            params[1] = dis.readDouble();
+            params[2] = dis.readDouble();
+            params[3] = dis.readInt();
+            params[4] = dis.readInt();
+            params[5] = dis.readInt();
+            int segmentCount = dis.readInt();
+            int[] segmentIndices = new int[segmentCount];
+            for (int i = 0; i < segmentCount; i++) {
+                segmentIndices[i] = dis.readInt();
+            }
+            params[6] = segmentIndices;
+            params[7] = dis.readInt();
+            params[8] = dis.readInt();
+            params[9] = dis.readInt();
+            params[10] = dis.readInt();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return params;
+    }
+
     /**
      * Сохраняет параметры в бинарный файл.
      *
@@ -330,22 +435,63 @@ public class Main {
      * @param segmentHeightSize Высота сегмента.
      * @param segmentIndices   Индексы сегментов.
      */
-    private static void saveParametersToBinaryFile(String filePath, int segmentWidthSize, int segmentHeightSize, int[] segmentIndices) {
+    private static void saveParametersToBinaryFile(String filePath, double ZOOM, double offsetX, double offsetY, int MAX_ITER, int segmentWidthSize, int segmentHeightSize, int[] segmentIndices, int startX, int startY, int width, int height) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            Mandelbrot mandelbrot = new Mandelbrot();
-            dos.writeDouble(mandelbrot.getZOOM());
-            dos.writeDouble(mandelbrot.getOffsetX());
-            dos.writeDouble(mandelbrot.getOffsetY());
-            dos.writeInt(mandelbrot.getMAX_ITER());
+            dos.writeDouble(ZOOM);
+            dos.writeDouble(offsetX);
+            dos.writeDouble(offsetY);
+            dos.writeInt(MAX_ITER);
             dos.writeInt(segmentWidthSize);
             dos.writeInt(segmentHeightSize);
             dos.writeInt(segmentIndices.length);
             for (int index : segmentIndices) {
                 dos.writeInt(index);
             }
+            dos.writeInt(startX);
+            dos.writeInt(startY);
+            dos.writeInt(width);
+            dos.writeInt(height);
             System.out.println("Параметры сохранены в файл " + filePath);
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // Вывод параметров шифрования
+        System.out.println("Параметры шифрования:");
+        System.out.println("ZOOM: " + ZOOM);
+        System.out.println("offsetX: " + offsetX);
+        System.out.println("offsetY: " + offsetY);
+        System.out.println("MAX_ITER: " + MAX_ITER);
+        System.out.println("segmentWidthSize: " + segmentWidthSize);
+        System.out.println("segmentHeightSize: " + segmentHeightSize);
+        System.out.println("segmentIndices length: " + segmentIndices.length);
+        System.out.println("startX: " + startX);
+        System.out.println("startY: " + startY);
+        System.out.println("width: " + width);
+        System.out.println("height: " + height);
+    }
+    private static Object[] loadParametersFromBinaryFile(String filePath) {
+        Object[] params = new Object[11];
+        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            params[0] = dis.readDouble();
+            params[1] = dis.readDouble();
+            params[2] = dis.readDouble();
+            params[3] = dis.readInt();
+            params[4] = dis.readInt();
+            params[5] = dis.readInt();
+            int segmentCount = dis.readInt();
+            int[] segmentIndices = new int[segmentCount];
+            for (int i = 0; i < segmentCount; i++) {
+                segmentIndices[i] = dis.readInt();
+            }
+            params[6] = segmentIndices;
+            params[7] = dis.readInt();
+            params[8] = dis.readInt();
+            params[9] = dis.readInt();
+            params[10] = dis.readInt();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return params;
     }
 }

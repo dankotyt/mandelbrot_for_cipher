@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
  * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
+    private Main main;
     private int x; // Координата X для генерации
     private int width; // Ширина изображения
     private int height; // Высота изображения
@@ -112,13 +113,11 @@ public class Mandelbrot extends JPanel {
         }
         repaint();
 
-        showImageInNewWindow(); // Отображаем изображение в новом окне
-
         while (true) {
             int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_CANCEL_OPTION);
             if (option == JOptionPane.YES_OPTION) {
                 saveImageToResources(image);
-                saveParametersToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
+                saveMandelbrotParamsToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", ZOOM, offsetX, offsetY, MAX_ITER);
                 break;
             } else if (option == JOptionPane.NO_OPTION) {
                 generateImage(); // Пересоздание изображения
@@ -185,21 +184,35 @@ public class Mandelbrot extends JPanel {
      *
      * @param filePath Путь к файлу для сохранения параметров.
      */
-    private void saveParametersToBinaryFile(String filePath) {
+    private static void saveMandelbrotParamsToBinaryFile(String filePath, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            dos.writeDouble(getZOOM());
-            dos.writeDouble(getOffsetX());
-            dos.writeDouble(getOffsetY());
-            dos.writeInt(getMAX_ITER());
-            dos.writeInt(getSegmentWidthSize());
-            dos.writeInt(getSegmentHeightSize());
-            dos.writeInt(getSegmentIndices().length);
-            for (int index : getSegmentIndices()) {
-                dos.writeInt(index);
-            }
+            dos.writeDouble(ZOOM);
+            dos.writeDouble(offsetX);
+            dos.writeDouble(offsetY);
+            dos.writeInt(MAX_ITER);
+            System.out.println("Параметры сохранены в файл " + filePath);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // Вывод параметров шифрования
+        System.out.println("Параметры шифрования:");
+        System.out.println("ZOOM: " + ZOOM);
+        System.out.println("offsetX: " + offsetX);
+        System.out.println("offsetY: " + offsetY);
+        System.out.println("MAX_ITER: " + MAX_ITER);
+    }
+
+    private static Object[] loadMandelbrotParamsFromBinaryFile(String filePath) {
+        Object[] params = new Object[4];
+        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            params[0] = dis.readDouble(); // ZOOM
+            params[1] = dis.readDouble(); // offsetX
+            params[2] = dis.readDouble(); // offsetY
+            params[3] = dis.readInt();    // MAX_ITER
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return params;
     }
 
     /**
@@ -208,7 +221,7 @@ public class Mandelbrot extends JPanel {
      * @param filePath Путь к файлу для загрузки параметров.
      * @return Массив значений [ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentIndices].
      */
-    public Object[] loadParametersFromBinaryFile(String filePath) {
+    public static Object[] loadParametersFromBinaryFile(String filePath) {
         Object[] params = new Object[7];
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
             params[0] = dis.readDouble();
