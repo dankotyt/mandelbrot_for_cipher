@@ -407,31 +407,4 @@ public class Main {
         System.out.println("width: " + width);
         System.out.println("height: " + height);
     }
-
-    private static Object[] loadKeyDecoderFromBinaryFile(String filePath) {
-        Object[] params = new Object[11];
-        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readDouble();
-            params[1] = dis.readDouble();
-            params[2] = dis.readDouble();
-            params[3] = dis.readInt();
-            params[4] = dis.readInt();
-            params[5] = dis.readInt();
-            int segmentCount = dis.readInt();
-            Map<Integer, Integer> segmentMapping = new HashMap<>();
-            for (int i = 0; i < segmentCount; i++) {
-                int key = dis.readInt();
-                int value = dis.readInt();
-                segmentMapping.put(key, value);
-            }
-            params[6] = segmentMapping;
-            params[7] = dis.readInt();
-            params[8] = dis.readInt();
-            params[9] = dis.readInt();
-            params[10] = dis.readInt();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return params;
-    }
 }
