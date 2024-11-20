@@ -71,10 +71,6 @@ public class Model_ImageMatrix {
                 encryptedMatrix[i][j] = (int) imageMatrix[i][j] ^ (int) mandelbrotMatrix[i][j];
             }
         }
-
-        // Применение сдвига бит
-        //encryptedMatrix = shiftPixels(encryptedMatrix, shiftBits);
-
         return encryptedMatrix;
     }
 
@@ -96,7 +92,6 @@ public class Model_ImageMatrix {
                 decryptedMatrix[i][j] = (int) encryptedMatrix[i][j] ^ (int) mandelbrotMatrix[i][j];
             }
         }
-
         return decryptedMatrix;
     }
 
@@ -111,23 +106,6 @@ public class Model_ImageMatrix {
         }
 
         return image;
-    }
-
-    public double[][] shiftPixels(double[][] encryptedMatrix, int shiftBits) {
-        int height = encryptedMatrix.length;
-        int width = encryptedMatrix[0].length;
-
-        double[][] shiftedMatrix = new double[height][width];
-
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                int pixel = (int) encryptedMatrix[i][j];
-                int shiftedPixel = (pixel << shiftBits) | (pixel >>> (32 - shiftBits)); // Циклический сдвиг влево
-                shiftedMatrix[i][j] = shiftedPixel;
-            }
-        }
-
-        return shiftedMatrix;
     }
 
     public Pair<BufferedImage, Map<Integer, Integer>> shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
@@ -217,7 +195,6 @@ public class Model_ImageMatrix {
                 resizedMatrix[i][j] = mandelbrotMatrix[mandelbrotI][mandelbrotJ];
             }
         }
-
         return resizedMatrix;
     }
 }
