@@ -72,11 +72,6 @@ public class ImageDecryptor {
         }
     }
 
-    /**
-     * Сохраняет дешифрованное изображение в файл.
-     *
-     * @param decryptedImage Дешифрованное изображение для сохранения.
-     */
     private static void saveDecryptedImage(BufferedImage decryptedImage) {
         try {
             ImageIO.write(decryptedImage, "png", new File(PROJECT_PATH + "resources/decrypted_image.png"));
@@ -86,12 +81,6 @@ public class ImageDecryptor {
         }
     }
 
-    /**
-     * Загружает параметры из бинарного файла key_decoder.
-     *
-     * @param filePath Путь к файлу для загрузки параметров.
-     * @return Массив объектов с параметрами.
-     */
     private static Object[] loadKeyDecoderParametersFromBinaryFile(String filePath) {
         Object[] params = new Object[11];
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
@@ -119,17 +108,6 @@ public class ImageDecryptor {
         return params;
     }
 
-    /**
-     * Генерирует изображение множества Мандельброта по заданным параметрам.
-     *
-     * @param width    Ширина изображения.
-     * @param height   Высота изображения.
-     * @param ZOOM     Зум.
-     * @param offsetX  Смещение по X.
-     * @param offsetY  Смещение по Y.
-     * @param MAX_ITER Максимальное количество итераций.
-     * @return Изображение множества Мандельброта.
-     */
     private static BufferedImage generateMandelbrotImage(int width, int height, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
         BufferedImage mandelbrotImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         for (int y = 0; y < height; y++) {
@@ -151,13 +129,6 @@ public class ImageDecryptor {
         return mandelbrotImage;
     }
 
-    /**
-     * Выполняет операцию XOR между двумя изображениями.
-     *
-     * @param image1 Первое изображение.
-     * @param image2 Второе изображение.
-     * @return Результат операции XOR.
-     */
     private static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
         int width = image1.getWidth();
         int height = image1.getHeight();
