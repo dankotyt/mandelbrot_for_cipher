@@ -52,7 +52,7 @@ public class ImageDecryptor {
             // Выполнение операции XOR между копией восстановленного изображения и изображением Мандельброта
             BufferedImage xorImage = performXOR(unshuffledImage, mandelbrotImage.getSubimage(startX, startY, width, height));
 
-            // Вырезаем результат, используя width, height
+            // Вырезаем результат, используя width, height, startX, startY
             BufferedImage selectedArea = xorImage.getSubimage(0, 0, width, height);
 
             // Сшиваем вырезанный участок с исходным зашифрованным изображением
