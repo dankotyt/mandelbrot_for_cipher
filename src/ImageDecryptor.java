@@ -95,7 +95,7 @@ public class ImageDecryptor {
                 int value = dis.readInt();
                 segmentMapping.put(key, value);
             }
-            params[8] = segmentMapping;
+            params[8] = segmentMapping; //ключ-пары позиций сегментов
             params[9] = dis.readInt(); // startX
             params[10] = dis.readInt(); // startY
             params[11] = dis.readInt(); // width
