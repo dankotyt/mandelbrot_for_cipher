@@ -3,20 +3,13 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.Graphics2D;
 import java.util.Random;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * @author Boykov Iliya
- */
 public class Model_ImageMatrix {
     private int[] pixels;
     private double[][] imageMatrix;
 
-    /**
-     * Constructor of the Model class with params
-     * @param my_image Buffered image from input
-     * @param my_height image height in pixels
-     * @param my_width image width in pixels
-     */
     Model_ImageMatrix(BufferedImage my_image, int my_height, int my_width) {
         DataBuffer dataBuffer = my_image.getRaster().getDataBuffer();
         if (dataBuffer instanceof DataBufferInt) {
@@ -32,44 +25,19 @@ public class Model_ImageMatrix {
         this.imageMatrix = new double[my_height][my_width];
     }
 
-//    /**
-//     * pixels field setter
-//     * @param my_pixels image as a vector of pixels
-//     */
-//    public void setPixels(int[] my_pixels) {
-//        this.pixels = my_pixels;
-//    }
-
-//    /**
-//     * pixels field getter
-//     * @return pixels field with type int[]
-//     */
-//    public int[] getPixels() {
-//        return this.pixels;
-//    }
-
-//    /**
-//     * imageMatrix field setter
-//     * @param my_imageMatrix matrix of numbers which are translation of pixels in image
-//     */
-//    public void setImageMatrix(double[][] my_imageMatrix) {
-//        this.imageMatrix = my_imageMatrix;
-//    }
-
-    /**
-     * imageMatrix field getter
-     * @return imageMatrix field with type double[][] (2-dim matrix)
-     */
     public double[][] getImageMatrix() {
         return this.imageMatrix;
     }
 
-    /**
-     * Method which translates image in pixels to matrix of numbers
-     * @param my_height height of image in pixels
-     * @param my_width width of image in pixels
-     */
     public void translatePixelsToNumbers(int my_height, int my_width) {
+        // Проверка, что размеры массива pixels соответствуют размерам изображения
+        if (pixels.length != my_height * my_width) {
+            throw new IllegalArgumentException("Размер массива pixels не соответствует размерам изображения");
+        }
+
+        // Инициализация матрицы imageMatrix
+        imageMatrix = new double[my_height][my_width];
+
         for (int i = 0; i < my_height; i++) {
             for (int j = 0; j < my_width; j++) {
                 imageMatrix[i][j] = pixels[i * my_width + j]; // Translate int to double
@@ -77,16 +45,6 @@ public class Model_ImageMatrix {
         }
     }
 
-    /**
-     * Изменяет размер изображения до нужных размеров.
-     *
-     * @param image Изображение для изменения размера.
-     * @param width Новая ширина.
-     * @param height Новая высота.
-     * @return Изображение с измененными размерами.
-     *
-     * @author andrey
-     */
     public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
         BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
@@ -95,13 +53,6 @@ public class Model_ImageMatrix {
         return resizedImage;
     }
 
-    /**
-     * Шифрует изображение с использованием матрицы множества Мандельброта через операцию XOR.
-     *
-     * @param mandelbrotMatrix Матрица множества Мандельброта.
-     * @return Зашифрованная матрица пикселей.
-     * @author andrey
-     */
     public double[][] encryptImage(double[][] mandelbrotMatrix, int shiftBits) {
         int height = imageMatrix.length;
         int width = imageMatrix[0].length;
@@ -110,7 +61,7 @@ public class Model_ImageMatrix {
 
         // Проверка размеров матриц
         if (height != mandelbrotHeight || width != mandelbrotWidth) {
-            throw new IllegalArgumentException("Размеры матриц не совпадают");
+            mandelbrotMatrix = resizeMandelbrotMatrix(mandelbrotMatrix, height, width);
         }
 
         double[][] encryptedMatrix = new double[height][width];
@@ -120,22 +71,9 @@ public class Model_ImageMatrix {
                 encryptedMatrix[i][j] = (int) imageMatrix[i][j] ^ (int) mandelbrotMatrix[i][j];
             }
         }
-
-        // Применение сдвига бит
-        encryptedMatrix = shiftPixels(encryptedMatrix, shiftBits);
-
         return encryptedMatrix;
     }
 
-    /**
-     * Дешифрует изображение с использованием матрицы множества Мандельброта через операцию XOR.
-     *
-     * @param encryptedMatrix Зашифрованная матрица пикселей.
-     * @param mandelbrotMatrix Матрица множества Мандельброта.
-     * @return Дешифрованная матрица пикселей.
-     *
-     * @author andrey
-     */
     public double[][] decryptImage(double[][] encryptedMatrix, double[][] mandelbrotMatrix) {
         int height = encryptedMatrix.length;
         int width = encryptedMatrix[0].length;
@@ -144,7 +82,7 @@ public class Model_ImageMatrix {
 
         // Проверка размеров матриц
         if (height != mandelbrotHeight || width != mandelbrotWidth) {
-            throw new IllegalArgumentException("Размеры матриц не совпадают");
+            mandelbrotMatrix = resizeMandelbrotMatrix(mandelbrotMatrix, height, width);
         }
 
         double[][] decryptedMatrix = new double[height][width];
@@ -154,20 +92,9 @@ public class Model_ImageMatrix {
                 decryptedMatrix[i][j] = (int) encryptedMatrix[i][j] ^ (int) mandelbrotMatrix[i][j];
             }
         }
-
         return decryptedMatrix;
     }
 
-    /**
-     * Преобразует матрицу пикселей в изображение.
-     *
-     * @param matrix Матрица пикселей.
-     * @param width Ширина изображения.
-     * @param height Высота изображения.
-     * @return Изображение.
-     *
-     * @author andrey
-     */
     public BufferedImage matrixToImage(double[][] matrix, int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         int[] pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
@@ -181,66 +108,7 @@ public class Model_ImageMatrix {
         return image;
     }
 
-    /**
-     * Сдвигает пиксели зашифрованного изображения на определенное количество бит.
-     *
-     * @param encryptedMatrix Зашифрованная матрица пикселей.
-     * @param shiftBits Количество бит для сдвига.
-     * @return Матрица пикселей со сдвигом.
-     *
-     * @author andrey
-     */
-    public double[][] shiftPixels(double[][] encryptedMatrix, int shiftBits) {
-        int height = encryptedMatrix.length;
-        int width = encryptedMatrix[0].length;
-
-        double[][] shiftedMatrix = new double[height][width];
-
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                int pixel = (int) encryptedMatrix[i][j];
-                int shiftedPixel = (pixel << shiftBits) | (pixel >>> (32 - shiftBits)); // Циклический сдвиг влево
-                shiftedMatrix[i][j] = shiftedPixel;
-            }
-        }
-
-        return shiftedMatrix;
-    }
-
-//    /**
-//     * Смешивает цвета двух изображений.
-//     *
-//     * @param fractalColor Цвет из фрактального изображения.
-//     * @param imageColor Цвет из исходного изображения.
-//     * @return Смешанный цвет.
-//     *
-//     * @author andrey
-//     */
-//    private int mixColors(int fractalColor, int imageColor) {
-//        int fractalRed = (fractalColor << 16) & 0xFF;
-//        int fractalGreen = (fractalColor << 8) & 0xFF;
-//        int fractalBlue = fractalColor & 0xFF;
-//
-//        int imageRed = (imageColor >> 16) & 0xFF;
-//        int imageGreen = (imageColor >> 8) & 0xFF;
-//        int imageBlue = imageColor & 0xFF;
-//
-//        int mixedRed = (fractalRed + imageRed) / 2;
-//        int mixedGreen = (fractalGreen + imageGreen) / 2;
-//        int mixedBlue = (fractalBlue + imageBlue) / 2;
-//
-//        return (mixedRed << 16) & (mixedGreen << 8) & mixedBlue;
-//    }
-
-    /**
-     * Разбивает изображение на сегменты и перемешивает их случайным образом.
-     *
-     * @param image Изображение для разбиения.
-     * @param segmentWidthSize Количество сегментов по ширине.
-     * @param segmentHeightSize Количество сегментов по высоте.
-     * @return Зашифрованное изображение и массив индексов сегментов.
-     */
-    public Pair<BufferedImage, int[]> shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
+    public Pair<BufferedImage, Map<Integer, Integer>> shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
         int width = image.getWidth();
         int height = image.getHeight();
         int segmentWidth = width / segmentWidthSize;
@@ -254,12 +122,14 @@ public class Model_ImageMatrix {
         BufferedImage shuffledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = shuffledImage.createGraphics();
 
-        Random random = new Random();
         int totalSegments = segmentWidthSize * segmentHeightSize;
         int[] segmentIndices = new int[totalSegments];
         for (int i = 0; i < totalSegments; i++) {
             segmentIndices[i] = i;
         }
+
+        // Перемешивание индексов сегментов
+        Random random = new Random();
         for (int i = totalSegments - 1; i > 0; i--) {
             int j = random.nextInt(i + 1);
             int temp = segmentIndices[i];
@@ -267,28 +137,22 @@ public class Model_ImageMatrix {
             segmentIndices[j] = temp;
         }
 
+        Map<Integer, Integer> segmentMapping = new HashMap<>();
         for (int i = 0; i < totalSegments; i++) {
-            int segmentIndex = segmentIndices[i];
-            int segmentX = (segmentIndex % segmentWidthSize) * segmentWidth;
-            int segmentY = (segmentIndex / segmentWidthSize) * segmentHeight;
+            int originalIndex = i; // Исходный индекс сегмента
+            int shuffledIndex = segmentIndices[i]; // Перемешанный индекс сегмента
+            int segmentX = (shuffledIndex % segmentWidthSize) * segmentWidth;
+            int segmentY = (shuffledIndex / segmentWidthSize) * segmentHeight;
             g2d.drawImage(image.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
                     (i % segmentWidthSize) * segmentWidth, (i / segmentWidthSize) * segmentHeight, null);
+            segmentMapping.put(originalIndex, shuffledIndex); // Сохраняем исходный индекс как ключ и перемешанный индекс как значение
         }
 
         g2d.dispose();
-        return new Pair<>(shuffledImage, segmentIndices);
+        return new Pair<>(shuffledImage, segmentMapping);
     }
 
-    /**
-     * Возвращает сегменты изображения на прежние места.
-     *
-     * @param shuffledImage Перемешанное изображение.
-     * @param segmentIndices Массив индексов сегментов.
-     * @param segmentWidthSize Количество сегментов по ширине.
-     * @param segmentHeightSize Количество сегментов по высоте.
-     * @return Восстановленное изображение.
-     */
-    public BufferedImage unshuffledSegments(BufferedImage shuffledImage, int[] segmentIndices, int segmentWidthSize, int segmentHeightSize) {
+    public BufferedImage unshuffledSegments(BufferedImage shuffledImage, Map<Integer, Integer> segmentMapping, int segmentWidthSize, int segmentHeightSize) {
         int width = shuffledImage.getWidth();
         int height = shuffledImage.getHeight();
         int segmentWidth = width / segmentWidthSize;
@@ -297,15 +161,40 @@ public class Model_ImageMatrix {
         BufferedImage unshuffledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = unshuffledImage.createGraphics();
 
-        for (int i = 0; i < segmentIndices.length; i++) {
-            int segmentIndex = segmentIndices[i];
-            int segmentX = (i % segmentWidthSize) * segmentWidth;
-            int segmentY = (i / segmentWidthSize) * segmentHeight;
+        for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
+            //ИМЕННО ТАК БЛЯТЬ И НИКАК ИНАЧЕ!!!! СПЕРВА VALUE, ПОТОМ KEY
+            int originalIndex = entry.getValue(); // Исходный индекс сегмента
+            int shuffledIndex = entry.getKey(); // Перемешанный индекс сегмента
+            //=----------------------------------------------------------------=
+            int segmentX = (shuffledIndex % segmentWidthSize) * segmentWidth;
+            int segmentY = (shuffledIndex / segmentWidthSize) * segmentHeight;
+            int originalX = (originalIndex % segmentWidthSize) * segmentWidth;
+            int originalY = (originalIndex / segmentWidthSize) * segmentHeight;
             g2d.drawImage(shuffledImage.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
-                    (segmentIndex % segmentWidthSize) * segmentWidth, (segmentIndex / segmentWidthSize) * segmentHeight, null);
+                    originalX, originalY, null);
         }
 
         g2d.dispose();
         return unshuffledImage;
+    }
+
+    public static double[][] resizeMandelbrotMatrix(double[][] mandelbrotMatrix, int targetHeight, int targetWidth) {
+        int mandelbrotHeight = mandelbrotMatrix.length;
+        int mandelbrotWidth = mandelbrotMatrix[0].length;
+
+        if (mandelbrotHeight == targetHeight && mandelbrotWidth == targetWidth) {
+            return mandelbrotMatrix;
+        }
+
+        double[][] resizedMatrix = new double[targetHeight][targetWidth];
+
+        for (int i = 0; i < targetHeight; i++) {
+            for (int j = 0; j < targetWidth; j++) {
+                int mandelbrotI = (int) ((double) i / targetHeight * mandelbrotHeight);
+                int mandelbrotJ = (int) ((double) j / targetWidth * mandelbrotWidth);
+                resizedMatrix[i][j] = mandelbrotMatrix[mandelbrotI][mandelbrotJ];
+            }
+        }
+        return resizedMatrix;
     }
 }
