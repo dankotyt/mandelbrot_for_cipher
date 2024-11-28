@@ -23,10 +23,8 @@ import java.util.concurrent.TimeUnit;
  * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
-    private Main main;
-    private int x; // Координата X для генерации
-    private int width; // Ширина изображения
-    private int height; // Высота изображения
+    private int startMandelbrotWidth; // Ширина изображения
+    private int startMandelbrotHeight; // Высота изображения
     private double ZOOM; // Уровень масштабирования
     private int MAX_ITER; // Максимальное количество итераций
     private double offsetX; // Смещение по оси X
@@ -44,8 +42,8 @@ public class Mandelbrot extends JPanel {
      * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
      */
     public Mandelbrot() {
-        this.width = 1024; // Устанавливаем начальные значения ширины и высоты
-        this.height = 720;
+        this.startMandelbrotWidth = 1024; // Устанавливаем начальные значения ширины и высоты
+        this.startMandelbrotHeight = 720;
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -93,10 +91,10 @@ public class Mandelbrot extends JPanel {
         while (!validImage) {
             attempt++;
             randomPositionOnPlenty();
-            image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            for (int x = 0; x < width; x++) {
-                executor.submit(new MandelbrotThread(x, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
+            for (int x = 0; x < startMandelbrotWidth; x++) {
+                executor.submit(new MandelbrotThread(x, startMandelbrotWidth, startMandelbrotHeight, ZOOM, MAX_ITER, offsetX, offsetY, image));
             }
 
             executor.shutdown();
@@ -117,7 +115,7 @@ public class Mandelbrot extends JPanel {
             int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_CANCEL_OPTION);
             if (option == JOptionPane.YES_OPTION) {
                 saveImageToResources(image);
-                saveMandelbrotParamsToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", ZOOM, offsetX, offsetY, MAX_ITER);
+                saveMandelbrotParamsToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
                 break;
             } else if (option == JOptionPane.NO_OPTION) {
                 generateImage(); // Пересоздание изображения
@@ -153,14 +151,6 @@ public class Mandelbrot extends JPanel {
         return (uniqueColors > 500 && percentage < 0.25);
     }
 
-    public void showImageInNewWindow() {
-        JFrame frame = new JFrame("Generated Mandelbrot Set");
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(width, height);
-        frame.add(this);
-        frame.setVisible(true);
-    }
-
     /**
      * Сохраняет изображение в папку resources в корне проекта.
      *
@@ -184,8 +174,10 @@ public class Mandelbrot extends JPanel {
      *
      * @param filePath Путь к файлу для сохранения параметров.
      */
-    private static void saveMandelbrotParamsToBinaryFile(String filePath, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+    private static void saveMandelbrotParamsToBinaryFile(String filePath, int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
+            dos.writeInt(startMandelbrotWidth);
+            dos.writeInt(startMandelbrotHeight);
             dos.writeDouble(ZOOM);
             dos.writeDouble(offsetX);
             dos.writeDouble(offsetY);
@@ -196,83 +188,16 @@ public class Mandelbrot extends JPanel {
         }
         // Вывод параметров шифрования
         System.out.println("Параметры шифрования:");
+        System.out.println("Start Mandelbrot Width: " + startMandelbrotWidth);
+        System.out.println("Start Mandelbrot Height: " + startMandelbrotHeight);
         System.out.println("ZOOM: " + ZOOM);
         System.out.println("offsetX: " + offsetX);
         System.out.println("offsetY: " + offsetY);
         System.out.println("MAX_ITER: " + MAX_ITER);
     }
 
-    private static Object[] loadMandelbrotParamsFromBinaryFile(String filePath) {
-        Object[] params = new Object[4];
-        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readDouble(); // ZOOM
-            params[1] = dis.readDouble(); // offsetX
-            params[2] = dis.readDouble(); // offsetY
-            params[3] = dis.readInt();    // MAX_ITER
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return params;
-    }
-
-    /**
-     * Загружает значения ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize и segmentIndices из двоичного файла.
-     *
-     * @param filePath Путь к файлу для загрузки параметров.
-     * @return Массив значений [ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentIndices].
-     */
-    public static Object[] loadParametersFromBinaryFile(String filePath) {
-        Object[] params = new Object[7];
-        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readDouble();
-            params[1] = dis.readDouble();
-            params[2] = dis.readDouble();
-            params[3] = dis.readInt();
-            params[4] = dis.readInt();
-            params[5] = dis.readInt();
-            int segmentCount = dis.readInt();
-            int[] segmentIndices = new int[segmentCount];
-            for (int i = 0; i < segmentCount; i++) {
-                segmentIndices[i] = dis.readInt();
-            }
-            params[6] = segmentIndices;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return params;
-    }
-
-    // Геттеры для переменных
-    public double getZOOM() {
-        return ZOOM;
-    }
-
     public BufferedImage getImage() {
         return image;
-    }
-
-    public int getMAX_ITER() {
-        return MAX_ITER;
-    }
-
-    public double getOffsetX() {
-        return offsetX;
-    }
-
-    public double getOffsetY() {
-        return offsetY;
-    }
-
-    public int getSegmentWidthSize() {
-        return segmentWidthSize;
-    }
-
-    public int getSegmentHeightSize() {
-        return segmentHeightSize;
-    }
-
-    public int[] getSegmentIndices() {
-        return segmentIndices;
     }
 
     /**

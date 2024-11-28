@@ -18,46 +18,42 @@ public class ImageDecryptor {
             Object[] keyDecoderParams = loadKeyDecoderParametersFromBinaryFile(PROJECT_PATH + "resources/key_decoder.bin");
 
             // Извлечение параметров из key_decoder
-            double ZOOM = (double) keyDecoderParams[0];
-            double offsetX = (double) keyDecoderParams[1];
-            double offsetY = (double) keyDecoderParams[2];
-            int MAX_ITER = (int) keyDecoderParams[3];
-            int segmentWidthSize = (int) keyDecoderParams[4];
-            int segmentHeightSize = (int) keyDecoderParams[5];
-            Map<Integer, Integer> segmentMapping = (Map<Integer, Integer>) keyDecoderParams[6];
-            int startX = (int) keyDecoderParams[7];
-            int startY = (int) keyDecoderParams[8];
-            int width = (int) keyDecoderParams[9];
-            int height = (int) keyDecoderParams[10];
+            int startMandelbrotWidth = (int) keyDecoderParams[0];
+            int startMandelbrotHeight = (int) keyDecoderParams[1];
+            double ZOOM = (double) keyDecoderParams[2];
+            double offsetX = (double) keyDecoderParams[3];
+            double offsetY = (double) keyDecoderParams[4];
+            int MAX_ITER = (int) keyDecoderParams[5];
+            int segmentWidthSize = (int) keyDecoderParams[6];
+            int segmentHeightSize = (int) keyDecoderParams[7];
+            Map<Integer, Integer> segmentMapping = (Map<Integer, Integer>) keyDecoderParams[8];
+            int startX = (int) keyDecoderParams[9];
+            int startY = (int) keyDecoderParams[10];
+            int width = (int) keyDecoderParams[11];
+            int height = (int) keyDecoderParams[12];
 
             // Загрузка зашифрованного изображения
             BufferedImage encryptedImage = ImageIO.read(new File(PROJECT_PATH + "resources/encrypted_image.png"));
 
-            // Копирование зашифрованного изображения
-            BufferedImage encryptedImageCopy = new BufferedImage(encryptedImage.getWidth(), encryptedImage.getHeight(), BufferedImage.TYPE_INT_RGB);
-            Graphics2D g2d = encryptedImageCopy.createGraphics();
-            g2d.drawImage(encryptedImage, 0, 0, null);
-            g2d.dispose();
+            //Выделяем зашифрованную часть
+            BufferedImage encryptedSelectedArea = encryptedImage.getSubimage(startX, startY, width, height);
 
-            // Генерация изображения множества Мандельброта по параметрам из key_decoder
-            BufferedImage mandelbrotImage = generateMandelbrotImage(encryptedImage.getWidth(), encryptedImage.getHeight(), ZOOM, offsetX, offsetY, MAX_ITER);
+            //Создаем модель для аншафла и возвращаем сегменты на свои места
+            Model_ImageMatrix modelEncryptedSelectedArea = new Model_ImageMatrix(encryptedSelectedArea, width, height);
+            BufferedImage unshuffledSelectedImage = modelEncryptedSelectedArea.unshuffledSegments(encryptedSelectedArea, segmentMapping, segmentWidthSize, segmentHeightSize);
 
-            // Вырезаем у копии зашифрованную область по значениям width, height, startX, startY из key_decoder
-            BufferedImage selectedEncryptedImage = encryptedImageCopy.getSubimage(startX, startY, width, height);
+            //Генерация полноразмерного Мандельброта по key_decoder
+            BufferedImage mandelbrotImage = generateMandelbrotImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
 
-            // Восстанавливаем исходный порядок сегментов
-            Model_ImageMatrix model = new Model_ImageMatrix(selectedEncryptedImage, height, width);
-            BufferedImage unshuffledImage = model.unshuffledSegments(selectedEncryptedImage, segmentMapping, segmentWidthSize, segmentHeightSize);
+            //Выделяем ту же часть Мандельброта, что и зашифрованная
+            BufferedImage selectedMandelbrotImage = mandelbrotImage.getSubimage(startX, startY, width, height);
 
-            // Выполнение операции XOR между копией восстановленного изображения и изображением Мандельброта
-            BufferedImage xorImage = performXOR(unshuffledImage, mandelbrotImage.getSubimage(startX, startY, width, height));
-
-            // Вырезаем результат, используя width, height
-            BufferedImage selectedArea = xorImage.getSubimage(0, 0, width, height);
+            //XOR между выделенной части и выделенным Мандельбротом
+            BufferedImage resultImage = performXOR(unshuffledSelectedImage, selectedMandelbrotImage);
 
             // Сшиваем вырезанный участок с исходным зашифрованным изображением
-            g2d = encryptedImage.createGraphics();
-            g2d.drawImage(selectedArea, startX, startY, null);
+            Graphics2D g2d = encryptedImage.createGraphics();
+            g2d.drawImage(resultImage, startX, startY, null);
             g2d.dispose();
 
             // Отображаем исходное изображение с дешифрованной областью
@@ -82,14 +78,16 @@ public class ImageDecryptor {
     }
 
     private static Object[] loadKeyDecoderParametersFromBinaryFile(String filePath) {
-        Object[] params = new Object[11];
+        Object[] params = new Object[13];
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readDouble(); // ZOOM
-            params[1] = dis.readDouble(); // offsetX
-            params[2] = dis.readDouble(); // offsetY
-            params[3] = dis.readInt(); // MAX_ITER
-            params[4] = dis.readInt(); // segmentWidthSize
-            params[5] = dis.readInt(); // segmentHeightSize
+            params[0] = dis.readInt(); //startMandelbrotWidth
+            params[1] = dis.readInt(); //startMandelbrotHeight
+            params[2] = dis.readDouble(); // ZOOM
+            params[3] = dis.readDouble(); // offsetX
+            params[4] = dis.readDouble(); // offsetY
+            params[5] = dis.readInt(); // MAX_ITER
+            params[6] = dis.readInt(); // segmentWidthSize
+            params[7] = dis.readInt(); // segmentHeightSize
             int segmentCount = dis.readInt();
             Map<Integer, Integer> segmentMapping = new HashMap<>();
             for (int i = 0; i < segmentCount; i++) {
@@ -97,24 +95,24 @@ public class ImageDecryptor {
                 int value = dis.readInt();
                 segmentMapping.put(key, value);
             }
-            params[6] = segmentMapping;
-            params[7] = dis.readInt(); // startX
-            params[8] = dis.readInt(); // startY
-            params[9] = dis.readInt(); // width
-            params[10] = dis.readInt(); // height
+            params[8] = segmentMapping;
+            params[9] = dis.readInt(); // startX
+            params[10] = dis.readInt(); // startY
+            params[11] = dis.readInt(); // width
+            params[12] = dis.readInt(); // height
         } catch (IOException e) {
             e.printStackTrace();
         }
         return params;
     }
 
-    private static BufferedImage generateMandelbrotImage(int width, int height, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
-        BufferedImage mandelbrotImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+    private static BufferedImage generateMandelbrotImage(int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+        BufferedImage mandelbrotImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < startMandelbrotHeight; y++) {
+            for (int x = 0; x < startMandelbrotWidth; x++) {
                 double zx = 0, zy = 0;
-                double cX = (x - width / 1.75) / ZOOM + offsetX;
-                double cY = (y - height / 1.75) / ZOOM + offsetY;
+                double cX = (x - startMandelbrotWidth / 1.75) / ZOOM + offsetX;
+                double cY = (y - startMandelbrotHeight / 1.75) / ZOOM + offsetY;
                 int i = MAX_ITER;
                 while (zx * zx + zy * zy < 4 && i > 0) {
                     double tmp = zx * zx - zy * zy + cX;
