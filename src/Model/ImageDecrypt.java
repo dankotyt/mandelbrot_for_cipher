@@ -1,21 +1,21 @@
+package Model;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Map;
 import java.awt.Graphics2D;
 
-public class ImageDecryptor {
+import View.ImageView;
+
+public class ImageDecrypt {
     private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
 
-    public static void main(String[] args) {
+    protected void decryptImage() {
         try {
             // Загрузка параметров из бинарного файла key_decoder
-            Object[] keyDecoderParams = loadKeyDecoderParametersFromBinaryFile(PROJECT_PATH + "resources/key_decoder.bin");
+            Object[] keyDecoderParams = BinaryFile.loadKeyDecoderFromBinaryFile(PROJECT_PATH + "resources/key_decoder.bin");
 
             // Извлечение параметров из key_decoder
             int startMandelbrotWidth = (int) keyDecoderParams[0];
@@ -39,7 +39,7 @@ public class ImageDecryptor {
             BufferedImage encryptedSelectedArea = encryptedImage.getSubimage(startX, startY, width, height);
 
             //Создаем модель для аншафла и возвращаем сегменты на свои места
-            Model_ImageMatrix modelEncryptedSelectedArea = new Model_ImageMatrix(encryptedSelectedArea, width, height);
+            ImageSegmentShuffler modelEncryptedSelectedArea = new ImageSegmentShuffler(encryptedSelectedArea);
             BufferedImage unshuffledSelectedImage = modelEncryptedSelectedArea.unshuffledSegments(encryptedSelectedArea, segmentMapping, segmentWidthSize, segmentHeightSize);
 
             //Генерация полноразмерного Мандельброта по key_decoder
@@ -57,7 +57,7 @@ public class ImageDecryptor {
             g2d.dispose();
 
             // Отображаем исходное изображение с дешифрованной областью
-            View_ImageMatrix originalView = new View_ImageMatrix("Original Image with Decrypted Area", encryptedImage, null);
+            ImageView originalView = new ImageView("Original Image with Decrypted Area", encryptedImage);
             originalView.showImage();
 
             // Сохраняем дешифрованное изображение
@@ -68,42 +68,13 @@ public class ImageDecryptor {
         }
     }
 
-    private static void saveDecryptedImage(BufferedImage decryptedImage) {
+    protected static void saveDecryptedImage(BufferedImage decryptedImage) {
         try {
             ImageIO.write(decryptedImage, "png", new File(PROJECT_PATH + "resources/decrypted_image.png"));
             System.out.println("Дешифрованное изображение сохранено как decrypted_image.png");
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private static Object[] loadKeyDecoderParametersFromBinaryFile(String filePath) {
-        Object[] params = new Object[13];
-        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readInt(); //startMandelbrotWidth
-            params[1] = dis.readInt(); //startMandelbrotHeight
-            params[2] = dis.readDouble(); // ZOOM
-            params[3] = dis.readDouble(); // offsetX
-            params[4] = dis.readDouble(); // offsetY
-            params[5] = dis.readInt(); // MAX_ITER
-            params[6] = dis.readInt(); // segmentWidthSize
-            params[7] = dis.readInt(); // segmentHeightSize
-            int segmentCount = dis.readInt();
-            Map<Integer, Integer> segmentMapping = new HashMap<>();
-            for (int i = 0; i < segmentCount; i++) {
-                int key = dis.readInt();
-                int value = dis.readInt();
-                segmentMapping.put(key, value);
-            }
-            params[8] = segmentMapping; //ключ-пары позиций сегментов
-            params[9] = dis.readInt(); // startX
-            params[10] = dis.readInt(); // startY
-            params[11] = dis.readInt(); // width
-            params[12] = dis.readInt(); // height
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return params;
     }
 
     private static BufferedImage generateMandelbrotImage(int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
@@ -127,7 +98,7 @@ public class ImageDecryptor {
         return mandelbrotImage;
     }
 
-    private static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
+    protected static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
         int width = image1.getWidth();
         int height = image1.getHeight();
         BufferedImage resultImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);

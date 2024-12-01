@@ -1,9 +1,11 @@
+package Model;
+
 import java.awt.image.BufferedImage;
 
 /**
  * @author @dankotyt Danil Kotlyarov
  *
- * Класс MandelbrotThread реализует интерфейс Runnable и используется для генерации части изображения множества Мандельброта
+ * Класс Model.MandelbrotThread реализует интерфейс Runnable и используется для генерации части изображения множества Мандельброта
  * в отдельном потоке.
  */
 public class MandelbrotThread implements Runnable {
@@ -18,7 +20,7 @@ public class MandelbrotThread implements Runnable {
     private BufferedImage image; // Изображение для записи результатов
 
     /**
-     * Конструктор класса MandelbrotThread.
+     * Конструктор класса Model.MandelbrotThread.
      *
      * @param x Координата X для генерации.
      * @param getWidth Ширина изображения.
