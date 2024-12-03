@@ -8,7 +8,6 @@ import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
 
-//Предварительно - переименовываем в MatrixXORAndShuffle
 public class ImageSegmentShuffler {
     private int[] pixels;
 
@@ -88,14 +87,21 @@ public class ImageSegmentShuffler {
         Graphics2D g2d = unshuffledImage.createGraphics();
 
         for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
-            //ИМЕННО ТАК И НИКАК ИНАЧЕ!!!! СПЕРВА VALUE, ПОТОМ KEY
             int originalIndex = entry.getValue(); // Исходный индекс сегмента
             int shuffledIndex = entry.getKey(); // Перемешанный индекс сегмента
-            //=----------------------------------------------------------------=
+
             int segmentX = (shuffledIndex % segmentWidthSize) * segmentWidth;
             int segmentY = (shuffledIndex / segmentWidthSize) * segmentHeight;
             int originalX = (originalIndex % segmentWidthSize) * segmentWidth;
             int originalY = (originalIndex / segmentWidthSize) * segmentHeight;
+
+            // Проверка координат и размеров сегментов
+            if (segmentX < 0 || segmentY < 0 || originalX < 0 || originalY < 0 ||
+                    segmentX + segmentWidth > width || segmentY + segmentHeight > height ||
+                    originalX + segmentWidth > width || originalY + segmentHeight > height) {
+                throw new IllegalArgumentException("Неправильные координаты или размеры сегментов");
+            }
+
             g2d.drawImage(shuffledImage.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
                     originalX, originalY, null);
         }

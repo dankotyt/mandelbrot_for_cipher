@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
  * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
+
     private int startMandelbrotWidth; // Ширина изображения
     private int startMandelbrotHeight; // Высота изображения
     private double ZOOM; // Уровень масштабирования
@@ -28,9 +29,16 @@ public class Mandelbrot extends JPanel {
     private double offsetX; // Смещение по оси X
     private double offsetY; // Смещение по оси Y
     private BufferedImage image; // Изображение для записи результатов
-    private int numberSave = 0;
 
-    private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
+    private static final String RESOURCES_PATH = "resources" + File.separator;
+
+    private static String getProjectRootPath() {
+        return new File("").getAbsolutePath() + File.separator;
+    }
+
+    private static String getResourcesPath() {
+        return getProjectRootPath() + RESOURCES_PATH;
+    }
 
     /**
      * Конструктор класса Model.Mandelbrot.
@@ -74,6 +82,8 @@ public class Mandelbrot extends JPanel {
         repaint();
     }
 
+
+
     public void createOrUseMandelbrot() {
         // Запрос пользователю о выборе области или всего изображения
         int option = JOptionPane.showOptionDialog(null, "Выберите действие:", "Создание картинки с множеством Мандельброта",
@@ -94,7 +104,7 @@ public class Mandelbrot extends JPanel {
      * Если изображение удовлетворяет условиям разнообразия, оно отображается и предлагается пользователю сохранить его.
      * Если пользователь отказывается, генерируется новое изображение.
      */
-    public void generateImage() {
+    public BufferedImage generateImage() {
         boolean validImage = false;
         int attempt = 0;
 
@@ -103,10 +113,18 @@ public class Mandelbrot extends JPanel {
             randomPositionOnPlenty();
             image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            for (int x = 0; x < startMandelbrotWidth; x++) {
-                executor.submit(new MandelbrotThread(x, startMandelbrotWidth, startMandelbrotHeight, ZOOM, MAX_ITER, offsetX, offsetY, image));
-            }
 
+            int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
+            int chunkHeight = startMandelbrotHeight;
+
+            for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+                int startX = i * chunkWidth;
+                int startY = 0;
+                int width = (i == Runtime.getRuntime().availableProcessors() - 1) ? startMandelbrotWidth - startX : chunkWidth;
+                int height = chunkHeight;
+
+                executor.submit(new MandelbrotThread(startX, startY, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
+            }
             executor.shutdown();
             try {
                 executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
@@ -120,22 +138,46 @@ public class Mandelbrot extends JPanel {
             }
         }
         repaint();
+        BinaryFile binaryFile = new BinaryFile();
+        binaryFile.saveMandelbrotParamsToBinaryFile(getResourcesPath() + "mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
+        saveImageToResources(image);
+        return image;
+    }
 
-        while (true) {
-            int option = JOptionPane.showConfirmDialog(this, "Хотите сохранить изображение?", "Сохранить изображение", JOptionPane.YES_NO_CANCEL_OPTION);
-            if (option == JOptionPane.YES_OPTION) {
-                saveImageToResources(image);
-                BinaryFile mandelbrotParams = new BinaryFile();
-                mandelbrotParams.saveMandelbrotParamsToBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
-                break;
-            } else if (option == JOptionPane.NO_OPTION) {
-                generateImage(); // Пересоздание изображения
-                break;
-            } else if (option == JOptionPane.CANCEL_OPTION) {
-                // Возвращаемся в меню
-                break;
-            }
+    public BufferedImage generateImage(int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+        this.startMandelbrotWidth = startMandelbrotWidth;
+        this.startMandelbrotHeight = startMandelbrotHeight;
+        this.ZOOM = ZOOM;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        this.MAX_ITER = MAX_ITER;
+
+        image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+        int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
+        int chunkHeight = startMandelbrotHeight;
+
+        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
+            int startX = i * chunkWidth;
+            int startY = 0;
+            int width = (i == Runtime.getRuntime().availableProcessors() - 1) ? startMandelbrotWidth - startX : chunkWidth;
+            int height = chunkHeight;
+
+            executor.submit(new MandelbrotThread(startX, startY, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
         }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        repaint();
+        return image;
+    }
+
+    public BufferedImage getImage() {
+        return image;
     }
 
     /**
@@ -144,7 +186,7 @@ public class Mandelbrot extends JPanel {
      * @param image Изображение для проверки.
      * @return true, если изображение удовлетворяет условиям разнообразия, иначе false.
      */
-    private boolean checkImageDiversity(BufferedImage image) {
+    public boolean checkImageDiversity(BufferedImage image) {
         Map<Integer, Integer> colorCount = new HashMap<>();
         int totalPixels = image.getWidth() * image.getHeight();
 
@@ -203,14 +245,12 @@ public class Mandelbrot extends JPanel {
      *
      * @param image Изображение для сохранения.
      */
-    private void saveImageToResources(BufferedImage image) {
-        String savePath = PROJECT_PATH + "/resources";
-        numberSave++;
-        File file = new File(savePath + File.separator + "mandelbrot" + numberSave + ".png");
+    public void saveImageToResources(BufferedImage image) {
+        String savePath = getResourcesPath();
+        File file = new File(savePath + "mandelbrot.png");
 
         try {
             ImageIO.write(image, "png", file);
-            JOptionPane.showMessageDialog(this, "Изображение сохранено в папку resources: " + file.getAbsolutePath());
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "Ошибка при сохранении изображения: " + e.getMessage());
         }

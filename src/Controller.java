@@ -1,3 +1,4 @@
+import Model.ImageDecrypt;
 import Model.Mandelbrot;
 import Model.ImageEncrypt;
 import View.*;
@@ -19,7 +20,7 @@ public class Controller {
 //            frameInterface.initializeScreenSize();
 //            frameInterface.createMainFrame();
             // Загрузка изображения
-            originalImage = ImageIO.read(new File(PROJECT_PATH + "resources/input.jpg"));
+            originalImage = ImageIO.read(new File(PROJECT_PATH + "resources/input.png"));
             int width = originalImage.getWidth();
             int height = originalImage.getHeight();
 
@@ -33,6 +34,7 @@ public class Controller {
 
             ImageEncrypt encryptOrDecrypt = new ImageEncrypt();
             encryptOrDecrypt.encryptWholeOrSelected();
+
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -10,9 +10,10 @@ import java.awt.image.BufferedImage;
  */
 public class MandelbrotThread implements Runnable {
 
-    private int x; // Координата X для генерации
-    private int getWidth; // Ширина изображения
-    private int getHeight; // Высота изображения
+    private int startX; // Начальная координата X для генерации
+    private int startY; // Начальная координата Y для генерации
+    private int width; // Ширина изображения
+    private int height; // Высота изображения
     private double ZOOM; // Уровень масштабирования
     private int MAX_ITER; // Максимальное количество итераций
     private double offsetX; // Смещение по оси X
@@ -22,19 +23,21 @@ public class MandelbrotThread implements Runnable {
     /**
      * Конструктор класса Model.MandelbrotThread.
      *
-     * @param x Координата X для генерации.
-     * @param getWidth Ширина изображения.
-     * @param getHeight Высота изображения.
+     * @param startX Начальная координата X для генерации.
+     * @param startY Начальная координата Y для генерации.
+     * @param width Ширина изображения.
+     * @param height Высота изображения.
      * @param ZOOM Уровень масштабирования.
      * @param MAX_ITER Максимальное количество итераций.
      * @param offsetX Смещение по оси X.
      * @param offsetY Смещение по оси Y.
      * @param image Изображение для записи результатов.
      */
-    public MandelbrotThread(int x, int getWidth, int getHeight, double ZOOM, int MAX_ITER, double offsetX, double offsetY, BufferedImage image) {
-        this.x = x;
-        this.getWidth = getWidth;
-        this.getHeight = getHeight;
+    public MandelbrotThread(int startX, int startY, int width, int height, double ZOOM, int MAX_ITER, double offsetX, double offsetY, BufferedImage image) {
+        this.startX = startX;
+        this.startY = startY;
+        this.width = width;
+        this.height = height;
         this.ZOOM = ZOOM;
         this.MAX_ITER = MAX_ITER;
         this.offsetX = offsetX;
@@ -50,19 +53,21 @@ public class MandelbrotThread implements Runnable {
      */
     @Override
     public void run() {
-        for (int y = 0; y < getHeight; y++) {
-            double zx = 0, zy = 0;
-            double cX = (x - getWidth / 1.75) / ZOOM + offsetX;
-            double cY = (y - getHeight / 1.75) / ZOOM + offsetY;
-            int i = MAX_ITER;
-            while (zx * zx + zy * zy < 4 && i > 0) {
-                double tmp = zx * zx - zy * zy + cX;
-                zy = 2.0 * zx * zy + cY;
-                zx = tmp;
-                i--;
+        for (int y = startY; y < startY + height; y++) {
+            for (int x = startX; x < startX + width; x++) {
+                double zx = 0, zy = 0;
+                double cX = (x - image.getWidth() / 1.75) / ZOOM + offsetX;
+                double cY = (y - image.getHeight() / 1.75) / ZOOM + offsetY;
+                int i = MAX_ITER;
+                while (zx * zx + zy * zy < 4 && i > 0) {
+                    double tmp = zx * zx - zy * zy + cX;
+                    zy = 2.0 * zx * zy + cY;
+                    zx = tmp;
+                    i--;
+                }
+                int color = i | (i << 10) | (i << 14);
+                image.setRGB(x, y, i > 0 ? color : 0);
             }
-            int color = i | (i << 10) | (i << 14);
-            image.setRGB(x, y, i > 0 ? color : 0);
         }
     }
 }

@@ -14,16 +14,25 @@ import View.ImageView;
 
 public class ImageEncrypt {
     private static BufferedImage originalImage;
+    private static BufferedImage encryptedWholeImage;
     private static BufferedImage selectedImage;
     private static int startX, startY, endX, endY;
     private static boolean selecting = false;
 
-    private static final String PROJECT_PATH = "C:/Users/Danil/ideaProjects/mandelbrot_for_cipher/";
+    private static final String RESOURCES_PATH = "resources" + File.separator;
+
+    private static String getProjectRootPath() {
+        return new File("").getAbsolutePath() + File.separator;
+    }
+
+    private static String getResourcesPath() {
+        return getProjectRootPath() + RESOURCES_PATH;
+    }
 
     public static void encryptWholeOrSelected() {
         try {
             // Загрузка изображения
-            originalImage = ImageIO.read(new File(PROJECT_PATH + "resources/input.jpg"));
+            originalImage = ImageIO.read(new File(getResourcesPath() + "input.png"));
             int width = originalImage.getWidth();
             int height = originalImage.getHeight();
 
@@ -124,7 +133,7 @@ public class ImageEncrypt {
         // Загружаем изображение множества Мандельброта
         BufferedImage mandelbrotImage = null;
         try {
-            mandelbrotImage = ImageIO.read(new File(PROJECT_PATH + "/resources/mandelbrot1.png"));
+            mandelbrotImage = ImageIO.read(new File(getResourcesPath() + "mandelbrot.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -135,7 +144,7 @@ public class ImageEncrypt {
                 Math.abs(endX - startX), Math.abs(endY - startY));
 
         // Загружаем параметры из mandelbrot_params
-        Object[] mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
+        Object[] mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(getResourcesPath() + "mandelbrot_params.bin");
         int startMandelbrotWidth = (int) mandelbrotParams[0];
         int startMandelbrotHeight = (int) mandelbrotParams[1];
         double ZOOM = (double) mandelbrotParams[2];
@@ -143,7 +152,7 @@ public class ImageEncrypt {
         double offsetY = (double) mandelbrotParams[4];
         int MAX_ITER = (int) mandelbrotParams[5];
 
-        BufferedImage encryptedXORImage = ImageDecrypt.performXOR(selectedImage, mandelbrotSelectedArea);
+        BufferedImage encryptedXORImage = XOR.performXOR(selectedImage, mandelbrotSelectedArea);
 
         // Сегментируем и перемешиваем зашифрованную область
         ImageSegmentShuffler mandelbrotModel = new ImageSegmentShuffler(encryptedXORImage);
@@ -162,10 +171,10 @@ public class ImageEncrypt {
 
         // Сохраняем зашифрованное изображение и параметры
         saveEncryptedImage(originalImage); // Сохраняем всю картинку с зашифрованной областью
-        BinaryFile.saveKeyDecoderToBinaryFile(PROJECT_PATH + "resources/key_decoder.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentMapping, Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
+        BinaryFile.saveKeyDecoderToBinaryFile(getResourcesPath() + "key_decoder.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentMapping, Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
     }
 
-    private static void encryptWholeImage(BufferedImage image) {
+    public static void encryptWholeImage(BufferedImage image) {
         int width = image.getWidth();
         int height = image.getHeight();
 
@@ -188,17 +197,31 @@ public class ImageEncrypt {
         // Загружаем изображение множества Мандельброта
         BufferedImage mandelbrotImage = null;
         try {
-            mandelbrotImage = ImageIO.read(new File(PROJECT_PATH + "resources/mandelbrot1.png"));
+            mandelbrotImage = ImageIO.read(new File(getResourcesPath() + "mandelbrot.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
 
         // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
         if (mandelbrotImage.getWidth() != width || mandelbrotImage.getHeight() != height) {
             mandelbrotImage = ImageSegmentShuffler.resizeImage(mandelbrotImage, width, height);
         }
 
-        BufferedImage encryptedXORImage = ImageDecrypt.performXOR(image, mandelbrotImage);
+        if (image.getWidth() != mandelbrotImage.getWidth() || image.getHeight() != mandelbrotImage.getHeight()) {
+            throw new IllegalArgumentException("Размеры изображений должны совпадать");
+        }
+
+        // Преобразование типов изображений в BufferedImage.TYPE_INT_RGB
+        image = ImageUtils.convertToType(image, BufferedImage.TYPE_INT_RGB);
+        mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
+
+        // Проверка кодировки пикселей
+        if (image.getType() != BufferedImage.TYPE_INT_RGB || mandelbrotImage.getType() != BufferedImage.TYPE_INT_RGB) {
+            throw new IllegalArgumentException("Изображения должны быть типа BufferedImage.TYPE_INT_RGB");
+        }
+
+        BufferedImage encryptedXORImage = XOR.performXOR(image, mandelbrotImage);
 
         // Сегментируем и перемешиваем зашифрованное изображение
         ImageSegmentShuffler mandelbrotModel = new ImageSegmentShuffler(encryptedXORImage);
@@ -206,12 +229,10 @@ public class ImageEncrypt {
         BufferedImage shuffledImage = shuffledResult.getKey();
         Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
 
-        // Отображаем зашифрованное изображение
-        ImageView encryptedView = new ImageView("Encrypted Image", shuffledImage);
-        encryptedView.showImage();
+        encryptedWholeImage = shuffledImage;
 
         // Загружаем параметры из mandelbrot_params
-        Object[] mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(PROJECT_PATH + "resources/mandelbrot_params.bin");
+        Object[] mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(getResourcesPath() + "mandelbrot_params.bin");
         int startMandelbrotWidth = (int) mandelbrotParams[0];
         int startMandelbrotHeight = (int) mandelbrotParams[1];
         double ZOOM = (double) mandelbrotParams[2];
@@ -220,13 +241,12 @@ public class ImageEncrypt {
         int MAX_ITER = (int) mandelbrotParams[5];
 
         // Сохраняем зашифрованное изображение и параметры
-        saveEncryptedImage(shuffledImage); // Сохраняем зашифрованное изображение
-        BinaryFile.saveKeyDecoderToBinaryFile(PROJECT_PATH + "resources/key_decoder.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentMapping, 0, 0, width, height);
-        // Предлагаем дешифровать картинку
-        if (JOptionPane.showConfirmDialog(null, "Хотите дешифровать картинку?", "Дешифрование", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-            ImageDecrypt decrypt = new ImageDecrypt();
-            decrypt.decryptImage();
-        }
+        saveEncryptedImage(encryptedWholeImage); // Сохраняем зашифрованное изображение
+        BinaryFile.saveKeyDecoderToBinaryFile(getResourcesPath() + "key_decoder.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER, segmentWidthSize, segmentHeightSize, segmentMapping, 0, 0, width, height);
+    }
+
+    public BufferedImage getEncryptedImage() {
+        return encryptedWholeImage;
     }
 
     private static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
@@ -244,8 +264,9 @@ public class ImageEncrypt {
      */
     private static void saveEncryptedImage(BufferedImage encryptedImage) {
         try {
-            ImageIO.write(encryptedImage, "png", new File(PROJECT_PATH + "resources/encrypted_image.png"));
-            System.out.println("Зашифрованное изображение сохранено как encrypted_image.png");
+            File outputFile = new File(getResourcesPath() + "encrypted_image.bmp");
+            ImageIO.write(encryptedImage, "bmp", outputFile);
+            System.out.println("Зашифрованное изображение сохранено как encrypted_image.bmp");
         } catch (IOException e) {
             e.printStackTrace();
         }

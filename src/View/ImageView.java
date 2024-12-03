@@ -11,7 +11,6 @@ public class ImageView {
     private String title;
     private BufferedImage image;
 
-
     /**
      * Constructor with params
      * @param my_title string containing the title of window

@@ -86,7 +86,7 @@ public class BinaryFile {
         System.out.println("height: " + height);
     }
 
-    protected static Object[] loadKeyDecoderFromBinaryFile(String filePath) {
+    public static Object[] loadKeyDecoderFromBinaryFile(String filePath) {
         Object[] params = new Object[13];
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
             params[0] = dis.readInt();

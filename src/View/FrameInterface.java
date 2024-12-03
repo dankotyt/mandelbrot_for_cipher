@@ -1,13 +1,25 @@
 package View;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.io.File;
 import java.io.FileNotFoundException;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.image.BufferedImage;
+import java.util.List;
 
 import Model.BinaryFile;
+import Model.Mandelbrot;
+import Model.ImageEncrypt;
+import Model.ImageDecrypt;
 
 /**
  * Класс Model.FrameInterface представляет собой графический интерфейс для работы с шифрованием и расшифровкой изображений с использованием множества Мандельброта.
@@ -16,7 +28,7 @@ import Model.BinaryFile;
  * @author Илья
  * @version 0.1
  */
-public class FrameInterface extends BinaryFile{
+public class FrameInterface extends BinaryFile {
 
     /**
      * Объект CardLayout, используемый для управления отображением различных панелей в главном окне.
@@ -70,12 +82,15 @@ public class FrameInterface extends BinaryFile{
      * Путь к директории с ресурсами, такими, как изображения.
      */
     //private static final String RESOURCES_PATH = "C:/Users/8220920/IdeaProjects/InterfaceMandelbrot/resources/";
-    private static final String RESOURCES_PATH = "C:/Users/Danil/IdeaProjects/mandelbrot_for_cipher/resources/";
+    private static final String RESOURCES_PATH = "resources" + File.separator;
 
-    /**
-     * Путь к директории проекта.
-     */
-    private static final String PROJECT_PATH = "C:/Users/Danil/IdeaProjects/mandelbrot_for_cipher/src/";
+    private static String getProjectRootPath() {
+        return new File("").getAbsolutePath() + File.separator;
+    }
+
+    private static String getResourcesPath() {
+        return getProjectRootPath() + RESOURCES_PATH;
+    }
 
     /**
      * Размер кнопок в интерфейсе.
@@ -86,6 +101,8 @@ public class FrameInterface extends BinaryFile{
      * Размер текстовых полей в интерфейсе.
      */
     private static final Dimension fieldSize = new Dimension(400, 30);
+
+    //public static File selectedImage = null;
 
     /**
      * Точка входа в программу. Инициализирует размер экрана и создает главное окно.
@@ -153,7 +170,7 @@ public class FrameInterface extends BinaryFile{
             loadingLabel.setHorizontalAlignment(SwingConstants.CENTER);
             loadingPanel.add(loadingLabel, gbc);
 
-            progressBar = new JProgressBar(0, 3000);
+            progressBar = new JProgressBar(0, 1000);
             progressBar.setIndeterminate(false);
             progressBar.setPreferredSize(new Dimension(screenWidth / 2, 32));
             progressBar.setUI(new GradientProgressBarUI());
@@ -175,7 +192,7 @@ public class FrameInterface extends BinaryFile{
                 @Override
                 protected Void doInBackground() {
                     try {
-                        for (int i = 0; i <= 3000; i++) {
+                        for (int i = 0; i <= 1000; i++) {
                             publish(i);
                             Thread.sleep(1); // Задержка для имитации загрузки
                         }
@@ -233,18 +250,28 @@ public class FrameInterface extends BinaryFile{
         }
     }
 
+
+
     /**
      * Создает панель для начала процесса шифрования изображения.
      */
+
     private static void createEncryptBeginPanel() {
         try {
             JPanel encryptBeginPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
             encryptBeginPanel.setLayout(new GridBagLayout());
             JLabel fileLabel = initializeNewLabel("Выберите изображение для шифрования:", 32, 0);
-
             JButton uploadButton = initializeNewButton("Загрузить изображение", buttonSize, buttonFont,
-                    e -> {createEncryptLoadPanel();
-                        cardLayout.show(mainPanel, "EncryptLoadPanel");});
+                    e -> {
+                        File selectedFile = selectImageFileForEncrypt(); // Выбираем файл
+                        if (selectedFile != null) {
+                            createEncryptLoadPanel(selectedFile.getAbsolutePath());
+                            cardLayout.show(mainPanel, "EncryptLoadPanel");
+                        } else {
+                            JOptionPane.showMessageDialog(encryptBeginPanel, "Файл не выбран!",
+                                    "Ошибка выбора файла", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
             JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
                     e -> {cardLayout.show(mainPanel, "StartPanel");});
 
@@ -263,13 +290,13 @@ public class FrameInterface extends BinaryFile{
     /**
      * Создает панель для загрузки изображения, которое будет зашифровано.
      */
-    private static void createEncryptLoadPanel() {
+    private static void createEncryptLoadPanel(String imagePath) {
         try {
             JPanel encryptLoadPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
             encryptLoadPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Загруженное для шифрования изображение:", 32, 0);
 
-            ImageIcon imageIcon = loadImageIcon(RESOURCES_PATH + "input.jpg");
+            ImageIcon imageIcon = new ImageIcon(imagePath);
             JPanel imageContainer = initializeImageContainer(imageIcon);
 
             JButton regenerateButton = initializeNewButton("Продолжить шифрование", buttonSize, buttonFont,
@@ -338,26 +365,24 @@ public class FrameInterface extends BinaryFile{
             encryptGeneratePanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Ваше изображение-ключ:", 32, 0);
 
-            String imagePath = getRandomImagePath();
-            ImageIcon imageIcon = loadImageIcon(imagePath);
-            JPanel imageContainer = initializeImageContainer(imageIcon);
+            JPanel imageContainer = new JPanel(new BorderLayout());
+            JLabel loadingLabel = initializeNewLabel("Картинка генерируется...", 32, 0);
+            imageContainer.add(loadingLabel, BorderLayout.CENTER);
 
             JButton regenerateButton = initializeNewButton("Сгенерировать заново", buttonSize, buttonFont,
                     e -> {
-                        String newImagePath = getRandomImagePath();
-                        ImageIcon newImageIcon = loadImageIcon(newImagePath);
-                        if (newImageIcon != null) {
-                            imageContainer.removeAll();
-                            imageContainer.add(new JLabel(newImageIcon), BorderLayout.CENTER);
-                            imageContainer.revalidate();
-                            imageContainer.repaint();
-                        }
+                        imageContainer.removeAll();
+                        imageContainer.add(loadingLabel, BorderLayout.CENTER);
+                        imageContainer.revalidate();
+                        imageContainer.repaint();
+                        generateImage(imageContainer);
                     });
             JButton manualButton = initializeNewButton("Сгенерировать заново вручную", buttonSize, buttonFont,
                     e -> {createManualEncryptionPanel();
                         cardLayout.show(mainPanel, "ManualEncryptionPanel");});
-            JButton okayButton = initializeNewButton("Зашифровать изображение", buttonSize, buttonFont,
-                    e -> {createEncryptFinalPanel();
+            JButton okayButton = initializeNewButton("Зашифровать изображение полностью", buttonSize, buttonFont,
+                    e -> {BufferedImage imageToEncrypt = loadImage(getResourcesPath() + "input.png"); // Загружаем изображение
+                        createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
                         cardLayout.show(mainPanel, "EncryptFinalPanel");});
             JButton partButton = initializeNewButton("Зашифровать часть изображения", buttonSize, buttonFont,
                     e -> {createEncryptPartialPanel();
@@ -383,9 +408,181 @@ public class FrameInterface extends BinaryFile{
             addComponent(buttonPanel, backButton, buttonConstraints, -1, 4, -1, -1, -1);
             encryptGeneratePanel.add(buttonPanel, constraints);
             mainPanel.add(encryptGeneratePanel, "EncryptGeneratePanel");
+
+            // Генерация изображения при первом открытии панели
+            generateImage(imageContainer);
         } catch (Exception e) {
             System.err.println("Ошибка при создании вкладки: " + e.getMessage());
         }
+    }
+
+    private static void generateImage(JPanel imageContainer) {
+        // Добавляем индикатор загрузки
+        JLabel loadingLabel = initializeNewLabel("Картинка генерируется...", 32, 0);
+        imageContainer.removeAll();
+        imageContainer.add(loadingLabel, BorderLayout.CENTER);
+        imageContainer.revalidate();
+        imageContainer.repaint();
+
+        SwingWorker<BufferedImage, BufferedImage> worker = new SwingWorker<BufferedImage, BufferedImage>() {
+            @Override
+            protected BufferedImage doInBackground() throws Exception {
+                Mandelbrot mandelbrot = new Mandelbrot();
+                return mandelbrot.generateImage();
+            }
+
+            @Override
+            protected void process(List<BufferedImage> chunks) {
+                // Обновляем изображение в EDT
+                if (!chunks.isEmpty()) {
+                    BufferedImage image = chunks.get(chunks.size() - 1);
+                    ImageIcon imageIcon = new ImageIcon(image);
+                    Image scaledImage = imageIcon.getImage().getScaledInstance(400, 300, Image.SCALE_SMOOTH);
+                    ImageIcon scaledImageIcon = new ImageIcon(scaledImage);
+                    imageContainer.removeAll();
+                    imageContainer.add(new JLabel(scaledImageIcon), BorderLayout.CENTER);
+                    imageContainer.revalidate();
+                    imageContainer.repaint();
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    BufferedImage image = get();
+                    ImageIcon imageIcon = new ImageIcon(image);
+                    Image scaledImage = imageIcon.getImage().getScaledInstance(400, 300, Image.SCALE_SMOOTH);
+                    ImageIcon scaledImageIcon = new ImageIcon(scaledImage);
+                    imageContainer.removeAll();
+                    imageContainer.add(new JLabel(scaledImageIcon), BorderLayout.CENTER);
+                    imageContainer.revalidate();
+                    imageContainer.repaint();
+
+                    // Сохраняем изображение после отображения
+                    saveImageToResources(image);
+                } catch (Exception e) {
+                    System.err.println("Ошибка при генерации изображения: " + e.getMessage());
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    private static void createEncryptGeneratePanelWithParams(String filePath) {
+        try {
+            JPanel encryptGeneratePanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
+            encryptGeneratePanel.setLayout(new GridBagLayout());
+            JLabel imageLabel = initializeNewLabel("Ваше изображение-ключ:", 32, 0);
+
+            JPanel imageContainer = new JPanel(new BorderLayout());
+            JLabel loadingLabel = initializeNewLabel("Картинка генерируется...", 32, 0);
+            imageContainer.add(loadingLabel, BorderLayout.CENTER);
+
+            JButton manualButton = initializeNewButton("Сгенерировать заново вручную", buttonSize, buttonFont,
+                    e -> {
+                        createManualEncryptionPanel();
+                        cardLayout.show(mainPanel, "ManualEncryptionPanel");
+                    });
+            JButton okayButton = initializeNewButton("Зашифровать изображение полностью", buttonSize, buttonFont,
+                    e -> {
+                        BufferedImage imageToEncrypt = loadImage(getResourcesPath() + "input.png"); // Загружаем изображение
+                        createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
+                        cardLayout.show(mainPanel, "EncryptFinalPanel");
+                    });
+            JButton partButton = initializeNewButton("Зашифровать часть изображения", buttonSize, buttonFont,
+                    e -> {
+                        createEncryptPartialPanel();
+                        cardLayout.show(mainPanel, "EncryptPartialPanel");
+                    });
+            JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
+                    e -> {
+                        cardLayout.show(mainPanel, "EncryptModePanel");
+                    });
+
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.insets = new Insets(10, 10, 10, 10);
+
+            addComponent(encryptGeneratePanel, imageLabel, constraints, 1, 0, -1, GridBagConstraints.CENTER, -1);
+            addComponent(encryptGeneratePanel, imageContainer, constraints, 1, 1, 1, -1, GridBagConstraints.BOTH);
+            setGridConstraints(constraints, 0, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.NONE);
+
+            JPanel buttonPanel = new TransparentPanel(new GridBagLayout());
+            GridBagConstraints buttonConstraints = new GridBagConstraints();
+            buttonConstraints.insets = new Insets(5, 5, 5, 5);
+
+            addComponent(buttonPanel, manualButton, buttonConstraints, 0, 0, -1, -1, -1);
+            addComponent(buttonPanel, okayButton, buttonConstraints, -1, 1, -1, -1, -1);
+            addComponent(buttonPanel, partButton, buttonConstraints, -1, 2, -1, -1, -1);
+            addComponent(buttonPanel, backButton, buttonConstraints, -1, 3, -1, -1, -1);
+            encryptGeneratePanel.add(buttonPanel, constraints);
+            mainPanel.add(encryptGeneratePanel, "EncryptGeneratePanelWithParams");
+
+            // Генерация изображения с использованием параметров из бинарного файла
+            generateImageWithParams(imageContainer, filePath);
+        } catch (Exception e) {
+            System.err.println("Ошибка при создании вкладки: " + e.getMessage());
+        }
+    }
+
+    private static void generateImageWithParams(JPanel imageContainer, String filePath) {
+        // Добавляем индикатор загрузки
+        JLabel loadingLabel = initializeNewLabel("Картинка генерируется...", 32, 0);
+        imageContainer.removeAll();
+        imageContainer.add(loadingLabel, BorderLayout.CENTER);
+        imageContainer.revalidate();
+        imageContainer.repaint();
+
+        SwingWorker<BufferedImage, BufferedImage> worker = new SwingWorker<BufferedImage, BufferedImage>() {
+            @Override
+            protected BufferedImage doInBackground() throws Exception {
+                Object[] params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
+
+                int startMandelbrotWidth = (int) params[0];
+                int startMandelbrotHeight = (int) params[1];
+                double ZOOM = (double) params[2];
+                double offsetX = (double) params[3];
+                double offsetY = (double) params[4];
+                int MAX_ITER = (int) params[5];
+
+                Mandelbrot mandelbrot = new Mandelbrot();
+                return mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
+            }
+
+            @Override
+            protected void process(List<BufferedImage> chunks) {
+                // Обновляем изображение в EDT
+                if (!chunks.isEmpty()) {
+                    BufferedImage image = chunks.get(chunks.size() - 1);
+                    ImageIcon imageIcon = new ImageIcon(image);
+                    Image scaledImage = imageIcon.getImage().getScaledInstance(400, 300, Image.SCALE_SMOOTH);
+                    ImageIcon scaledImageIcon = new ImageIcon(scaledImage);
+                    imageContainer.removeAll();
+                    imageContainer.add(new JLabel(scaledImageIcon), BorderLayout.CENTER);
+                    imageContainer.revalidate();
+                    imageContainer.repaint();
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    BufferedImage image = get();
+                    ImageIcon imageIcon = new ImageIcon(image);
+                    Image scaledImage = imageIcon.getImage().getScaledInstance(400, 300, Image.SCALE_SMOOTH);
+                    ImageIcon scaledImageIcon = new ImageIcon(scaledImage);
+                    imageContainer.removeAll();
+                    imageContainer.add(new JLabel(scaledImageIcon), BorderLayout.CENTER);
+                    imageContainer.revalidate();
+                    imageContainer.repaint();
+
+                    // Сохраняем изображение после отображения
+                    saveImageToResources(image);
+                } catch (Exception e) {
+                    System.err.println("Ошибка при генерации изображения: " + e.getMessage());
+                }
+            }
+        };
+        worker.execute();
     }
 
     /**
@@ -397,14 +594,15 @@ public class FrameInterface extends BinaryFile{
             encryptPartialPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Выберите область изображения для шифрования:", 32, 0);
 
-            ImageIcon imageIcon = loadImageIcon(RESOURCES_PATH + "input.jpg");
+            ImageIcon imageIcon = loadImageIcon(getResourcesPath() + "input.png");
             ImageContainerWithDrawing imageContainer = new ImageContainerWithDrawing(imageIcon);
             imageContainer.setPreferredSize(new Dimension(1024, 768));
 
             JButton regenerateButton = initializeNewButton("Продолжить шифрование", buttonSize, buttonFont,
                     e -> {
                         if (imageContainer.hasRectangle()) {
-                            createEncryptFinalPanel();
+                            BufferedImage imageToEncrypt = loadImage(getResourcesPath() + "input.png"); // Загружаем изображение
+                            createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
                             cardLayout.show(mainPanel, "EncryptFinalPanel");
                         } else {
                             JOptionPane.showMessageDialog(encryptPartialPanel, "Необходимо выделить зону шифрования!",
@@ -440,14 +638,20 @@ public class FrameInterface extends BinaryFile{
     /**
      * Создает панель для отображения зашифрованного изображения.
      */
-    private static void createEncryptFinalPanel() {
+    private static void createEncryptFinalPanel(BufferedImage image) {
         try {
             JPanel encryptFinalPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
             encryptFinalPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Полученное зашифрованное изображение:", 32, 0);
 
-            ImageIcon imageIcon = loadImageIcon(RESOURCES_PATH + "encrypted_image.jpg");
-            JPanel imageContainer = initializeImageContainer(imageIcon);
+            //Шифруем изображение
+            ImageEncrypt imageEncrypt = new ImageEncrypt();
+            imageEncrypt.encryptWholeImage(image);
+
+            // Получаем зашифрованное изображение
+            BufferedImage encryptedImage = imageEncrypt.getEncryptedImage();
+
+            JPanel imageContainer = initializeImageContainer(new ImageIcon(encryptedImage));
 
             JButton regenerateButton = initializeNewButton("Сгенерировать новый ключ", buttonSize, buttonFont,
                     e -> {cardLayout.show(mainPanel, "EncryptModePanel");});
@@ -483,6 +687,10 @@ public class FrameInterface extends BinaryFile{
             manualEncryptPanel.setLayout(new GridBagLayout());
 
             JLabel label = initializeNewLabel("Введите значения параметров:", 32, 0);
+            JLabel widthLabel = initializeNewLabel("Ширина множества:", 20, 1);
+            JTextField widthField = initializeNewTextField(20, fieldSize);
+            JLabel heightLabel = initializeNewLabel("Высота множества:", 20, 1);
+            JTextField heightField = initializeNewTextField(20, fieldSize);
             JLabel zoomLabel = initializeNewLabel("Масштаб множества:", 20, 1);
             JTextField zoomField = initializeNewTextField(20, fieldSize);
             JLabel iterationsLabel = initializeNewLabel("Число итераций:", 20, 1);
@@ -495,16 +703,25 @@ public class FrameInterface extends BinaryFile{
             JButton saveButton = initializeNewButton("Сохранить сгенерированный ключ", buttonSize, buttonFont,
                     e -> {
                         try {
+                            int width = Integer.parseInt(widthField.getText());
+                            int height = Integer.parseInt(heightField.getText());
                             double zoom = Double.parseDouble(zoomField.getText());
                             int iterations = Integer.parseInt(iterationsField.getText());
                             double x = Double.parseDouble(xField.getText());
                             double y = Double.parseDouble(yField.getText());
 
-                            if (zoom <= 0 || iterations <= 0 || x < 0 || y < 0) {
+                            if (width <= 0 || height <= 0 || zoom <= 0 || iterations <= 0 ) {
                                 throw new IllegalArgumentException("Некорректные данные");
                             }
-                            createEncryptGeneratePanel();
-                            cardLayout.show(mainPanel, "EncryptGeneratePanel");
+
+                            // Сохранение параметров в бинарный файл
+                            BinaryFile.saveMandelbrotParamsToBinaryFile(getResourcesPath() + "mandelbrot_params.bin", width, height, zoom, x, y, iterations);
+
+                            // Используем SwingUtilities.invokeLater для перехода на новую панель
+                            SwingUtilities.invokeLater(() -> {
+                                createEncryptGeneratePanelWithParams(getResourcesPath() + "mandelbrot_params.bin");
+                                cardLayout.show(mainPanel, "EncryptGeneratePanel");
+                            });
                         } catch (NumberFormatException ex) {
                             JOptionPane.showMessageDialog(null, "Некорректный формат данных", "Ошибка", JOptionPane.ERROR_MESSAGE);
                         } catch (IllegalArgumentException ex) {
@@ -518,17 +735,28 @@ public class FrameInterface extends BinaryFile{
             constraints.insets = new Insets(5, 10, 5, 10);
 
             addComponent(manualEncryptPanel, label, constraints, 0, 0, 2, -1, -1);
-            addComponent(manualEncryptPanel, zoomLabel, constraints, -1, 1, 1, -1, -1);
+
+            addComponent(manualEncryptPanel, widthLabel, constraints, 0, 1, 1, -1, -1);
+            addComponent(manualEncryptPanel, widthField, constraints, 1, -1, -1, -1, -1);
+
+            addComponent(manualEncryptPanel, heightLabel, constraints, 0, 2, 1, -1, -1);
+            addComponent(manualEncryptPanel, heightField, constraints, 1, -1, -1, -1, -1);
+
+            addComponent(manualEncryptPanel, zoomLabel, constraints, 0, 3, 1, -1, -1);
             addComponent(manualEncryptPanel, zoomField, constraints, 1, -1, -1, -1, -1);
-            addComponent(manualEncryptPanel, iterationsLabel, constraints, 0, 2, -1, -1, -1);
+
+            addComponent(manualEncryptPanel, iterationsLabel, constraints, 0, 4, 1, -1, -1);
             addComponent(manualEncryptPanel, iterationsField, constraints, 1, -1, -1, -1, -1);
-            addComponent(manualEncryptPanel, xLabel, constraints, 0, 3, -1, -1, -1);
+
+            addComponent(manualEncryptPanel, xLabel, constraints, 0, 5, 1, -1, -1);
             addComponent(manualEncryptPanel, xField, constraints, 1, -1, -1, -1, -1);
-            addComponent(manualEncryptPanel, yLabel, constraints, 0, 4, -1, -1, -1);
+
+            addComponent(manualEncryptPanel, yLabel, constraints, 0, 6, 1, -1, -1);
             addComponent(manualEncryptPanel, yField, constraints, 1, -1, -1, -1, -1);
 
-            addComponent(manualEncryptPanel, saveButton, constraints, 0, 5, 2, -1, -1);
-            addComponent(manualEncryptPanel, backButton, constraints, -1, 6, -1, -1, -1);
+            addComponent(manualEncryptPanel, saveButton, constraints, 0, 7, 2, -1, -1);
+            addComponent(manualEncryptPanel, backButton, constraints, -1, 8, -1, -1, -1);
+
             mainPanel.add(manualEncryptPanel, "ManualEncryptionPanel");
         } catch (Exception e) {
             System.err.println("Ошибка при создании вкладки: " + e.getMessage());
@@ -571,7 +799,7 @@ public class FrameInterface extends BinaryFile{
             decryptLoadPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Загруженное для расшифровки изображение:", 32, 0);
 
-            ImageIcon imageIcon = loadImageIcon(RESOURCES_PATH + "encrypted_image.jpg");
+            ImageIcon imageIcon = new ImageIcon(selectImageFileForDecrypt());
             JPanel imageContainer = initializeImageContainer(imageIcon);
 
             JButton regenerateButton = initializeNewButton("Продолжить расшифровку", buttonSize, buttonFont,
@@ -613,7 +841,7 @@ public class FrameInterface extends BinaryFile{
                     e -> {createDecryptKeyPanel();
                         cardLayout.show(mainPanel, "DecryptKeyPanel");});
             JButton manualButton = initializeNewButton("Загрузить файл-ключ", buttonSize, buttonFont,
-                    e -> {createManualDecryptionPanel();
+                    e -> {createDecryptFinalPanel();
                         cardLayout.show(mainPanel, "ManualDecryptionPanel");});
             JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
                     e -> {cardLayout.show(mainPanel, "DecryptBeginPanel");});
@@ -686,36 +914,63 @@ public class FrameInterface extends BinaryFile{
             decryptFinalPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Расшифрованное изображение:", 32, 0);
 
-            ImageIcon imageIcon = loadImageIcon(RESOURCES_PATH + "decrypted_image.jpg");
-            JPanel imageContainer = initializeImageContainer(imageIcon);
+            // Создаем экземпляр ImageDecrypt
+            ImageDecrypt imageDecrypt = new ImageDecrypt();
+            //
+            //Попробовать убрать doInBackground и не дешифровывать в отдельном потоке, а прямо в том же
+            //
+            // Используем SwingWorker для выполнения дешифрования в фоновом потоке
+            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    imageDecrypt.decryptImage();
+                    return null;
+                }
 
-            JButton reloadButton = initializeNewButton("Загрузить другое изображение", buttonSize, buttonFont,
-                    e -> {cardLayout.show(mainPanel, "DecryptBeginPanel");});
-            JButton reloadKeyButton = initializeNewButton("Загрузить другой ключ", buttonSize, buttonFont,
-                    e -> {cardLayout.show(mainPanel, "DecryptModePanel"); });
-            JButton saveButton = initializeNewButton("Сохранить изображение", buttonSize, buttonFont,
-                    e -> {createEncryptFinalPanel();
-                        cardLayout.show(mainPanel, "StartPanel");});
-            JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
-                    e -> {cardLayout.show(mainPanel, "StartPanel");});
+                @Override
+                protected void done() {
+                    try {
+                        // Загружаем расшифрованное изображение
+                        ImageIcon imageIcon = loadImageIcon(getResourcesPath() + "decrypted_image.png");
+                        JPanel imageContainer = initializeImageContainer(imageIcon);
 
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.insets = new Insets(10, 10, 10, 10);
+                        JButton reloadButton = initializeNewButton("Загрузить другое изображение", buttonSize, buttonFont,
+                                e -> {cardLayout.show(mainPanel, "DecryptBeginPanel");});
+                        JButton reloadKeyButton = initializeNewButton("Загрузить другой ключ", buttonSize, buttonFont,
+                                e -> {cardLayout.show(mainPanel, "DecryptModePanel"); });
+                        JButton saveButton = initializeNewButton("Сохранить изображение", buttonSize, buttonFont,
+                                e -> {BufferedImage imageToEncrypt = loadImage(getResourcesPath() + "decrypted_image.png"); // Загружаем изображение
+                                    createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
+                                    cardLayout.show(mainPanel, "StartPanel");});
+                        JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
+                                e -> {cardLayout.show(mainPanel, "StartPanel");});
 
-            addComponent(decryptFinalPanel, imageLabel, constraints, 1, 0, -1, GridBagConstraints.CENTER, -1);
-            addComponent(decryptFinalPanel, imageContainer, constraints, 1, 1, 1, -1, GridBagConstraints.BOTH);
-            setGridConstraints(constraints, 0, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.NONE);
+                        GridBagConstraints constraints = new GridBagConstraints();
+                        constraints.insets = new Insets(10, 10, 10, 10);
 
-            JPanel buttonPanel = new TransparentPanel(new GridBagLayout());
-            GridBagConstraints buttonConstraints = new GridBagConstraints();
-            buttonConstraints.insets = new Insets(5, 5, 5, 5);
+                        addComponent(decryptFinalPanel, imageLabel, constraints, 1, 0, -1, GridBagConstraints.CENTER, -1);
+                        addComponent(decryptFinalPanel, imageContainer, constraints, 1, 1, 1, -1, GridBagConstraints.BOTH);
+                        setGridConstraints(constraints, 0, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.NONE);
 
-            addComponent(buttonPanel, reloadButton, buttonConstraints, 0, 0, -1, -1, -1);
-            addComponent(buttonPanel, reloadKeyButton, buttonConstraints, -1, 1, -1, -1, -1);
-            addComponent(buttonPanel, saveButton, buttonConstraints, -1, 2, -1, -1, -1);
-            addComponent(buttonPanel, backButton, buttonConstraints, -1, 3, -1, -1, -1);
-            decryptFinalPanel.add(buttonPanel, constraints);
-            mainPanel.add(decryptFinalPanel, "DecryptFinalPanel");
+                        JPanel buttonPanel = new TransparentPanel(new GridBagLayout());
+                        GridBagConstraints buttonConstraints = new GridBagConstraints();
+                        buttonConstraints.insets = new Insets(5, 5, 5, 5);
+
+                        addComponent(buttonPanel, reloadButton, buttonConstraints, 0, 0, -1, -1, -1);
+                        addComponent(buttonPanel, reloadKeyButton, buttonConstraints, -1, 1, -1, -1, -1);
+                        addComponent(buttonPanel, saveButton, buttonConstraints, -1, 2, -1, -1, -1);
+                        addComponent(buttonPanel, backButton, buttonConstraints, -1, 3, -1, -1, -1);
+                        decryptFinalPanel.add(buttonPanel, constraints);
+                        mainPanel.add(decryptFinalPanel, "DecryptFinalPanel");
+
+                        // Показываем новую панель
+                        cardLayout.show(mainPanel, "DecryptFinalPanel");
+                    } catch (Exception e) {
+                        System.err.println("Ошибка при создании вкладки: " + e.getMessage());
+                    }
+                }
+            };
+            worker.execute();
         } catch (Exception e) {
             System.err.println("Ошибка при создании вкладки: " + e.getMessage());
         }
@@ -730,8 +985,10 @@ public class FrameInterface extends BinaryFile{
             decryptKeyPanel.setLayout(new GridBagLayout());
             JLabel imageLabel = initializeNewLabel("Ваше изображение-ключ:", 32, 0);
 
-            String imagePath = getRandomImagePath();
-            ImageIcon imageIcon = loadImageIcon(imagePath);
+            ImageDecrypt imageDecrypt = new ImageDecrypt();
+            imageDecrypt.decryptImage();
+
+            ImageIcon imageIcon = loadImageIcon(imageDecrypt.loadDecryptedImage());
             JPanel imageContainer = initializeImageContainer(imageIcon);
 
             JButton regenerateButton = initializeNewButton("Загрузить другой ключ", buttonSize, buttonFont,
@@ -853,11 +1110,65 @@ public class FrameInterface extends BinaryFile{
         try {
             Random random = new Random();
             String imageName = IMAGE_PATHS[random.nextInt(IMAGE_PATHS.length)];
-            return RESOURCES_PATH + imageName;
+            return getResourcesPath() + imageName;
         } catch (Exception e) {
             System.err.println("Ошибка при получении случайного пути к изображению: " + e.getMessage());
             return null;
         }
+    }
+
+    private static File selectImageFileForEncrypt() {
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Изображения", "jpg", "jpeg", "png", "bmp");
+        fileChooser.setFileFilter(filter);
+        int returnValue = fileChooser.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+
+            File selectedFile = fileChooser.getSelectedFile();
+            try {
+                // Загружаем выбранное изображение
+                BufferedImage image = ImageIO.read(selectedFile);
+                if (image != null) {
+                    // Сохраняем изображение в указанный путь
+                    String savePath = getResourcesPath() + "input.png";
+                    saveImageToFile(image, savePath);
+                    System.out.println("Изображение сохранено в: " + savePath);
+                } else {
+                    System.err.println("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
+                }
+            } catch (IOException e) {
+                System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            }
+            return selectedFile;
+        } else {
+            return null;
+        }
+    }
+
+    private static BufferedImage selectImageFileForDecrypt() {
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Изображения", "jpg", "jpeg", "png", "bmp");
+        fileChooser.setFileFilter(filter);
+        int returnValue = fileChooser.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            try {
+                // Загружаем выбранное изображение
+                BufferedImage image = ImageIO.read(selectedFile);
+                if (image != null) {
+                    // Сохраняем изображение в указанный путь
+                    String savePath = getResourcesPath() + "encrypted_image.png";
+                    saveImageToFile(image, savePath);
+                    System.out.println("Изображение сохранено в: " + savePath);
+                    return image;
+                } else {
+                    System.err.println("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
+                }
+            } catch (IOException e) {
+                System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            }
+        }
+        return null;
     }
 
     /**
@@ -879,18 +1190,45 @@ public class FrameInterface extends BinaryFile{
         }
     }
 
-    private static void loadParamsFromBinaryFile() {
+    private static ImageIcon loadImageIcon(BufferedImage image) {
+        if (image == null) {
+            System.err.println("Ошибка: изображение равно null");
+            return null;
+        }
+        return new ImageIcon(image);
+    }
+
+    private static void saveImageToResources(BufferedImage image) {
+        String savePath = getResourcesPath();
+        File file = new File(savePath + "mandelbrot.png");
+
         try {
-            Object[] keyDecoderParams = BinaryFile.loadKeyDecoderFromBinaryFile(RESOURCES_PATH + "key_decoder.bin");
-            // Извлечение параметров из key_decoder
-            int startMandelbrotWidth = (int) keyDecoderParams[0];
-            int startMandelbrotHeight = (int) keyDecoderParams[1];
-            double ZOOM = (double) keyDecoderParams[2];
-            double offsetX = (double) keyDecoderParams[3];
-            double offsetY = (double) keyDecoderParams[4];
-            int MAX_ITER = (int) keyDecoderParams[5];
+            ImageIO.write(image, "png", file);
+            System.out.println("Изображение сохранено в папку resources: " + file.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении изображения: " + e.getMessage());
+        }
+    }
+
+    private static void saveImageToFile(BufferedImage image, String filePath) {
+        try {
+            File outputFile = new File(filePath);
+            ImageIO.write(image, "jpg", outputFile);
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении изображения: " + e.getMessage());
+        }
+    }
+
+    private static BufferedImage loadImage(String filePath) {
+        try {
+            File imageFile = new File(filePath);
+            if (!imageFile.exists()) {
+                throw new FileNotFoundException("Не удалось найти изображение по пути: " + filePath);
+            }
+            return ImageIO.read(imageFile);
         } catch (Exception e) {
-            System.err.println("Ошибка при загрузке данных из бинарного файла! " + e.getMessage());
+            System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            return null;
         }
     }
 
