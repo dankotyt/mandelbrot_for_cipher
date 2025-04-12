@@ -13,7 +13,7 @@
 1. Перейдите в `File` → `Project Structure` → `Modules` → `Dependencies`
 2. Нажмите `+` под Module SDK
 3. Выберите `JARs or Directories`
-4. Укажите путь к распакованной папке JavaFX
+4. Укажите путь к `lib` в распакованной папке JavaFX (**ВАЖНО!**)
 5. Нажмите `Apply` → `OK`
 
 ### Настройка конфигурации
