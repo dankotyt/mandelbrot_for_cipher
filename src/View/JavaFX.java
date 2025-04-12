@@ -22,13 +22,11 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
-import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.application.Platform;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +46,7 @@ public class JavaFX extends Application {
     private StackPane mainPane;
     private Stage primaryStage;
     private Canvas canvas;
-    private Task<Image> currentTask; // Ссылка на текущую задачу
+    private Task<Image> currentTask;
     private static TextArea console;
 
     private Point2D startPoint;
@@ -76,7 +74,7 @@ public class JavaFX extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         mainPane = new StackPane();
-        Scene scene = new Scene(mainPane, 1440, 800);
+        Scene scene = new Scene(mainPane, 1540, 900);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Шифр Мандельброта");
 
@@ -84,12 +82,11 @@ public class JavaFX extends Application {
         Image icon = new Image(getClass().getResourceAsStream("/elements/icon.png"));
         primaryStage.getIcons().add(icon);
         primaryStage.show();
-        //createStartPanel();
         showLoadingScreen();
     }
 
     // Метод для создания градиента
-    private LinearGradient createGradient() {
+    protected static LinearGradient createGradient() {
         return new LinearGradient(
                 0, // Начальная точка по оси X (0 - слева)
                 0, // Начальная точка по оси Y (0 - сверху)
@@ -103,12 +100,12 @@ public class JavaFX extends Application {
     }
 
     private void showLoadingScreen() {
-        // Создаем заставку
+
         VBox loadingContainer = new VBox(20);
         loadingContainer.setAlignment(Pos.CENTER);
         loadingContainer.setPadding(new Insets(20));
         loadingContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Градиентный фон
+                createGradient(),
                 CornerRadii.EMPTY,
                 Insets.EMPTY
         )));
@@ -123,13 +120,10 @@ public class JavaFX extends Application {
         progressBar.setPrefWidth(900);
         progressBar.setStyle("-fx-accent: #0065CA;"); // Зеленый цвет прогресс-бара
 
-        // Добавляем элементы в контейнер
         loadingContainer.getChildren().addAll(loadingLabel, progressBar);
 
-        // Добавляем заставку в основной контейнер
         mainPane.getChildren().add(loadingContainer);
 
-        // Имитация загрузки
         Task<Void> loadingTask = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
@@ -146,22 +140,20 @@ public class JavaFX extends Application {
 
         // После завершения задачи переключаемся на startPanel
         loadingTask.setOnSucceeded(event -> {
-            // Удаляем заставку
             mainPane.getChildren().remove(loadingContainer);
-
-            // Показываем startPanel
             createStartPanel();
         });
 
-        // Запускаем задачу
         new Thread(loadingTask).start();
     }
 
     private void createStartPanel() {
-        GridPane startPanel = new GridPane();
-        startPanel.setPadding(new Insets(10));
-        startPanel.setHgap(10);
-        startPanel.setVgap(0); // Увеличение вертикального отступа между кнопками
+        BorderPane mainContainer = new BorderPane();
+        mainContainer.setBackground(new Background(new BackgroundFill(
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
+        )));
 
         // Загрузка изображений значков с использованием относительного пути
         Image lockImage = new Image(getClass().getResourceAsStream("/elements/icon_lock.png"));
@@ -183,6 +175,24 @@ public class JavaFX extends Application {
         Button decryptButton = new Button("", unlockImageView);
         decryptButton.setOnAction(e -> createDecryptBeginPanel());
 
+        Button exitButton = new Button("Завершить программу");
+        exitButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: #3A5975; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
+        exitButton.setPrefSize(350, 68);
+        exitButton.setOnAction(e -> {
+            Platform.exit();
+        });
+
+        Button connectButton = new Button("Подключение к серверу");
+        connectButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: #3A5975; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
+        connectButton.setPrefSize(380, 68);
+        connectButton.setOnAction(e -> {
+            createStartConnectionPanel();
+        });
+
         // Применение стилей к кнопкам
         String buttonStyle = "-fx-background-color: transparent;";
         encryptButton.setStyle(buttonStyle);
@@ -197,91 +207,155 @@ public class JavaFX extends Application {
         decryptButtonBox.setPadding(new Insets(0, 250, 0, 0)); // Отступы справа и слева
         decryptButtonBox.setAlignment(Pos.CENTER);
 
+        HBox connectButtonBox = new HBox(connectButton);
+        connectButtonBox.setPadding(new Insets(30, 0, 0, 0));
+        connectButtonBox.setAlignment(Pos.CENTER);
+
+        HBox exitButtonBox = new HBox(exitButton);
+        exitButtonBox.setPadding(new Insets(30, 0, 50, 0));
+        exitButtonBox.setAlignment(Pos.CENTER);
+
         // Создание метки "Начало работы"
         Label startLabel = new Label("Начало работы");
         startLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 72px;");
 
-        // Создание VBox для метки "Начало работы"
-        VBox labelBox = new VBox(startLabel);
-        labelBox.setAlignment(Pos.TOP_CENTER);
+        HBox topCenterContainer = new HBox(startLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
 
-        // Создание VBox для кнопок
-        VBox buttonBox = new VBox(0); // Установка вертикального отступа между кнопками
+        VBox buttonBox = new VBox(0);
         buttonBox.setAlignment(Pos.CENTER);
-        buttonBox.getChildren().addAll(encryptButtonBox, decryptButtonBox);
+        buttonBox.getChildren().addAll(encryptButtonBox, decryptButtonBox, connectButtonBox, exitButtonBox);
 
-        // Создание основного VBox для размещения метки и кнопок
-        VBox mainBox = new VBox(40); // Установка вертикального отступа между меткой и кнопками
-        mainBox.setAlignment(Pos.CENTER);
-        mainBox.getChildren().addAll(labelBox, buttonBox);
+        mainContainer.setTop(topCenterContainer);
 
-        // Добавление основного VBox в GridPane
-        startPanel.add(mainBox, 0, 0);
+        mainContainer.setCenter(buttonBox);
 
-        // Установка градиентного фона для панели
-        startPanel.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+        mainPane.getChildren().add(mainContainer);
+    }
+
+    public void createStartConnectionPanel() {
+        BorderPane mainContainer = new BorderPane();
+        mainContainer.setBackground(new Background(new BackgroundFill(
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
-        // Выравнивание по центру
-        startPanel.setAlignment(Pos.CENTER);
+        Label titleLabel = new Label("Выберите желаемое действие:");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
+        titleLabel.setAlignment(Pos.CENTER);
 
-        mainPane.getChildren().add(startPanel);
+        Image backImage = new Image(getClass().getResourceAsStream("/elements/icon_back.png"));
+        ImageView backImageView = new ImageView(backImage);
+        backImageView.setFitHeight(50);
+        backImageView.setFitWidth(50);
+
+        Button backButton = new Button("", backImageView);
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
+        backButton.setOnAction(e -> {
+            mainPane.getChildren().clear();
+            createStartPanel();
+        });
+
+        // Логика расположения объектов: создаем BorderPane = mainContainer. Далее создаем еще один
+        // BorderPane = topContainer, в котором мы расположим backButton и titleLabel, который
+        // в дальнейшем расположим в mainContainer.setTop(topContainer). А кнопки (buttonContainer)
+        // будут находится в mainContainer.setCenter(buttonContainer).
+        HBox topLeftContainer = new HBox(backButton);
+        topLeftContainer.setAlignment(Pos.TOP_LEFT);
+        topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
+
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setLeft(topLeftContainer);
+        topContainer.setCenter(topCenterContainer);
+
+        Button sendButton = new Button("Отправить");
+        sendButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
+        sendButton.setAlignment(Pos.CENTER);
+        sendButton.setOnAction(e -> {
+
+        });
+
+        Button getButton = new Button("Получить");
+        getButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
+        getButton.setAlignment(Pos.CENTER);
+        getButton.setOnAction(e -> {
+
+        });
+
+        HBox buttonContainer = new HBox(20, sendButton, getButton);
+        buttonContainer.setAlignment(Pos.CENTER);
+
+        // Размещаем контейнер с кнопками в центре BorderPane
+        mainContainer.setTop(topContainer);
+
+        mainContainer.setCenter(buttonContainer);
+
+        // Очищаем mainPane и добавляем mainContainer
+        mainPane.getChildren().clear();
+        mainPane.getChildren().add(mainContainer);
     }
 
     public void createEncryptBeginPanel() {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
-        // Установка градиентного фона для панели
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Шифратор"
         Label titleLabel = new Label("Шифратор");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 64px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 72px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowTitle = new Region();
+        Region spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        spaceBelowTitle.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Создание светло-серого прямоугольника
         Region lightGrayRect = new Region();
         lightGrayRect.setStyle("-fx-background-color: #494949;");
         lightGrayRect.setPrefSize(720, 540);
-        lightGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        lightGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
+        lightGrayRect.setMinSize(720, 540);
+        lightGrayRect.setMaxSize(720, 540);
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(640, 480);
-        darkGrayRect.setMinSize(640, 480); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(640, 480); // Фиксируем максимальный размер
-        darkGrayRect.setTranslateX(150); // Выглядывание на 50px
+        darkGrayRect.setMinSize(640, 480);
+        darkGrayRect.setMaxSize(640, 480);
+        darkGrayRect.setTranslateX(150); // Выглядывание на 150px
 
         // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowRect = new Region();
+        Region spaceBelowRect = new Region();
         spaceBelowRect.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowRect).setPrefHeight(113); // Расстояние под текстом
+        spaceBelowRect.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Создание кнопки "Выбрать файл"
         Button uploadButton = new Button("Выбрать файл");
-        uploadButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        uploadButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
         uploadButton.setPrefSize(257, 68);
         uploadButton.setOnAction(e -> {
             String imagePath = selectImageFileForEncrypt(); // Получаем путь к файлу input.png
             if (imagePath != null) {
                 createEncryptLoadPanel(imagePath); // Передаем путь к файлу в метод
             } else {
-                JOptionPane.showMessageDialog(null, "Файл не выбран!",
-                        "Ошибка выбора файла", JOptionPane.ERROR_MESSAGE);
+                showErrorDialog("Файл не выбран!");
             }
         });
 
@@ -299,10 +373,17 @@ public class JavaFX extends Application {
             createStartPanel();
         });
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
 
         // Размещение кнопки по центру светло-серого прямоугольника
         StackPane buttonContainer = new StackPane(uploadButton);
@@ -313,15 +394,21 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer, spaceBelowRect);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
+
+        Region spaceInBottom = new Region();
+        spaceInBottom.setStyle("-fx-background-color: transparent;");
+        spaceInBottom.setPrefHeight(120); // 120, т.к. на следующей панеле 20+50+50 (bottomButtonsContainer)
 
         // Установка центрального контента
         mainContainer.setCenter(contentBox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
+
+        mainContainer.setBottom(spaceInBottom);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -329,24 +416,22 @@ public class JavaFX extends Application {
     }
 
     private void createEncryptLoadPanel(String imagePath) {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
-        // Установка градиентного фона для панели
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Загруженное для шифрования изображение:"
         Label titleLabel = new Label("Загруженное для шифрования изображение:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowTitle = new Region();
+        Region spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        spaceBelowTitle.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
@@ -363,17 +448,14 @@ public class JavaFX extends Application {
         imageView.setFitHeight(540);
 
         // Создание кнопки "Продолжить шифрование"
-        Button regenerateButton = new Button("Продолжить шифрование");
-        regenerateButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 20px;");
-        regenerateButton.setPrefSize(290, 48);
-        regenerateButton.setOnAction(e -> {
+        Button continueButton = new Button("Продолжить шифрование");
+        continueButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 20px;");
+        continueButton.setPrefSize(290, 50);
+        continueButton.setOnAction(e -> {
             createEncryptModePanel();
         });
-
-        // Создание отдельного HBox для кнопки "Продолжить шифрование"
-        HBox buttonContainer = new HBox(regenerateButton);
-        buttonContainer.setAlignment(Pos.CENTER_LEFT); // Выравнивание кнопки по левому краю
-        buttonContainer.setPadding(new Insets(0, 0, 0, 0)); // Отступ справа для визуального разделения
 
         // Создание кнопки "Вернуться назад" с иконкой
         Image backImage = new Image(getClass().getResourceAsStream("/elements/icon_back.png"));
@@ -389,10 +471,22 @@ public class JavaFX extends Application {
             createEncryptBeginPanel();
         });
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
+        // Создание прозрачного прямоугольника для расстояния под текстом
+        Region spaceBelowRect = new Region();
+        spaceBelowRect.setStyle("-fx-background-color: transparent;");
+        spaceBelowRect.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Размещение темно-серого прямоугольника с изображением
         HBox contentContainer = new HBox(imageView);
@@ -402,8 +496,13 @@ public class JavaFX extends Application {
         StackPane rectContainer = new StackPane(darkGrayRect, contentContainer);
         rectContainer.setAlignment(Pos.CENTER);
 
+        // Создание контейнера для кнопок "Продолжить шифрование"
+        HBox bottomButtonsContainer = new HBox(20, continueButton);
+        bottomButtonsContainer.setAlignment(Pos.CENTER);
+        bottomButtonsContainer.setPadding(new Insets(0, 0, 50, 0));
+
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -411,14 +510,8 @@ public class JavaFX extends Application {
         mainContainer.setCenter(contentBox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
-        // Создание контейнера для кнопок "Продолжить шифрование"
-        HBox bottomButtonsContainer = new HBox(20, regenerateButton); // Кнопки в одной строке
-        bottomButtonsContainer.setAlignment(Pos.CENTER); // Выравнивание по центру
-        bottomButtonsContainer.setPadding(new Insets(0, 0, 30, 0)); // Отступ снизу
-
-        // Установка контейнера с кнопками внизу
         mainContainer.setBottom(bottomButtonsContainer);
 
         // Очистка и добавление нового контента в основной контейнер
@@ -427,108 +520,67 @@ public class JavaFX extends Application {
     }
 
     public BorderPane createEncryptModePanel() {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Выберите изображение-ключ:"
         Label titleLabel = new Label("Выберите изображение-ключ:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowTitle = new Region();
+        Region spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        spaceBelowTitle.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(720, 540);
-        darkGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
+        darkGrayRect.setMinSize(720, 540);
+        darkGrayRect.setMaxSize(720, 540);
 
-        // Загрузка изображения из папки temp
         ImageView imageView = loadInputImageFromTemp();
         if (imageView == null) {
-            // Возвращаем пустой контейнер или сообщение об ошибке
             return mainContainer;
         }
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 50px
 
-        // Создание кнопки "Сгенерировать изображение-ключ" с многострочным текстом и выравниванием по центру
-        Button generateButton = new Button();
-        Text generateText = new Text("Сгенерировать\nизображение-ключ");
-        generateText.setFill(Color.WHITE);
-        TextFlow generateTextFlow = new TextFlow(generateText);
-        generateTextFlow.setTextAlignment(TextAlignment.CENTER); // Выравнивание текста по центру
-        generateButton.setGraphic(generateTextFlow); // Устанавливаем TextFlow как графический элемент кнопки
-        generateButton.setAlignment(Pos.CENTER); // Выравнивание кнопки по центру
-        generateButton.setStyle(
-                "-fx-background-color: transparent; " +
-                        "-fx-border-color: white; " +
-                        "-fx-border-width: 5px; " +
-                        "-fx-border-radius: 10px; " +
-                        "-fx-text-fill: white; " + // Устанавливаем цвет текста на белый
-                        "-fx-font-size: 20px;"
-        );
-        generateButton.setPrefSize(247, 78);
+        Button generateButton = new Button("Сгенерировать изображение-ключ");
+        generateButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 20px;");
+        generateButton.setPrefSize(400, 65);
         generateButton.setOnAction(e -> {
             createEncryptGeneratePanel();
         });
 
-        // Создание кнопки "Ввести параметры ключа вручную" с многострочным текстом и выравниванием по центру
-        Button manualButton = new Button();
-        Text manualText = new Text("Ввести параметры\nключа вручную");
-        manualText.setFill(Color.WHITE);
-        TextFlow manualTextFlow = new TextFlow(manualText);
-        manualTextFlow.setTextAlignment(TextAlignment.CENTER); // Выравнивание текста по центру
-        manualButton.setGraphic(manualTextFlow); // Устанавливаем TextFlow как графический элемент кнопки
-        manualButton.setAlignment(Pos.CENTER); // Выравнивание кнопки по центру
-        manualButton.setStyle(
-                "-fx-background-color: transparent; " +
-                        "-fx-border-color: white; " +
-                        "-fx-border-width: 5px; " +
-                        "-fx-border-radius: 10px; " +
-                        "-fx-text-fill: white; " + // Устанавливаем цвет текста на белый
-                        "-fx-font-size: 20px;"
-        );
-        manualButton.setPrefSize(247, 78);
+        // Создание кнопки "Ввести параметры ключа вручную"
+        Button manualButton = new Button("Ввести параметры ключа вручную");
+        manualButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 20px;");
+        manualButton.setPrefSize(400, 65);
         manualButton.setOnAction(e -> {
             createManualEncryptionPanel();
         });
 
-        // Создание кнопки "Ввести параметры ключа вручную" с многострочным текстом и выравниванием по центру
-        Button chooseButton = new Button();
-        Text chooseText = new Text("Выбрать\nизображение-ключ");
-        chooseText.setFill(Color.WHITE);
-        TextFlow chooseTextFlow = new TextFlow(chooseText);
-        chooseTextFlow.setTextAlignment(TextAlignment.CENTER); // Выравнивание текста по центру
-        chooseButton.setGraphic(chooseTextFlow); // Устанавливаем TextFlow как графический элемент кнопки
-        chooseButton.setAlignment(Pos.CENTER); // Выравнивание кнопки по центру
-        chooseButton.setStyle(
-                "-fx-background-color: transparent; " +
-                        "-fx-border-color: white; " +
-                        "-fx-border-width: 5px; " +
-                        "-fx-border-radius: 10px; " +
-                        "-fx-text-fill: white; " + // Устанавливаем цвет текста на белый
-                        "-fx-font-size: 20px;"
-        );
-        chooseButton.setPrefSize(247, 78);
+        // Создание кнопки "Выбрать изображение-ключ"
+        Button chooseButton = new Button("Выбрать изображение-ключ");
+        chooseButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 20px;");
+        chooseButton.setPrefSize(350, 65);
         chooseButton.setOnAction(e -> {
             File selectedFile = selectMandelbrotForEncrypt();
             if (selectedFile != null) {
                 String getImagePath = selectedFile.getAbsolutePath();
                 createChoosenMandelbrotPanel(getImagePath);
             } else {
-                JOptionPane.showMessageDialog(null, "Файл не выбран!",
-                        "Ошибка выбора файла", JOptionPane.ERROR_MESSAGE);
+                showErrorDialog("Файл не выбран!");
             }
         });
 
@@ -559,25 +611,32 @@ public class JavaFX extends Application {
         contentContainer.setAlignment(Pos.CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowRect = new Region();
+        Region spaceBelowRect = new Region();
         spaceBelowRect.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowRect).setPrefHeight(163); // Расстояние под текстом
+        spaceBelowRect.setPrefHeight(50); // Устанавливаем фиксированную высоту
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, contentContainer, spaceBelowRect);
+        VBox contentBox = new VBox(10, spaceBelowTitle, contentContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
-        // Установка центрального контента
-        mainContainer.setCenter(contentBox);
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
+        // Установка центрального контента
+        mainContainer.setCenter(contentBox);
+
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -587,78 +646,67 @@ public class JavaFX extends Application {
     }
 
     private void createEncryptGeneratePanel() {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Ваше изображение-ключ:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(35); // Расстояние под текстом
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(720, 540);
-        darkGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
+        darkGrayRect.setMinSize(720, 540);
+        darkGrayRect.setMaxSize(720, 540);
 
         // Загрузка изображения из папки temp
         ImageView imageView = loadInputImageFromTemp();
         if (imageView == null) {
-            // Возвращаем пустой контейнер или сообщение об ошибке
             return;
         }
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 150px
 
-        // Создание текста "Картинка генерируется..."
         Label loadingLabel = new Label("Картинка генерируется...");
         loadingLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         loadingLabel.setAlignment(Pos.CENTER);
 
-        // Создание контейнера для текста "Картинка генерируется..."
         StackPane loadingContainer = new StackPane(loadingLabel);
         loadingContainer.setAlignment(Pos.CENTER);
 
-        // Создание кнопки "Сгенерировать заново вручную"
         Image writeParamsImage = new Image(getClass().getResourceAsStream("/elements/icon_writeParams.png"));
         ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        writeParamsImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button manualButton = new Button("", writeParamsImageView); // Иконка вместо текста
+        writeParamsImageView.setFitWidth(50);
+        writeParamsImageView.setFitHeight(50);
+        Button manualButton = new Button("", writeParamsImageView);
         manualButton.setStyle("-fx-background-color: transparent;");
         manualButton.setPrefSize(50, 50);
         manualButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             createManualEncryptionPanel();
         });
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
         Image nextImage = new Image(getClass().getResourceAsStream("/elements/icon_next.png"));
         ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        nextImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button okayButton = new Button("", nextImageView); // Иконка вместо текста
+        nextImageView.setFitWidth(50);
+        nextImageView.setFitHeight(50);
+        Button okayButton = new Button("", nextImageView);
         okayButton.setStyle("-fx-background-color: transparent;");
         okayButton.setPrefSize(50, 50);
         okayButton.setOnAction(e -> {
-            // Загружаем изображение из папки temp
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
-            } else {
-                System.err.println("Ошибка: изображение input.png не найдено в папке temp.");
+                createEncryptFinalPanel(imageToEncrypt);
             }
         });
 
@@ -714,23 +762,48 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
         // Создание блока-подсказки
         VBox hintBox = createHintBoxForEncrypt();
-        hintBox.setAlignment(Pos.CENTER); // Выравниваем hintBox по вертикали
-        hintBox.setPrefSize(300, 230); // Фиксированный размер hintBox (150x200)
-        hintBox.setMinSize(300, 230); // Минимальный размер hintBox (150x200)
-        hintBox.setMaxSize(300, 230); // Максимальный размер hintBox (150x200)
+        hintBox.setAlignment(Pos.CENTER);
+        hintBox.setPrefSize(300, 230);
+        hintBox.setMinSize(300, 230);
+        hintBox.setMaxSize(300, 230);
 
-        // Создание консоли для отображения отладочных сообщений
         TextArea console = new TextArea();
         console.setEditable(false);
-        console.setStyle("-fx-font-family: monospace; -fx-font-size: 14px; -fx-text-fill: black;");
+        console.setStyle("-fx-font-family: monospace; -fx-font-size: 14px; -fx-text-fill: white;" +
+                " -fx-control-inner-background: #001F3D; -fx-background-color: #001F3D;");
         console.setPrefSize(400, 200); // Консоль под hintBox
         console.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE); // Позволяем консоли растягиваться
+        // После добавления в сцену применяем стили к ползункам
+        Platform.runLater(() -> {
+            // Общие стили для скроллбаров
+            String scrollBarStyle = "-fx-background-color: #001F3D; -fx-background-radius: 5px;";
+            String trackStyle = "-fx-background-color: #001F3D; -fx-border-color: transparent;";
+            String thumbStyle = "-fx-background-color: #004488; -fx-background-radius: 5px;";
+            String arrowButtonStyle = "-fx-background-color: transparent; -fx-border-color: transparent;";
+            String arrowStyle = "-fx-background-color: transparent;";
+
+            // Настройка вертикального скроллбара
+            configureScrollBar(console, ".scroll-bar:vertical", scrollBarStyle + " -fx-pref-width: 10px;");
+            configureScrollBar(console, ".scroll-bar:vertical .track", trackStyle);
+            configureScrollBar(console, ".scroll-bar:vertical .thumb", thumbStyle);
+
+            // Настройка горизонтального скроллбара
+            configureScrollBar(console, ".scroll-bar:horizontal", scrollBarStyle + " -fx-pref-height: 10px;");
+            configureScrollBar(console, ".scroll-bar:horizontal .track", trackStyle);
+            configureScrollBar(console, ".scroll-bar:horizontal .thumb", thumbStyle);
+
+            // Настройка кнопок и стрелок
+            configureScrollBar(console, ".scroll-bar .increment-button, .scroll-bar .decrement-button",
+                    arrowButtonStyle);
+            configureScrollBar(console, ".scroll-bar .increment-arrow, .scroll-bar .decrement-arrow",
+                    arrowStyle);
+        });
 
         // Устанавливаем консоль в статическую переменную
         setConsole(console);
@@ -742,7 +815,7 @@ public class JavaFX extends Application {
         consoleContainer.setPrefSize(400,200);
         consoleContainer.setMinSize(400, 200);
         consoleContainer.setMaxSize(400, 200);
-        consoleContainer.setStyle("-fx-background-color: #1e1e1e;");
+        consoleContainer.setStyle("-fx-background-color: #001F3D;");
 
         // Создаем GridPane для размещения hintBox и contentBox
         GridPane centerGrid = new GridPane();
@@ -761,6 +834,7 @@ public class JavaFX extends Application {
 
         // Устанавливаем отступы между hintBox и консолью
         VBox.setVgrow(consoleContainer, Priority.ALWAYS); // Позволяем консоли растягиваться по высоте
+
         // Устанавливаем пропорции для колонок
         ColumnConstraints hintColumn = new ColumnConstraints();
         hintColumn.setPrefWidth(300); // Фиксированная ширина для hintBox
@@ -771,21 +845,28 @@ public class JavaFX extends Application {
 
         centerGrid.getColumnConstraints().addAll(hintColumn, contentColumn);
 
-        // Установка центрального контента
-        mainContainer.setCenter(centerGrid);
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
-        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
         bottomContainer.setAlignment(Pos.BOTTOM_CENTER);
         bottomContainer.setPadding(new Insets(0, 0, 30, 0)); // Уменьшаем отступ снизу
+
+        // Установка центрального контента
+        mainContainer.setCenter(centerGrid);
+
+        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
+        mainContainer.setTop(topContainer);
 
         // Установка контейнера внизу
         mainContainer.setBottom(bottomContainer);
@@ -798,10 +879,20 @@ public class JavaFX extends Application {
         generateImage(loadingContainer, regenerateButton, manualButton, okayButton, swapButton);
     }
 
+    // Метод для настройки стилей скроллбара
+    private void configureScrollBar(TextArea console, String selector, String style) {
+        Node node = console.lookup(selector);
+        if (node != null) {
+            node.setStyle(style);
+        } else {
+            System.err.println("Элемент не найден: " + selector);
+        }
+    }
+
     private VBox createHintBoxForEncrypt() {
-        // Создание прямоугольника с белой обводкой
         Region hintBackground = new Region();
-        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-background-color: transparent;");
+        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;" +
+                " -fx-background-color: transparent;");
         hintBackground.setPrefSize(300, 260); // Увеличиваем высоту для размещения всего текста
 
         // Создание заголовка "Подсказка"
@@ -811,7 +902,8 @@ public class JavaFX extends Application {
         hintTitle.setFont(Font.font("Intro Regular", 18));
 
         // Создание текста подсказки
-        Text hintText = new Text("Для шифрования части изображения - перейдите\nна исходную картинку и выделите желаемую часть");
+        Text hintText = new Text("Для шифрования части изображения - перейдите\nна исходную картинку и " +
+                "выделите желаемую часть");
         hintText.setFill(Color.WHITE); // Устанавливаем белый цвет текста
         hintText.setFont(Font.font("Intro Regular", 14)); // Устанавливаем шрифт и размер текста
 
@@ -853,19 +945,15 @@ public class JavaFX extends Application {
             if (node instanceof HBox) {
                 // Получаем текстовый элемент из HBox
                 Text text = (Text) ((HBox) node).getChildren().get(1);
-                // Устанавливаем белый цвет текста
                 text.setFill(Color.WHITE);
-                // Устанавливаем шрифт и размер текста
                 text.setFont(Font.font("Intro Regular", 14));
             }
         }
 
-        // Размещение hintContent внутри hintBackground
         StackPane hintContainer = new StackPane(hintBackground, hintContent);
         StackPane.setAlignment(hintContent, Pos.CENTER);
         StackPane.setMargin(hintContent, new Insets(10)); // Добавляем отступы внутри hintBackground
 
-        // Возвращаем контейнер
         return new VBox(hintContainer);
     }
 
@@ -877,9 +965,16 @@ public class JavaFX extends Application {
 
         Task<Image> generateImageTask = new Task<Image>() {
             @Override
-            protected Image call() throws Exception {
+            protected Image call() {
                 Mandelbrot mandelbrot = new Mandelbrot();
                 BufferedImage mandelbrotImage = mandelbrot.generateImage();
+
+                // Проверяем, была ли задача отменена
+                if (isCancelled()) {
+                    updateMessage("Задача отменена");
+                    return null;
+                }
+
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
             }
         };
@@ -900,6 +995,7 @@ public class JavaFX extends Application {
 
         generateImageTask.setOnFailed(e -> {
             System.err.println("Ошибка при генерации изображения: " + generateImageTask.getException().getMessage());
+            showErrorDialog("Ошибка при генерации изображения: " + generateImageTask.getMessage());
 
             // Включаем кнопки в случае сбоя
             for (Button button : buttonsToDisable) {
@@ -907,33 +1003,44 @@ public class JavaFX extends Application {
             }
         });
 
+        // Обработка отмены задачи
+        generateImageTask.setOnCancelled(e -> {
+            System.out.println("Задача генерации изображения отменена");
+            // Включаем кнопки после отмены
+            for (Button button : buttonsToDisable) {
+                button.setDisable(false);
+            }
+        });
+
         new Thread(generateImageTask).start();
+
+        // Сохраняем текущую задачу для возможности отмены
+        currentTask = generateImageTask;
     }
 
     private void cancelCurrentTask() {
         if (currentTask != null && currentTask.isRunning()) {
-            currentTask.cancel(); // Отменяем текущую задачу
+            currentTask.cancel();
+            currentTask = null;
         }
     }
 
     private void panelForChooseAreaForEncrypt() {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Шифруемое изображение:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
-        // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(35);
 
         // Загрузка изображения input.png из папки temp
         String tempPath = getTempPath();
@@ -941,7 +1048,8 @@ public class JavaFX extends Application {
         File inputFile = new File(inputFilePath);
         if (!inputFile.exists() || !inputFile.canRead()) {
             System.err.println("Файл изображения не найден: " + inputFilePath);
-            return; // Возвращаем пустой контейнер или сообщение об ошибке
+            showErrorDialog("Выбранный файл изображения не найден: " + inputFilePath);
+            return;
         }
         Image image = new Image(inputFile.toURI().toString());
         ImageView imageView = new ImageView(image);
@@ -953,7 +1061,8 @@ public class JavaFX extends Application {
         File mandelbrotFile = new File(mandelbrotFilePath);
         if (!mandelbrotFile.exists() || !mandelbrotFile.canRead()) {
             System.err.println("Файл изображения не найден: " + mandelbrotFilePath);
-            return; // Возвращаем пустой контейнер или сообщение об ошибке
+            showErrorDialog("Изображение-ключ не найден: " + mandelbrotFilePath);
+            return;
         }
         Image mandelbrotImage = new Image(mandelbrotFile.toURI().toString());
         ImageView mandelbrotImageView = new ImageView(mandelbrotImage);
@@ -964,23 +1073,15 @@ public class JavaFX extends Application {
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
         Image encryptWholeImage = new Image(getClass().getResourceAsStream("/elements/icon_encryptWhole.png"));
         ImageView encryptWholeImageView = new ImageView(encryptWholeImage);
-        encryptWholeImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        encryptWholeImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button encryptWholeButton = new Button("", encryptWholeImageView); // Иконка вместо текста
+        encryptWholeImageView.setFitWidth(50);
+        encryptWholeImageView.setFitHeight(50);
+        Button encryptWholeButton = new Button("", encryptWholeImageView);
         encryptWholeButton.setStyle("-fx-background-color: transparent;");
         encryptWholeButton.setPrefSize(50, 50);
         encryptWholeButton.setOnAction(e -> {
-            try {
-                // Загружаем изображение из папки temp
-                BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-                if (imageToEncrypt == null) {
-                    System.err.println("Файл изображения не найден: " + inputFilePath);
-                    return;
-                }
-                createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
-            } catch (Exception ex) {
-                System.err.println("Произошла ошибка: " + ex.getMessage());
-                ex.printStackTrace();
+            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
+            if (imageToEncrypt != null) {
+                createEncryptFinalPanel(imageToEncrypt);
             }
         });
 
@@ -991,10 +1092,10 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             clearRectangles();
             mainPane.getChildren().clear();
             createEncryptModePanel();
@@ -1016,7 +1117,6 @@ public class JavaFX extends Application {
 
         // Создаем слой для рисования прямоугольников
         Canvas canvas = new Canvas(720, 540); // Размер canvas соответствует отображаемому изображению
-        //Canvas canvas = new Canvas(imageView.getFitWidth(), imageView.getFitHeight());
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Коэффициенты масштабирования для перевода координат с 720x540 на 1024x768
@@ -1086,9 +1186,9 @@ public class JavaFX extends Application {
         // Создание кнопки "Продолжить шифрование" с иконкой
         Image encryptPartImage = new Image(getClass().getResourceAsStream("/elements/icon_encryptPart.png"));
         ImageView encryptPartImageView = new ImageView(encryptPartImage);
-        encryptPartImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        encryptPartImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button encryptPartButton = new Button("", encryptPartImageView); // Иконка вместо текста
+        encryptPartImageView.setFitWidth(50);
+        encryptPartImageView.setFitHeight(50);
+        Button encryptPartButton = new Button("", encryptPartImageView);
         encryptPartButton.setStyle("-fx-background-color: transparent;");
         encryptPartButton.setPrefSize(50, 50);
         encryptPartButton.setOnAction(e -> {
@@ -1098,10 +1198,6 @@ public class JavaFX extends Application {
 
                 // Загружаем изображение из папки temp
                 BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-                if (imageToEncrypt == null) {
-                    System.err.println("Файл изображения не найден: " + inputFilePath);
-                    return;
-                }
 
                 BufferedImage selectedSubImage = imageToEncrypt.getSubimage(
                         (int) selectedRectangle.getMinX(),
@@ -1147,16 +1243,16 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
         // Создание блока-подсказки
         VBox hintBox = createHintBoxForEncryptPart();
-        hintBox.setAlignment(Pos.CENTER); // Выравниваем hintBox по вертикали
-        hintBox.setPrefSize(300, 230); // Фиксированный размер hintBox (150x200)
-        hintBox.setMinSize(300, 230); // Минимальный размер hintBox (150x200)
-        hintBox.setMaxSize(300, 230); // Максимальный размер hintBox (150x200)
+        hintBox.setAlignment(Pos.CENTER);
+        hintBox.setPrefSize(300, 230);
+        hintBox.setMinSize(300, 230);
+        hintBox.setMaxSize(300, 230);
 
         // Создаем GridPane для размещения hintBox и contentBox
         GridPane centerGrid = new GridPane();
@@ -1167,7 +1263,7 @@ public class JavaFX extends Application {
 
         // Устанавливаем пропорции для колонок
         ColumnConstraints hintColumn = new ColumnConstraints();
-        hintColumn.setPrefWidth(300); // Фиксированная ширина для hintBox
+        hintColumn.setPrefWidth(300);
         hintColumn.setHgrow(Priority.NEVER); // hintBox не растягивается
 
         ColumnConstraints contentColumn = new ColumnConstraints();
@@ -1175,21 +1271,28 @@ public class JavaFX extends Application {
 
         centerGrid.getColumnConstraints().addAll(hintColumn, contentColumn);
 
-        // Установка центрального контента
-        mainContainer.setCenter(centerGrid);
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
-        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
         bottomContainer.setAlignment(Pos.BOTTOM_CENTER);
         bottomContainer.setPadding(new Insets(0, 0, 30, 0)); // Уменьшаем отступ снизу
+
+        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
+        mainContainer.setTop(topContainer);
+
+        // Установка центрального контента
+        mainContainer.setCenter(centerGrid);
 
         // Установка контейнера внизу
         mainContainer.setBottom(bottomContainer);
@@ -1202,7 +1305,8 @@ public class JavaFX extends Application {
     private VBox createHintBoxForEncryptPart() {
         // Создание прямоугольника с белой обводкой
         Region hintBackground = new Region();
-        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-background-color: transparent;");
+        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;" +
+                " -fx-background-color: transparent;");
         hintBackground.setPrefSize(370, 230);
         hintBackground.setMaxSize(370, 230);
         hintBackground.setMinSize(370, 230);
@@ -1215,8 +1319,8 @@ public class JavaFX extends Application {
 
         // Создание текста подсказки
         Text hintText = new Text("Для шифрования части изображения - выделите\nжелаемую часть.");
-        hintText.setFill(Color.WHITE); // Устанавливаем белый цвет текста
-        hintText.setFont(Font.font("Intro Regular", 14)); // Устанавливаем шрифт и размер текста
+        hintText.setFill(Color.WHITE);
+        hintText.setFont(Font.font("Intro Regular", 14));
 
         // Иконки для кнопок
         Image encryptWholeIcon = new Image(getClass().getResourceAsStream("/elements/icon_encryptWhole.png"));
@@ -1239,7 +1343,8 @@ public class JavaFX extends Application {
         hintContent.getChildren().addAll(
                 hintTitle, // Заголовок "Подсказка"
                 new HBox(encryptWholeIconView, new Text(" \n - зашифровать изображение полностью;")),
-                new HBox(encryptPartIconView, new Text(" \n - зашифровать выделенную часть\n  (после выделения области);")),
+                new HBox(encryptPartIconView, new Text(" \n - зашифровать выделенную часть\n  " +
+                        "(после выделения области);")),
                 new HBox(resetPartIconView, new Text(" \n - сбрасывает ранее выделенную часть;")),
                 hintText // Дополнительный текст
         );
@@ -1248,11 +1353,8 @@ public class JavaFX extends Application {
         // Устанавливаем стили для текста и иконок
         for (Node node : hintContent.getChildren()) {
             if (node instanceof HBox) {
-                // Получаем текстовый элемент из HBox
                 Text text = (Text) ((HBox) node).getChildren().get(1);
-                // Устанавливаем белый цвет текста
                 text.setFill(Color.WHITE);
-                // Устанавливаем шрифт и размер текста
                 text.setFont(Font.font("Intro Regular", 14));
             }
         }
@@ -1262,45 +1364,39 @@ public class JavaFX extends Application {
         StackPane.setAlignment(hintContent, Pos.CENTER);
         StackPane.setMargin(hintContent, new Insets(15)); // Добавляем отступы внутри hintBackground
 
-        // Возвращаем контейнер
         return new VBox(hintContainer);
     }
 
     private void createEncryptGeneratePanelWithParams(String filePath) {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Ваше изображение-ключ:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(720, 540);
-        darkGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
+        darkGrayRect.setMinSize(720, 540);
+        darkGrayRect.setMaxSize(720, 540);
 
         // Загрузка изображения из папки temp
         ImageView imageView = loadInputImageFromTemp();
         if (imageView == null) {
-            // Возвращаем пустой контейнер или сообщение об ошибке
             return;
         }
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 150px
 
         // Создание текста "Картинка генерируется..."
         Label loadingLabel = new Label("Картинка генерируется...");
@@ -1311,37 +1407,31 @@ public class JavaFX extends Application {
         StackPane loadingContainer = new StackPane(loadingLabel);
         loadingContainer.setAlignment(Pos.CENTER);
 
-//        StackPane imageContainer = new StackPane(imageView);
-//        imageContainer.setAlignment(Pos.CENTER);
-
         // Создание кнопки "Сгенерировать заново вручную" с иконкой
         Image writeParamsImage = new Image(getClass().getResourceAsStream("/elements/icon_writeParams.png"));
         ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        writeParamsImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button manualButton = new Button("", writeParamsImageView); // Иконка вместо текста
+        writeParamsImageView.setFitWidth(50);
+        writeParamsImageView.setFitHeight(50);
+        Button manualButton = new Button("", writeParamsImageView);
         manualButton.setStyle("-fx-background-color: transparent;");
         manualButton.setPrefSize(50, 50);
         manualButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             createManualEncryptionPanel();
         });
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
         Image nextImage = new Image(getClass().getResourceAsStream("/elements/icon_next.png"));
         ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        nextImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button okayButton = new Button("", nextImageView); // Иконка вместо текста
+        nextImageView.setFitWidth(50);
+        nextImageView.setFitHeight(50);
+        Button okayButton = new Button("", nextImageView);
         okayButton.setStyle("-fx-background-color: transparent;");
         okayButton.setPrefSize(50, 50);
         okayButton.setOnAction(e -> {
-            // Загружаем изображение из папки temp
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
-            } else {
-                System.err.println("Ошибка: изображение input.png не найдено в папке temp.");
+                createEncryptFinalPanel(imageToEncrypt);
             }
         });
 
@@ -1351,10 +1441,10 @@ public class JavaFX extends Application {
         backImageView.setFitWidth(50);
         backImageView.setFitHeight(50);
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             mainPane.getChildren().clear();
             createEncryptModePanel();
         });
@@ -1363,13 +1453,13 @@ public class JavaFX extends Application {
         Button regenerateButton = new Button();
         Image repeatIcon = new Image(getClass().getResourceAsStream("/elements/icon_repeat.png"));
         ImageView repeatIconView = new ImageView(repeatIcon);
-        repeatIconView.setFitWidth(50); // Установите нужный размер иконки
+        repeatIconView.setFitWidth(50);
         repeatIconView.setFitHeight(50);
         regenerateButton.setGraphic(repeatIconView);
         regenerateButton.setStyle("-fx-background-color: transparent;");
         regenerateButton.setPrefSize(50, 50);
         regenerateButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             loadingContainer.getChildren().clear();
             loadingContainer.getChildren().add(loadingLabel);
             createEncryptGeneratePanel();
@@ -1396,16 +1486,16 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
         // Создание блока-подсказки
         VBox hintBox = createHintBoxForEncrypt();
-        hintBox.setAlignment(Pos.CENTER); // Выравниваем hintBox по вертикали
-        hintBox.setPrefSize(300, 230); // Фиксированный размер hintBox (150x200)
-        hintBox.setMinSize(300, 230); // Минимальный размер hintBox (150x200)
-        hintBox.setMaxSize(300, 230); // Максимальный размер hintBox (150x200)
+        hintBox.setAlignment(Pos.CENTER);
+        hintBox.setPrefSize(300, 230);
+        hintBox.setMinSize(300, 230);
+        hintBox.setMaxSize(300, 230);
 
         // Создаем GridPane для размещения hintBox и contentBox
         GridPane centerGrid = new GridPane();
@@ -1427,13 +1517,20 @@ public class JavaFX extends Application {
         // Установка центрального контента
         mainContainer.setCenter(centerGrid);
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
@@ -1458,7 +1555,7 @@ public class JavaFX extends Application {
 
         Task<Image> generateImageTask = new Task<Image>() {
             @Override
-            protected Image call() throws Exception {
+            protected Image call() {
                 Object[] params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
 
                 int startMandelbrotWidth = (int) params[0];
@@ -1469,7 +1566,8 @@ public class JavaFX extends Application {
                 int MAX_ITER = (int) params[5];
 
                 Mandelbrot mandelbrot = new Mandelbrot();
-                BufferedImage mandelbrotImage = mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
+                BufferedImage mandelbrotImage = mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight,
+                        ZOOM, offsetX, offsetY, MAX_ITER);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
             }
         };
@@ -1488,6 +1586,7 @@ public class JavaFX extends Application {
 
         generateImageTask.setOnFailed(e -> {
             System.err.println("Ошибка при генерации изображения: " + generateImageTask.getException().getMessage());
+            showErrorMessage("Ошибка при генерации изображения: " + generateImageTask.getMessage());
         });
 
         new Thread(generateImageTask).start();
@@ -1536,23 +1635,22 @@ public class JavaFX extends Application {
     }
 
     private void createEncryptFinalPanel(BufferedImage image) {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Полученное зашифрованное изображение:"
         Label titleLabel = new Label("Полученное зашифрованное изображение:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50); // Расстояние под текстом
 
         // Шифруем изображение
         ImageEncrypt imageEncrypt = new ImageEncrypt();
@@ -1580,7 +1678,6 @@ public class JavaFX extends Application {
         saveButton.setPrefSize(50, 50);
         saveButton.setOnAction(e -> {
             saveEncryptedImage(encryptedImage);
-            //createStartPanel();
         });
 
         // Создание кнопки "Вернуться назад" с иконкой
@@ -1590,17 +1687,24 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             panelForChooseAreaForEncrypt();
         });
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, saveButton);
@@ -1611,7 +1715,7 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -1619,7 +1723,7 @@ public class JavaFX extends Application {
         mainContainer.setCenter(contentBox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
@@ -1635,23 +1739,22 @@ public class JavaFX extends Application {
     }
 
     private void createEncryptFinalPanelForSelectedImage(BufferedImage image) {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Полученное зашифрованное изображение:"
         Label titleLabel = new Label("Полученное зашифрованное изображение:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Создание ImageView для зашифрованного изображения
         ImageView imageView = new ImageView(SwingFXUtils.toFXImage(image, null));
@@ -1682,17 +1785,24 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             panelForChooseAreaForEncrypt();
         });
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, saveButton);
@@ -1703,7 +1813,7 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -1711,7 +1821,7 @@ public class JavaFX extends Application {
         mainContainer.setCenter(contentBox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
@@ -1727,12 +1837,11 @@ public class JavaFX extends Application {
     }
 
     private void createManualEncryptionPanel() {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание GridPane для размещения элементов
@@ -1741,11 +1850,9 @@ public class JavaFX extends Application {
         manualEncryptPanel.setHgap(15);
         manualEncryptPanel.setVgap(15);
 
-        // Заголовок
-        Label label = new Label("Введите значения параметров:");
-        label.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
+        Label titleLabel = new Label("Введите значения параметров:");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
 
-        // Подписи и поля ввода
         Label widthLabel = new Label("Ширина изображения:");
         widthLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField widthField = new TextField();
@@ -1760,7 +1867,6 @@ public class JavaFX extends Application {
         heightField.setPromptText("768");
         heightField.setTextFormatter(new TextFormatter<>(createIntegerFilter(4)));
 
-        // Zoom
         Label zoomLabel = new Label("Масштаб множества:");
         zoomLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField zoomField = new TextField();
@@ -1789,9 +1895,10 @@ public class JavaFX extends Application {
         yField.setPromptText("0.9999");
         yField.setTextFormatter(new TextFormatter<>(createDoubleFilter()));
 
-        // Кнопка "Сохранить сгенерированный ключ"
         Button saveButton = new Button("Сохранить сгенерированный ключ");
-        saveButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px; -fx-border-radius: 10px; -fx-border-width: 5px; -fx-border-color: white;");
+        saveButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-text-fill: white; -fx-font-size: 24px; -fx-border-radius: 10px; -fx-border-width: 5px;" +
+                " -fx-border-color: white;");
         saveButton.setOnAction(e -> {
             try {
                 int startMandelbrotWidth = Integer.parseInt(widthField.getText());
@@ -1805,11 +1912,10 @@ public class JavaFX extends Application {
                     throw new IllegalArgumentException("Некорректные данные");
                 }
 
-                // Сохранение параметров в бинарный файл
                 String filePath = getTempPath() + "mandelbrot_params.bin";
-                BinaryFile.saveMandelbrotParamsToBinaryFile(filePath, startMandelbrotWidth, startMandelbrotHeight, zoom, x, y, iterations);
+                BinaryFile.saveMandelbrotParamsToBinaryFile(filePath, startMandelbrotWidth, startMandelbrotHeight,
+                        zoom, x, y, iterations);
 
-                // Переход на новую панель
                 createEncryptGeneratePanelWithParams(filePath);
             } catch (NumberFormatException ex) {
                 showErrorDialog("Некорректный формат данных");
@@ -1840,13 +1946,19 @@ public class JavaFX extends Application {
             }
         });
 
-        // Размещение кнопки "Вернуться назад" в левом верхнем углу
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
         // Добавляем элементы в GridPane
-        manualEncryptPanel.add(label, 0, 0, 2, 1); // Заголовок
         manualEncryptPanel.add(widthLabel, 0, 1); // Метка для ширины
         manualEncryptPanel.add(widthField, 1, 1); // Поле для ширины
         manualEncryptPanel.add(heightLabel, 0, 2); // Метка для высоты
@@ -1859,22 +1971,25 @@ public class JavaFX extends Application {
         manualEncryptPanel.add(xField, 1, 5);
         manualEncryptPanel.add(yLabel, 0, 6);
         manualEncryptPanel.add(yField, 1, 6);
-        manualEncryptPanel.add(saveButton, 0, 7, 2, 1); // Кнопка сохранения
+
+        HBox saveButtonBox = new HBox(saveButton);
+        saveButtonBox.setPadding(new Insets(0, 0, 0, 20));
+        saveButtonBox.setAlignment(Pos.CENTER);
+        manualEncryptPanel.add(saveButtonBox, 0, 7, 2, 1); // Кнопка сохранения
 
         // Создание HBox для обертки GridPane и выравнивания по центру
         HBox gridPaneContainer = new HBox(manualEncryptPanel);
         gridPaneContainer.setAlignment(Pos.CENTER); // Выравнивание по центру
 
         // Создание VBox для вертикального выравнивания
-        VBox vbox = new VBox(20, gridPaneContainer);
+        VBox vbox = new VBox(gridPaneContainer);
         vbox.setAlignment(Pos.CENTER); // Выравнивание по центру
-        vbox.setPadding(new Insets(50)); // Добавляем отступы слева и справа
 
         // Установка VBox в центр основного контейнера
         mainContainer.setCenter(vbox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -1912,23 +2027,22 @@ public class JavaFX extends Application {
     }
 
     private void createChoosenMandelbrotPanel(String imagePath) {
-        // Создание основного контейнера с фоном на весь экран
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Ваше изображение-ключ:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(35); // Расстояние под текстом
 
         // Проверяем, существует ли файл mandelbrot.png в папке temp
         String mandelbrotFilePath = getTempPath() + "mandelbrot.png";
@@ -1937,13 +2051,12 @@ public class JavaFX extends Application {
         BufferedImage mandelbrotImage = null;
 
         if (!mandelbrotFile.exists()) {
-            // Если файл не существует, генерируем изображение
             Mandelbrot mandelbrot = new Mandelbrot();
-            mandelbrotImage = mandelbrot.generateAfterGetParams(imagePath); // Получаем изображение
-
+            mandelbrotImage = mandelbrot.generateAfterGetParams(imagePath);
             if (mandelbrotImage == null) {
-                System.err.println("Ошибка: не удалось сгенерировать изображение.");
-                return; // Если изображение не сгенерировано, завершаем метод
+                System.err.println("Ошибка: не удалось сгенерировать изображение!");
+                showErrorMessage("Ошибка: не удалось сгенерировать изображение!");
+                return;
             }
 
             // Сохраняем сгенерированное изображение в файл mandelbrot.png
@@ -1951,6 +2064,7 @@ public class JavaFX extends Application {
                 ImageIO.write(mandelbrotImage, "png", mandelbrotFile);
             } catch (IOException e) {
                 System.err.println("Ошибка при сохранении изображения: " + e.getMessage());
+                showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
                 return;
             }
         } else {
@@ -1959,6 +2073,7 @@ public class JavaFX extends Application {
                 mandelbrotImage = ImageIO.read(mandelbrotFile);
             } catch (IOException e) {
                 System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+                showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
                 return;
             }
         }
@@ -1966,7 +2081,7 @@ public class JavaFX extends Application {
         // Загрузка изображения mandelbrot.png из папки temp
         Image imageMandelbrot = loadImageFromTemp(mandelbrotFilePath);
         if (imageMandelbrot == null) {
-            return; // Если файл не найден, завершаем метод
+            return;
         }
         ImageView imageViewMandelbrot = new ImageView(imageMandelbrot);
         imageViewMandelbrot.setFitWidth(720);
@@ -1977,7 +2092,7 @@ public class JavaFX extends Application {
         Image imageInput = loadImageFromTemp(inputFilePath);
         if (imageInput == null) {
             System.err.println("Файл изображения не найден: " + inputFilePath);
-            return; // Если файл не найден, завершаем метод
+            return;
         }
         ImageView imageView = new ImageView(imageInput);
         imageView.setFitWidth(640);
@@ -1988,13 +2103,13 @@ public class JavaFX extends Application {
         Button regenerateButton = new Button();
         Image repeatIcon = new Image(getClass().getResourceAsStream("/elements/icon_repeat.png"));
         ImageView repeatIconView = new ImageView(repeatIcon);
-        repeatIconView.setFitWidth(50); // Установите нужный размер иконки
+        repeatIconView.setFitWidth(50);
         repeatIconView.setFitHeight(50);
         regenerateButton.setGraphic(repeatIconView);
         regenerateButton.setStyle("-fx-background-color: transparent;");
         regenerateButton.setPrefSize(50, 50);
         regenerateButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             createEncryptGeneratePanel();
             System.out.println("Кнопка 'Сгенерировать заново' нажата");
         });
@@ -2002,36 +2117,28 @@ public class JavaFX extends Application {
         // Создание кнопки "Сгенерировать заново вручную"
         Image writeParamsImage = new Image(getClass().getResourceAsStream("/elements/icon_writeParams.png"));
         ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        writeParamsImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button manualButton = new Button("", writeParamsImageView); // Иконка вместо текста
+        writeParamsImageView.setFitWidth(50);
+        writeParamsImageView.setFitHeight(50);
+        Button manualButton = new Button("", writeParamsImageView);
         manualButton.setStyle("-fx-background-color: transparent;");
         manualButton.setPrefSize(50, 50);
         manualButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             createManualEncryptionPanel();
         });
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
         Image nextImage = new Image(getClass().getResourceAsStream("/elements/icon_next.png"));
         ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50); // Устанавливаем ширину иконки
-        nextImageView.setFitHeight(50); // Устанавливаем высоту иконки
-        Button okayButton = new Button("", nextImageView); // Иконка вместо текста
+        nextImageView.setFitWidth(50);
+        nextImageView.setFitHeight(50);
+        Button okayButton = new Button("", nextImageView);
         okayButton.setStyle("-fx-background-color: transparent;");
         okayButton.setPrefSize(50, 50);
         okayButton.setOnAction(e -> {
-            try {
-                // Загружаем изображение из папки temp
-                BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-                if (imageToEncrypt == null) {
-                    System.err.println("Файл изображения не найден: " + inputFilePath);
-                    return;
-                }
-                createEncryptFinalPanel(imageToEncrypt); // Передаем изображение в метод
-            } catch (Exception ex) {
-                System.err.println("Произошла ошибка: " + ex.getMessage());
-                ex.printStackTrace();
+            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
+            if (imageToEncrypt != null) {
+                createEncryptFinalPanel(imageToEncrypt);
             }
         });
 
@@ -2042,10 +2149,10 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
+            cancelCurrentTask();
             mainPane.getChildren().clear();
             createEncryptModePanel();
         });
@@ -2071,16 +2178,16 @@ public class JavaFX extends Application {
         imageContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, imageContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, imageContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
         // Создание блока-подсказки
         VBox hintBox = createHintBoxForEncrypt();
         hintBox.setAlignment(Pos.CENTER); // Выравниваем hintBox по вертикали
-        hintBox.setPrefSize(300, 230); // Фиксированный размер hintBox (150x200)
-        hintBox.setMinSize(300, 230); // Минимальный размер hintBox (150x200)
-        hintBox.setMaxSize(300, 230); // Максимальный размер hintBox (150x200)
+        hintBox.setPrefSize(300, 230);
+        hintBox.setMinSize(300, 230);
+        hintBox.setMaxSize(300, 230);
 
         // Создаем GridPane для размещения hintBox и contentBox
         GridPane centerGrid = new GridPane();
@@ -2102,13 +2209,20 @@ public class JavaFX extends Application {
         // Установка центрального контента
         mainContainer.setCenter(centerGrid);
 
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
         // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
-        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
+        mainContainer.setTop(topContainer);
 
         // Создание контейнера для кнопок под прямоугольником
         VBox bottomContainer = new VBox(buttonContainer);
@@ -2124,12 +2238,11 @@ public class JavaFX extends Application {
     }
 
     public void createDecryptBeginPanel() {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Дешифратор"
@@ -2140,31 +2253,28 @@ public class JavaFX extends Application {
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Создание светло-серого прямоугольника
         Region lightGrayRect = new Region();
         lightGrayRect.setStyle("-fx-background-color: #494949;");
         lightGrayRect.setPrefSize(720, 540);
-        lightGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        lightGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
-
-        // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowRect = new Region();
-        spaceBelowRect.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowRect).setPrefHeight(163); // Расстояние под текстом
+        lightGrayRect.setMinSize(720, 540);
+        lightGrayRect.setMaxSize(720, 540);
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(640, 480);
-        darkGrayRect.setMinSize(640, 480); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(640, 480); // Фиксируем максимальный размер
+        darkGrayRect.setMinSize(640, 480);
+        darkGrayRect.setMaxSize(640, 480);
         darkGrayRect.setTranslateX(150); // Выглядывание на 150px
 
         // Создание кнопки "Выбрать файл"
         Button uploadButton = new Button("Выбрать файл");
-        uploadButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        uploadButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 28px;");
         uploadButton.setPrefSize(257, 68);
         uploadButton.setOnAction(e -> {
             String imagePath = selectImageFileForDecrypt(); // Получаем путь к файлу input.png
@@ -2182,8 +2292,8 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             createStartPanel();
@@ -2194,6 +2304,18 @@ public class JavaFX extends Application {
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
+        Region spaceInBottom = new Region();
+        spaceInBottom.setStyle("-fx-background-color: transparent;");
+        spaceInBottom.setPrefHeight(120); // 120, т.к. на следующей панеле 20+50+50 (bottomButtonsContainer)
+
         // Размещение кнопки по центру светло-серого прямоугольника
         StackPane buttonContainer = new StackPane(uploadButton);
         buttonContainer.setAlignment(Pos.CENTER);
@@ -2203,15 +2325,17 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer, spaceBelowRect);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
         // Установка центрального контента
         mainContainer.setCenter(contentBox);
 
-        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол и установка label по центру вверху
+        mainContainer.setTop(topContainer);
+
+        mainContainer.setBottom(spaceInBottom);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -2219,30 +2343,29 @@ public class JavaFX extends Application {
     }
 
     private void createDecryptLoadPanel(String imagePath) {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Загруженное для расшифровки изображение:"
         Label titleLabel = new Label("Загруженное для расшифровки изображение:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Создание темно-серого прямоугольника
         Region darkGrayRect = new Region();
         darkGrayRect.setStyle("-fx-background-color: #373737;");
         darkGrayRect.setPrefSize(640, 480);
-        darkGrayRect.setMinSize(640, 480); // Фиксируем минимальный размер
-        darkGrayRect.setMaxSize(640, 480); // Фиксируем максимальный размер
+        darkGrayRect.setMinSize(640, 480);
+        darkGrayRect.setMaxSize(640, 480);
         darkGrayRect.setTranslateX(150); // Выглядывание на 150px
 
         // Загрузка изображения
@@ -2252,10 +2375,12 @@ public class JavaFX extends Application {
         imageView.setFitHeight(540);
 
         // Создание кнопки "Продолжить расшифровку"
-        Button regenerateButton = new Button("Продолжить расшифровку");
-        regenerateButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 20px;");
-        regenerateButton.setPrefSize(320, 48);
-        regenerateButton.setOnAction(e -> {
+        Button continueButton = new Button("Продолжить расшифровку");
+        continueButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 20px;");
+        continueButton.setPrefSize(320, 50);
+        continueButton.setOnAction(e -> {
             createDecryptModePanel();
         });
 
@@ -2266,8 +2391,8 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             createDecryptBeginPanel();
@@ -2276,7 +2401,15 @@ public class JavaFX extends Application {
         // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
-        topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
+        topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
+
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setLeft(topLeftContainer);
+        topContainer.setCenter(topCenterContainer);
 
         // Размещение темно-серого прямоугольника с изображением
         HBox contentContainer = new HBox(imageView);
@@ -2287,7 +2420,7 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -2295,12 +2428,12 @@ public class JavaFX extends Application {
         mainContainer.setCenter(contentBox);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Создание контейнера для кнопок "Продолжить расшифровку"
-        HBox bottomButtonsContainer = new HBox(20, regenerateButton); // Кнопки в одной строке
-        bottomButtonsContainer.setAlignment(Pos.CENTER); // Выравнивание по центру
-        bottomButtonsContainer.setPadding(new Insets(0, 0, 30, 0)); // Отступ снизу
+        HBox bottomButtonsContainer = new HBox(20, continueButton);
+        bottomButtonsContainer.setAlignment(Pos.CENTER);
+        bottomButtonsContainer.setPadding(new Insets(0, 0, 50, 0)); // Отступ снизу
 
         // Установка контейнера с кнопками внизу
         mainContainer.setBottom(bottomButtonsContainer);
@@ -2311,12 +2444,11 @@ public class JavaFX extends Application {
     }
 
     public void createDecryptModePanel() {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Дешифратор"
@@ -2327,25 +2459,27 @@ public class JavaFX extends Application {
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Загрузка изображения input.png
         Image inputImage = new Image("file:" + getTempPath() + "input.png");
         ImageView inputImageView = new ImageView(inputImage);
-        inputImageView.setFitWidth(640); // Ширина изображения
-        inputImageView.setFitHeight(480); // Высота изображения
+        inputImageView.setFitWidth(640);
+        inputImageView.setFitHeight(480);
         inputImageView.setTranslateX(150); // Сдвигаем прямоугольник вправо на 150px
 
         // Создание светло-серого прямоугольника
         Region lightGrayRect = new Region();
         lightGrayRect.setStyle("-fx-background-color: #494949;");
         lightGrayRect.setPrefSize(720, 540); // Уменьшаем размер прямоугольника
-        lightGrayRect.setMinSize(720, 540); // Фиксируем минимальный размер
-        lightGrayRect.setMaxSize(720, 540); // Фиксируем максимальный размер
+        lightGrayRect.setMinSize(720, 540);
+        lightGrayRect.setMaxSize(720, 540);
 
         // Создание кнопки "Загрузить файл-ключ"
         Button manualButton = new Button("Загрузить файл-ключ");
-        manualButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 22px;");
+        manualButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
+                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
+                " -fx-font-size: 22px;");
         manualButton.setPrefSize(287, 68);
         manualButton.setOnAction(e -> {
             File selectedFile = selectKeyFileForDecrypt();
@@ -2363,8 +2497,8 @@ public class JavaFX extends Application {
         backImageView.setFitHeight(50);
 
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             createDecryptBeginPanel();
@@ -2382,13 +2516,12 @@ public class JavaFX extends Application {
         StackPane imageContainer = new StackPane(inputImageView, rectContainer);
         imageContainer.setAlignment(Pos.CENTER);
 
-        // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowRect = new Region();
-        spaceBelowRect.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowRect).setPrefHeight(163); // Расстояние под текстом
+        Region spaceInBottom = new Region();
+        spaceInBottom.setStyle("-fx-background-color: transparent;");
+        spaceInBottom.setPrefHeight(120); // 120, т.к. на следующей панеле 20+50+50 (bottomButtonsContainer)
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, imageContainer, spaceBelowRect);
+        VBox contentBox = new VBox(10, spaceBelowTitle, imageContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -2400,8 +2533,18 @@ public class JavaFX extends Application {
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 0, 0, 0));
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setCenter(topCenterContainer);
+        topContainer.setLeft(topLeftContainer);
+
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
+
+        mainContainer.setBottom(spaceInBottom);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -2409,23 +2552,22 @@ public class JavaFX extends Application {
     }
 
     private void createDecryptFinalPanel(String keyFilePath) {
-        // Создание основного контейнера с градиентным фоном
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(), // Создаем градиент
-                CornerRadii.EMPTY, // Без закругленных углов
-                Insets.EMPTY // Без отступов
+                createGradient(),
+                CornerRadii.EMPTY,
+                Insets.EMPTY
         )));
 
         // Создание текста "Расшифрованное изображение"
         Label titleLabel = new Label("Расшифрованное изображение");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 40px;");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowTitle).setPrefHeight(100); // Расстояние под текстом
+        ((Region) spaceBelowTitle).setPrefHeight(50);
 
         // Создание контейнера для изображения
         StackPane imageContainer = new StackPane();
@@ -2443,8 +2585,8 @@ public class JavaFX extends Application {
         backImageView.setFitWidth(50);
         backImageView.setFitHeight(50);
         Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
+        backButton.setStyle("-fx-background-color: transparent;");
+        backButton.setPrefSize(50, 50);
         backButton.setOnAction(e -> {
             mainPane.getChildren().clear();
             createStartPanel();
@@ -2455,23 +2597,26 @@ public class JavaFX extends Application {
         topLeftContainer.setAlignment(Pos.TOP_LEFT);
         topLeftContainer.setPadding(new Insets(20, 0, 0, 20)); // Отступы сверху и слева
 
-        // Создание прозрачного прямоугольника для расстояния под текстом
-        Node spaceBelowRect = new Region();
-        spaceBelowRect.setStyle("-fx-background-color: transparent;");
-        ((Region) spaceBelowRect).setPrefHeight(113); // Расстояние под текстом
+        HBox topCenterContainer = new HBox(titleLabel);
+        topCenterContainer.setAlignment(Pos.CENTER);
+        topCenterContainer.setPadding(new Insets(80, 40, 0, 0));
+
+        BorderPane topContainer = new BorderPane();
+        topContainer.setLeft(topLeftContainer);
+        topContainer.setCenter(topCenterContainer);
 
         // Создание кнопки "Сохранить изображение" с иконкой
         Image saveIcon = new Image(getClass().getResourceAsStream("/elements/icon_save.png"));
         ImageView saveIconView = new ImageView(saveIcon);
-        saveIconView.setFitWidth(50); // Устанавливаем ширину иконки
-        saveIconView.setFitHeight(50); // Устанавливаем высоту иконки
+        saveIconView.setFitWidth(50);
+        saveIconView.setFitHeight(50);
 
         Button saveButton = new Button("", saveIconView); // Иконка вместо текста
         saveButton.setStyle("-fx-background-color: transparent;"); // Прозрачный фон
-        saveButton.setPrefSize(50, 50); // Устанавливаем размер кнопки
+        saveButton.setPrefSize(50, 50);
         saveButton.setOnAction(e -> {
             saveDecryptedImage();
-        }); // Логика сохранения изображения
+        });
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, saveButton);
@@ -2483,7 +2628,7 @@ public class JavaFX extends Application {
         saveButtonContainer.setPadding(new Insets(0, 0, 30, 0)); // Отступ снизу 30px
 
         // Размещение элементов в центре
-        VBox contentBox = new VBox(10, titleLabel, spaceBelowTitle, rectContainer, spaceBelowRect);
+        VBox contentBox = new VBox(10, spaceBelowTitle, rectContainer);
         contentBox.setAlignment(Pos.TOP_CENTER);
         contentBox.setPadding(new Insets(20));
 
@@ -2494,7 +2639,7 @@ public class JavaFX extends Application {
         mainContainer.setBottom(saveButtonContainer);
 
         // Установка контейнера с кнопкой "Вернуться назад" в верхний левый угол
-        mainContainer.setTop(topLeftContainer);
+        mainContainer.setTop(topContainer);
 
         // Очистка и добавление нового контента в основной контейнер
         mainPane.getChildren().clear();
@@ -2550,7 +2695,7 @@ public class JavaFX extends Application {
                 ImageIO.write(encryptedImage, "png", new File(imageFilePath));
 
                 // Сохраняем key_decoder.bin
-                saveFileWithPathToEncryptImage(imageFilePath);
+                //saveFileWithPathToEncryptImage(imageFilePath);
                 saveKeyDecoder(imageFilePath);
                 System.out.println("Путь к файлу: " + imageFilePath);
             } catch (IOException e) {
@@ -2637,9 +2782,8 @@ public class JavaFX extends Application {
                             startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER
                     );
                     saveMandelbrotToTemp(generatedImage);
-                    BinaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
-
-                    //createChoosenMandelbrotPanel(tempFile.getAbsolutePath());
+                    BinaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin",
+                            startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
                 } catch (Exception e) {
                     showErrorDialog("Ошибка при чтении файла-ключа: " + e.getMessage());
                 }
@@ -2660,7 +2804,8 @@ public class JavaFX extends Application {
         // Создаем FileChooser для выбора изображения
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Выберите изображение для шифрования");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png",
+                "*.jpg", "*.jpeg"));
 
         // Открываем диалоговое окно и получаем выбранный файл
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
@@ -2679,7 +2824,8 @@ public class JavaFX extends Application {
     private String selectImageFileForDecrypt() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Выберите изображение для расшифрования");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.jpg", "*.jpeg", "*.png", "*.bmp"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.jpg",
+                "*.jpeg", "*.png", "*.bmp"));
 
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
         if (selectedFile != null) {
@@ -2690,12 +2836,14 @@ public class JavaFX extends Application {
                     // Сохраняем изображение в папку temp
                     saveInputImageToTemp(selectedFile);
                     System.out.println("Изображение сохранено в папку temp: " + selectedFile.getName());
-                    return selectedFile.getAbsolutePath(); // Возвращаем путь к выбранному файлу
+                    return selectedFile.getAbsolutePath();
                 } else {
                     System.err.println("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
+                    showErrorMessage("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
                 }
             } catch (IOException e) {
                 System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+                showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
             }
         }
         return null;
@@ -2718,6 +2866,7 @@ public class JavaFX extends Application {
             return ImageIO.read(imageFile);
         } catch (Exception e) {
             System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
             return null;
         }
     }
@@ -2813,7 +2962,7 @@ public class JavaFX extends Application {
                 }
             }
         }
-        folder.delete(); // Удаляем папку или файл
+        folder.delete();
     }
 
     private void saveInputImageToTemp(File selectedFile) {
@@ -2845,9 +2994,11 @@ public class JavaFX extends Application {
                 System.out.println("Файл существует: " + tempFile.getAbsolutePath());
             } else {
                 System.err.println("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
+                showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
             }
         } catch (IOException e) {
             System.err.println("Ошибка при сохранении изображения: " + e.getMessage());
+            showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
         }
     }
 
@@ -2861,7 +3012,8 @@ public class JavaFX extends Application {
         // Проверяем, существует ли файл и доступен ли он для чтения
         if (!tempFile.exists() || !tempFile.canRead()) {
             System.err.println("Файл изображения не найден: " + tempFilePath);
-            return null; // Возвращаем null, если файл не найден
+            showErrorDialog("Файл изображения не найден: " + tempFilePath);
+            return null;
         }
 
         // Загружаем изображение из файла
@@ -2878,6 +3030,7 @@ public class JavaFX extends Application {
         File tempFile = new File(filePath);
         if (!tempFile.exists() || !tempFile.canRead()) {
             System.err.println("Файл изображения не найден: " + filePath);
+            showErrorDialog("Файл изображения не найден: " + filePath);
             return null;
         }
 
@@ -2885,6 +3038,7 @@ public class JavaFX extends Application {
             return ImageIO.read(tempFile);
         } catch (IOException e) {
             System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            showErrorDialog("Ошибка при загрузке изображения: " + e.getMessage());
             return null;
         }
     }
@@ -2893,6 +3047,7 @@ public class JavaFX extends Application {
         File tempFile = new File(filePath);
         if (!tempFile.exists() || !tempFile.canRead()) {
             System.err.println("Файл изображения не найден: " + filePath);
+            showErrorMessage("Файл изображения не найден: " + filePath);
             return null;
         }
 
@@ -2900,6 +3055,7 @@ public class JavaFX extends Application {
             return new Image(tempFile.toURI().toString());
         } catch (Exception e) {
             System.err.println("Ошибка при загрузке изображения: " + e.getMessage());
+            showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
             return null;
         }
     }
@@ -2923,13 +3079,13 @@ public class JavaFX extends Application {
             // Убеждаемся, что файл существует
             if (tempFile.exists() && tempFile.canRead()) {
                 System.out.println("Файл существует: " + tempFile.getAbsolutePath());
-                // Переходим к созданию панели со сгенерированным изображением
-                //createChoosenMandelbrotPanel(tempFile.getAbsolutePath());
             } else {
                 System.err.println("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
+                showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
             }
         } catch (IOException e) {
             System.err.println("Ошибка при сохранении изображения: " + e.getMessage());
+            showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
         }
     }
 

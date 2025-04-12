@@ -1,455 +1,346 @@
 package View;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionListener;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import Model.ClientServerTest;
-
 /**
- * Класс ServerInterface представляет собой графический интерфейс для работы с сервером, диспетчеризующим передачу зашифрованных
- * изображений и ключей для их расшифровки между различными клиентами на различных IP-адресах и портах.
- * Интерфейс состоит из нескольких панелей: экрана загрузки, экрана запуска сервера, экрана ввода порта и экрана с журналом действий сервера.
+ * Класс ServerInterface представляет собой графический интерфейс для работы с сервером,
+ * диспетчеризующим передачу зашифрованных изображений и ключей для их расшифровки
+ * между различными клиентами на различных IP-адресах и портах.
  *
  * @author Илья
  * @version 0.2
  */
-public class ServerInterface {
+public class ServerInterface extends Application {
 
-    /**
-     * Объект CardLayout, используемый для управления отображением различных панелей в главном окне.
-     */
-    private static CardLayout cardLayout;
-
-    /**
-     * Основная панель, содержащая все остальные панели, управляемые CardLayout.
-     */
-    private static JPanel mainPanel;
-
-    /**
-     * Ширина экрана, на котором отображается интерфейс.
-     */
-    private static int screenWidth;
-
-    /**
-     * Высота экрана, на котором отображается интерфейс.
-     */
-    private static int screenHeight;
-
-    /**
-     * Полоса загрузки, используемая для отображения прогресса загрузки или выполнения операций.
-     */
-    private static JProgressBar progressBar;
-
-    /**
-     * Цвет для верхней части градиента на панелях.
-     */
     private static final int NORTH_COL = 0x011324;
+    private static final int SOUTH_COL = 0x011A30;
 
-    /**
-     * Цвет для нижней части градиента на панелях.
-     */
-    private static final int SOUTH_COL = 0x011a30;
+    private Pane mainPane;
+    private TextArea consoleTextArea;
+    private Stage primaryStage;
 
-    /**
-     * Шрифт, используемый для кнопок в интерфейсе.
-     */
-    private static final Font buttonFont = new Font("Arial", Font.BOLD, 16);
-
-    /**
-     * Размер кнопок в интерфейсе.
-     */
-    private static final Dimension buttonSize = new Dimension(400, 40);
-
-    /**
-     * Размер текстовых полей в интерфейсе.
-     */
-    private static final Dimension fieldSize = new Dimension(320, 42);
-
-    /**
-     * Точка входа в программу. Инициализирует размер экрана и создает главное окно.
-     *
-     * @param args Аргументы командной строки.
-     */
     public static void main(String[] args) {
-        initializeScreenSize();
-        createMainFrame();
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+        mainPane = new StackPane();
+        Scene scene = new Scene(mainPane, 1440, 800);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Шифр Мандельброта");
+
+        // Добавление иконки приложения
+        Image icon = new Image(getClass().getResourceAsStream("/elements/icon.png"));
+        primaryStage.getIcons().add(icon);
+        primaryStage.show();
+        //createStartPanel();
+        showLoadingScreen();
     }
 
     /**
-     * Инициализирует размеры экрана, на котором будет отображаться интерфейс.
-     * В случае ошибки устанавливает размеры по умолчанию (640x480).
+     * Создает экран загрузки.
      */
-    private static void initializeScreenSize() {
-        try {
-            Toolkit toolkit = Toolkit.getDefaultToolkit();
-            Dimension screenSize = toolkit.getScreenSize();
-            screenWidth = screenSize.width;
-            screenHeight = screenSize.height;
-        } catch (Exception e) {
-            System.err.println("Ошибка при получении размеров экрана: " + e.getMessage());
-            screenWidth = 640;
-            screenHeight = 480;
-        }
-    }
+    private void showLoadingScreen() {
+        // Создаем заставку
+        VBox loadingContainer = new VBox(20);
+        loadingContainer.setAlignment(Pos.CENTER);
+        loadingContainer.setPadding(new Insets(20));
+        loadingContainer.setBackground(new Background(new BackgroundFill(
+                createGradient(), // Градиентный фон
+                CornerRadii.EMPTY,
+                Insets.EMPTY
+        )));
 
-    /**
-     * Создает главное окно приложения и настраивает его.
-     */
-    private static void createMainFrame() {
-        try {
-            JFrame mainFrame = new JFrame("Шифр Мандельброта");
-            mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            mainFrame.setSize(screenWidth, screenHeight);
-            mainFrame.setLocationRelativeTo(null);
+        // Создаем метку "Загрузка"
+        Label loadingLabel = new Label("Mandelbrot Cipher");
+        loadingLabel.setFont(Font.font("Intro Regular", 96));
+        loadingLabel.setTextFill(Color.WHITE);
 
-            cardLayout = new CardLayout();
-            mainPanel = new JPanel(cardLayout);
-            mainFrame.add(mainPanel);
-            mainFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        // Создаем прогресс-бар
+        ProgressBar progressBar = new ProgressBar(0);
+        progressBar.setPrefWidth(900);
+        progressBar.setStyle("-fx-accent: #0065CA;"); // Зеленый цвет прогресс-бара
 
-            createLoadingScreen(mainFrame);
-        } catch (Exception e) {
-            System.err.println("Ошибка при создании главного фрейма: " + e.getMessage());
-        }
-    }
+        // Добавляем элементы в контейнер
+        loadingContainer.getChildren().addAll(loadingLabel, progressBar);
 
-    /**
-     * Создает экран загрузки, который отображается при запуске приложения.
-     *
-     * @param mainFrame Главное окно приложения.
-     */
-    private static void createLoadingScreen(JFrame mainFrame) {
-        try {
-            JPanel loadingPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
-            loadingPanel.setLayout(new GridBagLayout());
+        // Добавляем заставку в основной контейнер
+        mainPane.getChildren().add(loadingContainer);
 
-            GridBagConstraints gbc = new GridBagConstraints();
-            setGridConstraints(gbc, 0, 0, -1, -1, GridBagConstraints.HORIZONTAL);
-            gbc.insets = new Insets(0, 0, 64, 0);
-
-            JLabel loadingLabel = initializeNewLabel("Mandelbrot Model.Server", 96, 0);
-            loadingLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            loadingPanel.add(loadingLabel, gbc);
-
-            progressBar = new JProgressBar(0, 1000);
-            progressBar.setIndeterminate(false);
-            progressBar.setPreferredSize(new Dimension(screenWidth / 2, 32));
-            progressBar.setUI(new GradientProgressBarUI());
-            progressBar.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(Color.WHITE, 1),
-                    BorderFactory.createEmptyBorder(1, 1, 1, 1)
-            ));
-
-            setGridConstraints(gbc, -1, 1, -1, -1, -1);
-            gbc.insets = new Insets(0, 0, 0, 0);
-            loadingPanel.add(progressBar, gbc);
-
-            mainPanel.add(loadingPanel, "LoadingPanel");
-            cardLayout.show(mainPanel, "LoadingPanel");
-            mainFrame.setVisible(true);
-
-            // Используем SwingWorker для имитации загрузки
-            SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
-                @Override
-                protected Void doInBackground() {
-                    try {
-                        for (int i = 0; i <= 1000; i++) {
-                            publish(i);
-                            Thread.sleep(1); // Задержка для имитации загрузки
-                        }
-                    } catch (InterruptedException e) {
-                        System.err.println("Ошибка в SwingWorker: " + e.getMessage());
-                        Thread.currentThread().interrupt();
-                    }
-                    return null;
+        // Имитация загрузки
+        Task<Void> loadingTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                for (int i = 0; i <= 100; i++) {
+                    updateProgress(i, 100); // Обновляем прогресс
+                    Thread.sleep(20); // Задержка для имитации загрузки
                 }
+                return null;
+            }
+        };
 
-                @Override
-                protected void process(java.util.List<Integer> chunks) {
-                    for (int progress : chunks) {
-                        progressBar.setValue(progress);
-                    }
-                }
+        // Привязываем прогресс-бар к Task
+        progressBar.progressProperty().bind(loadingTask.progressProperty());
 
-                @Override
-                protected void done() {
-                    createStartPanel();
-                    cardLayout.show(mainPanel, "StartPanel");
-                }
-            };
+        // После завершения задачи переключаемся на startPanel
+        loadingTask.setOnSucceeded(event -> {
+            // Удаляем заставку
+            mainPane.getChildren().remove(loadingContainer);
 
-            worker.execute();
-        } catch (Exception e) {
-            System.err.println("Ошибка при создании экрана загрузки: " + e.getMessage());
-        }
+            // Показываем startPanel
+            createStartPanel();
+        });
+
+        // Запускаем задачу
+        new Thread(loadingTask).start();
     }
 
     /**
-     * Создает стартовую панель с кнопками для шифрования и расшифровки изображений.
+     * Создает стартовую панель.
      */
-    private static void createStartPanel() {
-        try {
-            JPanel startPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
-            startPanel.setLayout(new GridBagLayout());
+    private void createStartPanel() {
+        BorderPane startPanel = new BorderPane();
+        startPanel.setBackground(new Background(new BackgroundFill(
+                createGradient(), CornerRadii.EMPTY, Insets.EMPTY
+        )));
 
-            JButton encryptButton = initializeNewButton("Запустить сервер", buttonSize, buttonFont,
-                    e -> {createListeningPortPanel();
-                        cardLayout.show(mainPanel, "ListeningPortPanel"); });
+        Label titleLabel = new Label("Запустить сервер");
+        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 64px;");
+        titleLabel.setAlignment(Pos.CENTER);
 
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.insets = new Insets(10, 10, 10, 10);
+        Button startServerButton = new Button("Запустить сервер");
+        startServerButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        startServerButton.setPrefSize(327, 58);
+        startServerButton.setAlignment(Pos.CENTER);
+        startServerButton.setOnAction(e -> createListeningPortPanel());
 
-            addComponent(startPanel, encryptButton, constraints, 0, 0, 1, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL);
+        VBox contentBox = new VBox(20, titleLabel, startServerButton);
+        contentBox.setAlignment(Pos.CENTER); // Выравниваем по центру
+        contentBox.setPadding(new Insets(20));
 
-            mainPanel.add(startPanel,"StartPanel");
-        } catch (Exception e) {
-            System.err.println("Ошибка при создании вкладки: " + e.getMessage());
-        }
+        startPanel.setCenter(contentBox);
+
+        mainPane.getChildren().clear(); // Очищаем mainPane
+        mainPane.getChildren().add(startPanel); // Добавляем новый контент
     }
 
-    private static void createListeningPortPanel() {
-        try {
-            JPanel listeningPortPanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
-            listeningPortPanel.setLayout(new GridBagLayout());
+    /**
+     * Создает панель для ввода порта сервера.
+     */
+    private void createListeningPortPanel() {
+        BorderPane listeningPortPanel = new BorderPane();
+        listeningPortPanel.setBackground(new Background(new BackgroundFill(
+                createGradient(), CornerRadii.EMPTY, Insets.EMPTY
+        )));
 
-            JLabel portLabel = initializeNewLabel("Введите порт сервера:", 32, 0);
-            JTextField portField = initializeNewTextField(20, fieldSize);
-            JButton startServerButton = initializeNewButton("Запустить сервер", buttonSize, buttonFont,
-                    e -> {
-                        try {
-                            int port = Integer.parseInt(portField.getText());
-                            if (port <= 0 || port > 65535) {
-                                throw new IllegalArgumentException("Введён некорректный порт.");
-                            }
+        Label portLabel = new Label("Введите порт сервера:");
+        portLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 32px;");
 
-                            ClientServerTest newTest = new ClientServerTest(port);
-                            newTest.main(null);
+        TextField portField = new TextField();
+        portField.setPromptText("Порт");
+        portField.setPrefSize(320, 42);
+        portField.setAlignment(Pos.CENTER);
+        portField.setMaxWidth(320);
+        portField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
 
-                            createServerConsolePanel();
-                            System.out.println(getTimestamp() + "Model.Server is listening at " + port);
-                            cardLayout.show(mainPanel, "ServerConsolePanel");
-                        } catch (NumberFormatException ex) {
-                            JOptionPane.showMessageDialog(null, "Некорректный формат порта.", "Ошибка!", JOptionPane.ERROR_MESSAGE);
-                        } catch (IllegalArgumentException ex) {
-                            JOptionPane.showMessageDialog(null, ex.getMessage(), "Ошибка!", JOptionPane.ERROR_MESSAGE);
-                        }
-                    });
+        Button startServerButton = new Button("Запустить сервер");
+        startServerButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        startServerButton.setPrefSize(327, 58);
+        startServerButton.setOnAction(e -> {
+            try {
+                int port = Integer.parseInt(portField.getText());
+                if (port <= 0 || port > 65535) {
+                    throw new IllegalArgumentException("Некорректный порт.");
+                }
+                // Запуск сервера
+                System.out.println(getTimestamp() + "Сервер запущен на порту " + port);
+                createServerConsolePanel();
+            } catch (NumberFormatException ex) {
+                showAlert("Ошибка", "Некорректный формат порта.");
+            } catch (IllegalArgumentException ex) {
+                showAlert("Ошибка", ex.getMessage());
+            }
+        });
 
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.insets = new Insets(5, 10, 5, 10);
+        VBox contentBox = new VBox(20, portLabel, portField, startServerButton);
+        contentBox.setAlignment(Pos.CENTER); // Выравниваем по центру
+        contentBox.setPadding(new Insets(20));
 
-            addComponent(listeningPortPanel, portLabel, constraints, 0, 0, 2, -1, -1);
-            addComponent(listeningPortPanel, portField, constraints, 1, 1, -1, -1, -1);
-            addComponent(listeningPortPanel, startServerButton, constraints, 0, 2, 2, -1, -1);
+        listeningPortPanel.setCenter(contentBox);
 
-            mainPanel.add(listeningPortPanel, "ListeningPortPanel");
-        } catch (Exception e) {
-            System.err.println("Ошибка при создании вкладки: " + e.getMessage());
-        }
+        mainPane.getChildren().clear();
+        mainPane.getChildren().add(listeningPortPanel);
     }
 
     /**
      * Создает панель для отображения журнала действий сервера.
      */
-    private static void createServerConsolePanel() {
-        try {
-            JPanel serverConsolePanel = new GradientPanel(new Color(NORTH_COL), new Color(SOUTH_COL));
-            serverConsolePanel.setLayout(new GridBagLayout());
+    private void createServerConsolePanel() {
+        BorderPane serverConsolePanel = new BorderPane();
+        serverConsolePanel.setBackground(new Background(new BackgroundFill(
+                createGradient(), CornerRadii.EMPTY, Insets.EMPTY
+        )));
 
-            JLabel consoleLabel = initializeNewLabel("Журнал действий сервера:", 32, 0);
-            CustomTextArea consoleTextArea = new CustomTextArea(20, 60);
-            JScrollPane scrollPane = new JScrollPane(consoleTextArea);
+        Label consoleLabel = new Label("Журнал действий сервера:");
+        consoleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 32px;");
 
-            JButton stopServerButton = initializeNewButton("Завершить работу сервера", buttonSize, buttonFont,
-                    e -> {
-                        // Здесь можно добавить логику для завершения работы сервера
-                        System.out.println(getTimestamp() + "Model.Server is disabled.");
-                    });
+        consoleTextArea = new TextArea();
+        consoleTextArea.setEditable(false);
+        consoleTextArea.setPrefSize(800, 400);
+        consoleTextArea.setMaxSize(800, 400);
+        consoleTextArea.setMinSize(800, 400);
+        consoleTextArea.setStyle("-fx-text-fill: #56AAFF; -fx-font-family: 'Intro Regular'; -fx-font-size: 18px; -fx-control-inner-background: #001F3D; -fx-background-color: #001F3D;");
+        Platform.runLater(() -> {
+            // Настройка стилей для вертикального скроллбара
+            consoleTextArea.lookup(".scroll-bar:vertical").setStyle(
+                    "-fx-background-color: #001F3D; " + // Цвет фона ползунка
+                            "-fx-pref-width: 10px; " +         // Ширина ползунка
+                            "-fx-background-radius: 5px;"      // Закругленные углы
+            );
 
-            JButton backButton = initializeNewButton("Вернуться назад", buttonSize, buttonFont,
-                    e -> {
-                        cardLayout.show(mainPanel, "StartPanel"); // Перенаправление на StartPanel
-                    });
+            // Настройка стилей для трека вертикального скроллбара
+            consoleTextArea.lookup(".scroll-bar:vertical .track").setStyle(
+                    "-fx-background-color: #001F3D; " + // Цвет фона трека
+                            "-fx-border-color: transparent;"    // Убираем границу
+            );
 
-            GridBagConstraints constraints = new GridBagConstraints();
-            constraints.insets = new Insets(5, 10, 5, 10);
+            // Настройка стилей для ползунка вертикального скроллбара
+            consoleTextArea.lookup(".scroll-bar:vertical .thumb").setStyle(
+                    "-fx-background-color: #004488; " + // Цвет ползунка
+                            "-fx-background-radius: 5px;"       // Закругленные углы
+            );
 
-            addComponent(serverConsolePanel, consoleLabel, constraints, 0, 0, 2, -1, -1);
-            addComponent(serverConsolePanel, scrollPane, constraints, 0, 1, 2, -1, GridBagConstraints.BOTH);
+            // Настройка стилей для горизонтального скроллбара
+            consoleTextArea.lookup(".scroll-bar:horizontal").setStyle(
+                    "-fx-background-color: #001F3D; " + // Цвет фона ползунка
+                            "-fx-pref-height: 10px; " +        // Высота ползунка
+                            "-fx-background-radius: 5px;"      // Закругленные углы
+            );
 
-            // Расположение кнопок слева и справа
-            addComponent(serverConsolePanel, stopServerButton, constraints, 0, 2, 1, -1, -1);
-            addComponent(serverConsolePanel, backButton, constraints, 1, 2, 1, -1, -1);
+            // Настройка стилей для трека горизонтального скроллбара
+            consoleTextArea.lookup(".scroll-bar:horizontal .track").setStyle(
+                    "-fx-background-color: #001F3D; " + // Цвет фона трека
+                            "-fx-border-color: transparent;"    // Убираем границу
+            );
 
-            // Перенаправление System.out в JTextArea
-            System.setOut(new PrintStream(new OutputStream() {
-                @Override
-                public void write(int b) {
-                    consoleTextArea.append(String.valueOf((char) b));
-                }
-            }));;
+            // Настройка стилей для ползунка горизонтального скроллбара
+            consoleTextArea.lookup(".scroll-bar:horizontal .thumb").setStyle(
+                    "-fx-background-color: #004488; " + // Цвет ползунка
+                            "-fx-background-radius: 5px;"       // Закругленные углы
+            );
 
-            mainPanel.add(serverConsolePanel, "ServerConsolePanel");
-        } catch (Exception e) {
-            System.err.println("Ошибка при создании вкладки: " + e.getMessage());
-        }
+            // Настройка стилей для указателя (arrow buttons)
+            consoleTextArea.lookup(".scroll-bar .increment-button, .scroll-bar .decrement-button").setStyle(
+                    "-fx-background-color: transparent; " + // Прозрачные кнопки
+                            "-fx-border-color: transparent;"
+            );
+
+            // Настройка стилей для стрелок (arrows)
+            consoleTextArea.lookup(".scroll-bar .increment-arrow, .scroll-bar .decrement-arrow").setStyle(
+                    "-fx-background-color: transparent;" // Скрываем стрелки
+            );
+        });
+
+        Button stopServerButton = new Button("Завершить работу сервера");
+        stopServerButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        stopServerButton.setPrefSize(257, 68);
+        stopServerButton.setOnAction(e -> {
+            // Логика завершения работы сервера
+            System.out.println(getTimestamp() + "Сервер остановлен.");
+        });
+
+        Button backButton = new Button("Вернуться назад");
+        backButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular'; -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white; -fx-font-size: 28px;");
+        backButton.setPrefSize(257, 68);
+        backButton.setOnAction(e -> createStartPanel());
+
+        HBox buttonBox = new HBox(20, stopServerButton, backButton);
+        buttonBox.setAlignment(Pos.CENTER); // Выравниваем по центру
+        buttonBox.setPadding(new Insets(20));
+
+        VBox contentBox = new VBox(20, consoleLabel, consoleTextArea, buttonBox);
+        contentBox.setAlignment(Pos.CENTER); // Выравниваем по центру
+        contentBox.setPadding(new Insets(20));
+
+        serverConsolePanel.setCenter(contentBox);
+
+        mainPane.getChildren().clear();
+        mainPane.getChildren().add(serverConsolePanel);
+
+        // Перенаправление System.out в TextArea
+        System.setOut(new ConsolePrintStream(consoleTextArea));
     }
 
     /**
-     * Инициализирует новое текстовое поле на заданное количество символов с заданным размером.
-     *
-     * @param my_columns Ожидаемое количество символов текстового поля.
-     * @param my_size Размер текстового поля.
-     * @return Инициализированное текстовое поле.
+     * Создает градиентный фон.
      */
-    private static JTextField initializeNewTextField(int my_columns, Dimension my_size) {
-        try {
-            CustomTextField myField = new CustomTextField(my_columns);
-            myField.setPreferredSize(my_size);
-            return myField;
-        } catch (Exception e) {
-            System.err.println("Ошибка при инициализации текстового поля: " + e.getMessage());
-            return null;
-        }
+    // Метод для создания градиента
+    private LinearGradient createGradient() {
+        return new LinearGradient(
+                0, // Начальная точка по оси X (0 - слева)
+                0, // Начальная точка по оси Y (0 - сверху)
+                0, // Конечная точка по оси X (0 - слева)
+                1, // Конечная точка по оси Y (1 - снизу)
+                true, // Пропорциональный градиент
+                CycleMethod.NO_CYCLE, // Не повторять градиент
+                new Stop(0, Color.web("011324FF")), // Начальный цвет
+                new Stop(1, Color.web("011A30FF"))  // Конечный цвет
+        );
     }
 
     /**
-     * Инициализирует новую кнопку с заданным текстом, размером, шрифтом и обработчиком событий.
-     *
-     * @param my_text Текст на кнопке.
-     * @param my_size Размер кнопки.
-     * @param my_font Шрифт кнопки.
-     * @param my_event Обработчик событий для кнопки.
-     * @return Инициализированная кнопка.
+     * Отображает диалоговое окно с сообщением.
      */
-    private static JButton initializeNewButton(String my_text, Dimension my_size, Font my_font, ActionListener my_event) {
-        try {
-            JButton myButton = new CustomButton(my_text);
-            myButton.setPreferredSize(my_size);
-            myButton.setMinimumSize(my_size);
-            myButton.setMaximumSize(my_size);
-            myButton.setFont(my_font);
-
-            myButton.addActionListener(e -> {
-                try {
-                    my_event.actionPerformed(e);
-                } catch (Exception ex) {
-                    System.err.println("Ошибка при обработке действия кнопки: " + ex.getMessage());
-                    JOptionPane.showMessageDialog(null, "Произошла ошибка: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-                }
-            });
-
-            return myButton;
-        } catch (Exception e) {
-            System.err.println("Ошибка при инициализации кнопки: " + e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Инициализирует новый текстовый элемент с заданным текстом, размером шрифта и флагом стиля (курсив/обычный текст).
-     *
-     * @param my_text Текст для элемента.
-     * @param my_size Размер шрифта.
-     * @param my_flag Флаг стиля (0 - курсив и жирный, 1 - обычный).
-     * @return Инициализированный текстовый элемент.
-     */
-    private static JLabel initializeNewLabel(String my_text, int my_size, int my_flag) {
-        try {
-            JLabel myLabel = new JLabel(my_text);
-            if (my_flag == 0)
-                myLabel.setFont(new Font("Serif", Font.ITALIC + Font.BOLD, my_size));
-            else if (my_flag == 1)
-                myLabel.setFont(new Font("Serif", Font.PLAIN, my_size));
-
-            myLabel.setForeground(Color.WHITE);
-            return myLabel;
-        } catch (Exception e) {
-            System.err.println("Ошибка при инициализации текста: " + e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Устанавливает ограничения для GridBagConstraints.
-     *
-     * @param gbc Объект GridBagConstraints.
-     * @param my_gridx Координата X в сетке.
-     * @param my_gridy Координата Y в сетке.
-     * @param my_gridwidth Ширина в сетке.
-     * @param my_anchor Привязка компонента.
-     * @param my_fill Заполнение компонента.
-     */
-    private static void setGridConstraints(GridBagConstraints gbc, int my_gridx, int my_gridy, int my_gridwidth, int my_anchor, int my_fill) {
-        try {
-            if (my_gridx != -1) {
-                gbc.gridx = my_gridx;
-            }
-            if (my_gridy != -1) {
-                gbc.gridy = my_gridy;
-            }
-            if (my_gridwidth != -1) {
-                gbc.gridwidth = my_gridwidth;
-            }
-            if (my_anchor != -1) {
-                gbc.anchor = my_anchor;
-            }
-            if (my_fill != -1) {
-                gbc.fill = my_fill;
-            }
-        } catch (Exception e) {
-            System.err.println("Ошибка при установке размеров макета: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Добавляет компонент на панель с заданными ограничениями GridBagConstraints.
-     *
-     * @param my_panel Панель, на которую добавляется компонент.
-     * @param my_component Компонент для добавления.
-     * @param gbc Объект GridBagConstraints.
-     * @param my_gridx Координата X в сетке.
-     * @param my_gridy Координата Y в сетке.
-     * @param my_gridwidth Ширина в сетке.
-     * @param my_anchor Привязка компонента.
-     * @param my_fill Заполнение компонента.
-     */
-    private static void addComponent(JPanel my_panel, Component my_component, GridBagConstraints gbc,
-                                     int my_gridx, int my_gridy, int my_gridwidth, int my_anchor, int my_fill) {
-        try {
-            if (my_gridx != -1) {
-                gbc.gridx = my_gridx;
-            }
-            if (my_gridy != -1) {
-                gbc.gridy = my_gridy;
-            }
-            if (my_gridwidth != -1) {
-                gbc.gridwidth = my_gridwidth;
-            }
-            if (my_anchor != -1) {
-                gbc.anchor = my_anchor;
-            }
-            if (my_fill != -1) {
-                gbc.fill = my_fill;
-            }
-            my_panel.add(my_component, gbc);
-        } catch (Exception e) {
-            System.err.println("Ошибка при добавлении компонента: " + e.getMessage());
-        }
+    private void showAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
      * Генерирует временный отпечаток в формате "yyyy-MM-dd HH:mm:ss".
-     *
-     * @return Временной отпечаток.
      */
-    private static String getTimestamp() {
+    private String getTimestamp() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return "[" + sdf.format(new Date()) + "] ";
+    }
+
+    /**
+     * Перенаправляет вывод System.out в TextArea.
+     */
+    private static class ConsolePrintStream extends java.io.PrintStream {
+        private final TextArea textArea;
+
+        public ConsolePrintStream(TextArea textArea) {
+            super(System.out);
+            this.textArea = textArea;
+        }
+
+        @Override
+        public void println(String x) {
+            super.println(x);
+            Platform.runLater(() -> textArea.appendText(x + "\n")); // Обновление UI через Platform.runLater
+        }
     }
 }

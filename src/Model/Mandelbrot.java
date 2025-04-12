@@ -98,7 +98,7 @@ public class Mandelbrot extends JPanel {
         boolean validImage = false;
         int attempt = 0;
 
-        while (!validImage) {
+        while (!validImage && !Thread.currentThread().isInterrupted()) { // Проверяем флаг прерывания
             attempt++;
             randomPositionOnPlenty();
             image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
@@ -117,9 +117,13 @@ public class Mandelbrot extends JPanel {
             }
             executor.shutdown();
             try {
-                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+                    executor.shutdownNow(); // Принудительно завершаем выполнение, если тайм-аут истек
+                }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                executor.shutdownNow(); // Принудительно завершаем выполнение при прерывании
+                Thread.currentThread().interrupt(); // Восстанавливаем флаг прерывания
+                return null; // Возвращаем null, так как задача была отменена
             }
 
             validImage = checkImageDiversity(image);
