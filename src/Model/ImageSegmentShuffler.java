@@ -4,12 +4,36 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.Graphics2D;
-import java.util.Random;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.awt.*;
+import java.util.List;
 
 public class ImageSegmentShuffler {
+
     private int[] pixels;
+    /**
+     * Создает список сегментов изображения заданного размера
+     * @param image исходное изображение
+     * @param segmentWidth ширина сегмента (может быть 1, 2 или любое другое значение)
+     * @param segmentHeight высота сегмента (может быть 1, 2 или любое другое значение)
+     * @return список прямоугольников, представляющих сегменты
+     */
+    public static List<Rectangle> createSegments(BufferedImage image, int segmentWidth, int segmentHeight) {
+        List<Rectangle> segments = new ArrayList<>();
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        // Обрабатываем края изображения, где сегменты могут быть меньше заданного размера
+        for (int y = 0; y < height; y += segmentHeight) {
+            for (int x = 0; x < width; x += segmentWidth) {
+                int segW = Math.min(segmentWidth, width - x);
+                int segH = Math.min(segmentHeight, height - y);
+                segments.add(new Rectangle(x, y, segW, segH));
+            }
+        }
+
+        return segments;
+    }
 
     public ImageSegmentShuffler(BufferedImage my_image) {
         DataBuffer dataBuffer = my_image.getRaster().getDataBuffer();
@@ -25,88 +49,89 @@ public class ImageSegmentShuffler {
         }
     }
 
+    /**
+     * Перемешивает сегменты изображения
+     * @param image исходное изображение
+     * @param segmentWidth ширина сегмента
+     * @param segmentHeight высота сегмента
+     * @return перемешанное изображение и карта соответствия сегментов
+     */
+    public static Pair<BufferedImage, Map<Integer, Integer>> shuffleSegments(
+            BufferedImage image, int segmentWidth, int segmentHeight) {
+
+        List<Rectangle> segments = createSegments(image, segmentWidth, segmentHeight);
+        BufferedImage result = new BufferedImage(
+                image.getWidth(), image.getHeight(), image.getType());
+
+        // Создаем список индексов и перемешиваем его
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < segments.size(); i++) {
+            indices.add(i);
+        }
+        Collections.shuffle(indices);
+
+        // Создаем карту соответствия оригинальных и новых позиций
+        Map<Integer, Integer> segmentMapping = new HashMap<>();
+        for (int i = 0; i < indices.size(); i++) {
+            segmentMapping.put(i, indices.get(i));
+        }
+
+        // Копируем сегменты в новые позиции
+        Graphics2D g = result.createGraphics();
+        for (int i = 0; i < segments.size(); i++) {
+            Rectangle srcRect = segments.get(indices.get(i));
+            Rectangle destRect = segments.get(i);
+
+            BufferedImage segment = image.getSubimage(
+                    srcRect.x, srcRect.y, srcRect.width, srcRect.height);
+            g.drawImage(segment, destRect.x, destRect.y, null);
+        }
+        g.dispose();
+
+        return new Pair<>(result, segmentMapping);
+    }
+
+    /**
+     * Восстанавливает оригинальный порядок сегментов
+     * @param shuffledImage перемешанное изображение
+     * @param segmentMapping карта соответствия сегментов
+     * @param segmentWidth ширина сегмента
+     * @param segmentHeight высота сегмента
+     * @return изображение с восстановленным порядком сегментов
+     */
+    public static BufferedImage unshuffledSegments(
+            BufferedImage shuffledImage, Map<Integer, Integer> segmentMapping,
+            int segmentWidth, int segmentHeight) {
+
+        List<Rectangle> segments = createSegments(shuffledImage, segmentWidth, segmentHeight);
+        BufferedImage result = new BufferedImage(
+                shuffledImage.getWidth(), shuffledImage.getHeight(), shuffledImage.getType());
+
+        // Создаем обратную карту соответствия
+        Map<Integer, Integer> reverseMapping = new HashMap<>();
+        for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
+            reverseMapping.put(entry.getValue(), entry.getKey());
+        }
+
+        // Восстанавливаем оригинальный порядок
+        Graphics2D g = result.createGraphics();
+        for (int i = 0; i < segments.size(); i++) {
+            Rectangle srcRect = segments.get(reverseMapping.get(i));
+            Rectangle destRect = segments.get(i);
+
+            BufferedImage segment = shuffledImage.getSubimage(
+                    srcRect.x, srcRect.y, srcRect.width, srcRect.height);
+            g.drawImage(segment, destRect.x, destRect.y, null);
+        }
+        g.dispose();
+
+        return result;
+    }
     public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
         BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
         g2d.drawImage(image, 0, 0, width, height, null);
         g2d.dispose();
         return resizedImage;
-    }
-
-    public Pair<BufferedImage, Map<Integer, Integer>> shuffleSegments(BufferedImage image, int segmentWidthSize, int segmentHeightSize) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int segmentWidth = width / segmentWidthSize;
-        int segmentHeight = height / segmentHeightSize;
-
-        // Проверка, что размеры изображения делятся на количество сегментов без остатка
-        if (width % segmentWidthSize != 0 || height % segmentHeightSize != 0) {
-            throw new IllegalArgumentException("Размеры изображения должны быть кратны количеству сегментов");
-        }
-
-        BufferedImage shuffledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = shuffledImage.createGraphics();
-
-        int totalSegments = segmentWidthSize * segmentHeightSize;
-        int[] segmentIndices = new int[totalSegments];
-        for (int i = 0; i < totalSegments; i++) {
-            segmentIndices[i] = i;
-        }
-
-        // Перемешивание индексов сегментов
-        Random random = new Random();
-        for (int i = totalSegments - 1; i > 0; i--) {
-            int j = random.nextInt(i + 1);
-            int temp = segmentIndices[i];
-            segmentIndices[i] = segmentIndices[j];
-            segmentIndices[j] = temp;
-        }
-
-        Map<Integer, Integer> segmentMapping = new HashMap<>();
-        for (int i = 0; i < totalSegments; i++) {
-            int originalIndex = i; // Исходный индекс сегмента
-            int shuffledIndex = segmentIndices[i]; // Перемешанный индекс сегмента
-            int segmentX = (shuffledIndex % segmentWidthSize) * segmentWidth;
-            int segmentY = (shuffledIndex / segmentWidthSize) * segmentHeight;
-            g2d.drawImage(image.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
-                    (i % segmentWidthSize) * segmentWidth, (i / segmentWidthSize) * segmentHeight, null);
-            segmentMapping.put(originalIndex, shuffledIndex); // Сохраняем исходный индекс как ключ и перемешанный индекс как значение
-        }
-
-        g2d.dispose();
-        return new Pair<>(shuffledImage, segmentMapping);
-    }
-
-    public BufferedImage unshuffledSegments(BufferedImage shuffledImage, Map<Integer, Integer> segmentMapping, int segmentWidthSize, int segmentHeightSize) {
-        int width = shuffledImage.getWidth();
-        int height = shuffledImage.getHeight();
-        int segmentWidth = width / segmentWidthSize;
-        int segmentHeight = height / segmentHeightSize;
-
-        BufferedImage unshuffledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = unshuffledImage.createGraphics();
-
-        for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
-            int originalIndex = entry.getValue(); // Исходный индекс сегмента
-            int shuffledIndex = entry.getKey(); // Перемешанный индекс сегмента
-
-            int segmentX = (shuffledIndex % segmentWidthSize) * segmentWidth;
-            int segmentY = (shuffledIndex / segmentWidthSize) * segmentHeight;
-            int originalX = (originalIndex % segmentWidthSize) * segmentWidth;
-            int originalY = (originalIndex / segmentWidthSize) * segmentHeight;
-
-            // Проверка координат и размеров сегментов
-            if (segmentX < 0 || segmentY < 0 || originalX < 0 || originalY < 0 ||
-                    segmentX + segmentWidth > width || segmentY + segmentHeight > height ||
-                    originalX + segmentWidth > width || originalY + segmentHeight > height) {
-                throw new IllegalArgumentException("Неправильные координаты или размеры сегментов");
-            }
-
-            g2d.drawImage(shuffledImage.getSubimage(segmentX, segmentY, segmentWidth, segmentHeight),
-                    originalX, originalY, null);
-        }
-
-        g2d.dispose();
-        return unshuffledImage;
     }
 }

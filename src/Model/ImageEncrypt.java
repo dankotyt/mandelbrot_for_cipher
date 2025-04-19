@@ -24,8 +24,8 @@ public class ImageEncrypt {
         int selectedHeight = selectedImage.getHeight();
 
         // Проверка и корректировка размеров для сегментации
-        int segmentWidthSize = 16; // Например, 32 сегмента по ширине
-        int segmentHeightSize = 8; // Например, 16 сегментов по высоте
+        int segmentWidthSize = 4; // Например, 32 сегмента по ширине
+        int segmentHeightSize = 4; // Например, 16 сегментов по высоте
 
         // Уменьшаем размеры сегментов, если они не делят размеры выделенной области без остатка
         while (selectedWidth % segmentWidthSize != 0) {
@@ -79,8 +79,8 @@ public class ImageEncrypt {
         int height = image.getHeight();
 
         // Проверка и корректировка размеров для сегментации
-        int segmentWidthSize = 32; // Например, 32 сегмента по ширине
-        int segmentHeightSize = 16; // Например, 16 сегментов по высоте
+        int segmentWidthSize = 4; // Например, 32 сегмента по ширине
+        int segmentHeightSize = 4; // Например, 16 сегментов по высоте
 
         if (width % segmentWidthSize != 0) {
             width = (width / segmentWidthSize + 1) * segmentWidthSize;

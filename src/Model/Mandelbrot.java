@@ -53,7 +53,7 @@ public class Mandelbrot extends JPanel {
      */
     public Mandelbrot() {
         this.startMandelbrotWidth = 1024; // Устанавливаем начальные значения ширины и высоты
-        this.startMandelbrotHeight = 768;
+        this.startMandelbrotHeight = 720;
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
