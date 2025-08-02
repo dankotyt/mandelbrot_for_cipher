@@ -1,0 +1,53 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    modularity.inferModulePath = true
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = "21.0.8"
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing']
+    configuration = 'compileOnly'
+}
+
+dependencies {
+    //JavaFX
+    implementation "org.openjfx:javafx-base:21.0.8"
+    implementation "org.openjfx:javafx-graphics:21.0.8"
+    implementation "org.openjfx:javafx-controls:21.0.8"
+    implementation "org.openjfx:javafx-fxml:21.0.8"
+    implementation "org.openjfx:javafx-swing:21.0.8"
+
+    //Logger
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
+}
+
+application {
+    mainModule = 'com.cipher'
+    mainClass = 'com.cipher.View.JavaFX'
+}
+
+tasks.withType(JavaExec).configureEach {
+    systemProperty "file.encoding", "UTF-8"
+    jvmArgs "-Dfile.encoding=UTF-8"
+}
+
+compileJava {
+    options.encoding = "UTF-8"
+}
+
+compileTestJava {
+    options.encoding = "UTF-8"
+}
