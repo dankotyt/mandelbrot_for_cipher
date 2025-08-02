@@ -3,6 +3,8 @@ package View;
 import javafx.application.Application;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
@@ -74,7 +76,7 @@ public class JavaFX extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         mainPane = new StackPane();
-        Scene scene = new Scene(mainPane, 1540, 900);
+        Scene scene = new Scene(mainPane, 1920, 980);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Шифр Мандельброта");
 
@@ -891,9 +893,9 @@ public class JavaFX extends Application {
 
     private VBox createHintBoxForEncrypt() {
         Region hintBackground = new Region();
-        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;" +
-                " -fx-background-color: transparent;");
-        hintBackground.setPrefSize(300, 260); // Увеличиваем высоту для размещения всего текста
+        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;"
+                + " -fx-background-color: transparent;");
+        hintBackground.setPrefSize(300, 260);
 
         // Создание заголовка "Подсказка"
         Text hintTitle = new Text("Подсказка");
@@ -901,13 +903,13 @@ public class JavaFX extends Application {
         hintTitle.setFill(Color.WHITE);
         hintTitle.setFont(Font.font("Intro Regular", 18));
 
-        // Создание текста подсказки
-        Text hintText = new Text("Для шифрования части изображения - перейдите\nна исходную картинку и " +
-                "выделите желаемую часть");
-        hintText.setFill(Color.WHITE); // Устанавливаем белый цвет текста
-        hintText.setFont(Font.font("Intro Regular", 14)); // Устанавливаем шрифт и размер текста
+        // Создание текста подсказки (с переносом строки)
+        Text hintText = new Text("Для шифрования части изображения - перейдите на исходную картинку и выделите желаемую часть");
+        hintText.setFill(Color.WHITE);
+        hintText.setFont(Font.font("Intro Regular", 14));
+        hintText.setWrappingWidth(280); // Ограничиваем ширину, чтобы текст не выходил за рамки
 
-        // Добавление иконок
+        // Загрузка иконок
         Image repeatIcon = new Image(getClass().getResourceAsStream("/elements/icon_repeat.png"));
         ImageView repeatIconView = new ImageView(repeatIcon);
         repeatIconView.setFitWidth(30);
@@ -928,33 +930,47 @@ public class JavaFX extends Application {
         swapIconView.setFitWidth(30);
         swapIconView.setFitHeight(30);
 
-        // Создание контейнера для текста и иконок
-        VBox hintContent = new VBox(5);
+        HBox repeatBox = createIconTextRow(repeatIconView, "пересоздать ключ;");
+        HBox manualBox = createIconTextRow(manualIconView, "создать ключ по заданным вручную параметрам;");
+        HBox nextBox = createIconTextRow(nextIconView, "зашифровать изображение полностью;");
+        HBox swapBox = createIconTextRow(swapIconView, "свапнуть картинку;");
+
+        VBox hintContent = new VBox(8);
         hintContent.getChildren().addAll(
-                hintTitle, // Заголовок "Подсказка"
-                new HBox(repeatIconView, new Text(" \n - пересоздать ключ;")),
-                new HBox(manualIconView, new Text(" \n - создать ключ по заданным вручную параметрам;")),
-                new HBox(nextIconView, new Text(" \n - зашифровать изображение полностью;")),
-                new HBox(swapIconView, new Text(" \n - свапнуть картинку;")),
-                hintText // Дополнительный текст
+                hintTitle,
+                repeatBox,
+                manualBox,
+                nextBox,
+                swapBox,
+                hintText
         );
-        hintContent.setAlignment(Pos.BASELINE_LEFT);
+        hintContent.setAlignment(Pos.TOP_LEFT);
+        hintContent.setPadding(new Insets(10, 15, 10, 15));
 
-        // Устанавливаем стили для текста и иконок
-        for (Node node : hintContent.getChildren()) {
-            if (node instanceof HBox) {
-                // Получаем текстовый элемент из HBox
-                Text text = (Text) ((HBox) node).getChildren().get(1);
-                text.setFill(Color.WHITE);
-                text.setFont(Font.font("Intro Regular", 14));
-            }
-        }
-
+        // Общий контейнер (StackPane для фона и содержимого)
         StackPane hintContainer = new StackPane(hintBackground, hintContent);
-        StackPane.setAlignment(hintContent, Pos.CENTER);
-        StackPane.setMargin(hintContent, new Insets(10)); // Добавляем отступы внутри hintBackground
+        StackPane.setAlignment(hintContent, Pos.TOP_LEFT);
 
-        return new VBox(hintContainer);
+        // Основной VBox (можно регулировать размеры здесь)
+        VBox mainHintBox = new VBox(hintContainer);
+        mainHintBox.setAlignment(Pos.CENTER);
+        mainHintBox.setPrefSize(300, 230);
+        mainHintBox.setMinSize(300, 230);
+        mainHintBox.setMaxSize(300, 230);
+
+        return mainHintBox;
+    }
+
+    // Вспомогательный метод для создания строки с иконкой и текстом
+    private HBox createIconTextRow(ImageView iconView, String text) {
+        Text textNode = new Text(" " + text); // Добавляем пробел для отступа от иконки
+        textNode.setFill(Color.WHITE);
+        textNode.setFont(Font.font("Intro Regular", 14));
+
+        HBox row = new HBox(5, iconView, textNode); // Отступ между иконкой и текстом 5px
+        row.setAlignment(Pos.CENTER_LEFT); // Выравниваем по центру по вертикали
+
+        return row;
     }
 
     private void generateImage(StackPane imageContainer, Button... buttonsToDisable) {
@@ -1303,68 +1319,69 @@ public class JavaFX extends Application {
     }
 
     private VBox createHintBoxForEncryptPart() {
-        // Создание прямоугольника с белой обводкой
-        Region hintBackground = new Region();
-        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;" +
-                " -fx-background-color: transparent;");
-        hintBackground.setPrefSize(370, 230);
-        hintBackground.setMaxSize(370, 230);
-        hintBackground.setMinSize(370, 230);
+        // Основной контейнер с фиксированными размерами (300x230)
+        VBox mainBox = new VBox();
+        mainBox.setAlignment(Pos.CENTER);
+        mainBox.setPrefSize(300, 230);
+        mainBox.setMinSize(300, 230);
+        mainBox.setMaxSize(300, 230);
 
-        // Создание заголовка "Подсказка"
+        // Фоновый прямоугольник (немного меньше, чтобы был отступ)
+        Region hintBackground = new Region();
+        hintBackground.setStyle("-fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px;"
+                + " -fx-background-color: transparent;");
+        hintBackground.setPrefSize(290, 220);
+
+        // Заголовок
         Text hintTitle = new Text("Подсказка");
         hintTitle.setStyle("-fx-font-family: 'Intro Regular'; -fx-font-weight: bold;");
         hintTitle.setFill(Color.WHITE);
         hintTitle.setFont(Font.font("Intro Regular", 18));
 
-        // Создание текста подсказки
-        Text hintText = new Text("Для шифрования части изображения - выделите\nжелаемую часть.");
+        // Текст подсказки с переносами
+        Text hintText = new Text("Для шифрования части изображения\nвыделите нужную область.");
         hintText.setFill(Color.WHITE);
         hintText.setFont(Font.font("Intro Regular", 14));
+        hintText.setWrappingWidth(270); // Ширина с учетом отступов
 
-        // Иконки для кнопок
+        // Иконки
         Image encryptWholeIcon = new Image(getClass().getResourceAsStream("/elements/icon_encryptWhole.png"));
         ImageView encryptWholeIconView = new ImageView(encryptWholeIcon);
-        encryptWholeIconView.setFitWidth(30);
-        encryptWholeIconView.setFitHeight(30);
+        encryptWholeIconView.setFitWidth(25); // Уменьшаем иконки
+        encryptWholeIconView.setFitHeight(25);
 
         Image resetPartIcon = new Image(getClass().getResourceAsStream("/elements/icon_resetPart.png"));
         ImageView resetPartIconView = new ImageView(resetPartIcon);
-        resetPartIconView.setFitWidth(30);
-        resetPartIconView.setFitHeight(30);
+        resetPartIconView.setFitWidth(25);
+        resetPartIconView.setFitHeight(25);
 
         Image encryptPartIcon = new Image(getClass().getResourceAsStream("/elements/icon_encryptPart.png"));
         ImageView encryptPartIconView = new ImageView(encryptPartIcon);
-        encryptPartIconView.setFitWidth(30);
-        encryptPartIconView.setFitHeight(30);
+        encryptPartIconView.setFitWidth(25);
+        encryptPartIconView.setFitHeight(25);
 
-        // Создание контейнера для текста и иконок
-        VBox hintContent = new VBox(5);
-        hintContent.getChildren().addAll(
-                hintTitle, // Заголовок "Подсказка"
-                new HBox(encryptWholeIconView, new Text(" \n - зашифровать изображение полностью;")),
-                new HBox(encryptPartIconView, new Text(" \n - зашифровать выделенную часть\n  " +
-                        "(после выделения области);")),
-                new HBox(resetPartIconView, new Text(" \n - сбрасывает ранее выделенную часть;")),
-                hintText // Дополнительный текст
+        // Строки с иконками
+        HBox encryptWholeBox = createIconTextRow(encryptWholeIconView, "зашифровать изображение полностью;");
+        HBox encryptPartBox = createIconTextRow(encryptPartIconView, "зашифровать выделенную часть;");
+        HBox resetPartBox = createIconTextRow(resetPartIconView, "сбросить выделение;");
+
+        // Основное содержимое
+        VBox content = new VBox(5);
+        content.getChildren().addAll(
+                hintTitle,
+                encryptWholeBox,
+                encryptPartBox,
+                resetPartBox,
+                hintText
         );
-        hintContent.setAlignment(Pos.BASELINE_LEFT);
+        content.setAlignment(Pos.TOP_LEFT);
+        content.setPadding(new Insets(10));
 
-        // Устанавливаем стили для текста и иконок
-        for (Node node : hintContent.getChildren()) {
-            if (node instanceof HBox) {
-                Text text = (Text) ((HBox) node).getChildren().get(1);
-                text.setFill(Color.WHITE);
-                text.setFont(Font.font("Intro Regular", 14));
-            }
-        }
+        // Центрируем содержимое
+        StackPane container = new StackPane(hintBackground, content);
+        mainBox.getChildren().add(container);
 
-        // Размещение hintContent внутри hintBackground
-        StackPane hintContainer = new StackPane(hintBackground, hintContent);
-        StackPane.setAlignment(hintContent, Pos.CENTER);
-        StackPane.setMargin(hintContent, new Insets(15)); // Добавляем отступы внутри hintBackground
-
-        return new VBox(hintContainer);
+        return mainBox;
     }
 
     private void createEncryptGeneratePanelWithParams(String filePath) {
@@ -2037,7 +2054,7 @@ public class JavaFX extends Application {
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Ваше изображение-ключ:");
         titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
-        titleLabel.setAlignment(Pos.TOP_CENTER);
+        //titleLabel.setAlignment(Pos.TOP_CENTER);
 
         // Создание прозрачного прямоугольника для расстояния под текстом
         Node spaceBelowTitle = new Region();

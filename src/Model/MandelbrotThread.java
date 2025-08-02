@@ -1,6 +1,8 @@
 package Model;
 
 import java.awt.image.BufferedImage;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author @dankotyt Danil Kotlyarov
@@ -19,7 +21,7 @@ public class MandelbrotThread implements Runnable {
     private double offsetX; // Смещение по оси X
     private double offsetY; // Смещение по оси Y
     private BufferedImage image; // Изображение для записи результатов
-
+    private static final Logger logger = Logger.getLogger(MandelbrotThread.class.getName());
 
     /**
      * Конструктор класса Model.MandelbrotThread.
@@ -72,7 +74,7 @@ public class MandelbrotThread implements Runnable {
                 }
             }
         } catch (Exception e) {
-            // Если поток был прерван, просто завершаем выполнение
+            logger.log(Level.WARNING, e.toString());
         }
     }
 }
