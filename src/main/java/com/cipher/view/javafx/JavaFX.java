@@ -1,5 +1,6 @@
 package com.cipher.view.javafx;
 
+import com.cipher.core.utils.CoordinateUtils;
 import javafx.application.Application;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -51,6 +52,7 @@ public class JavaFX extends Application {
     private StackPane mainPane;
     private Stage primaryStage;
     private Canvas canvas;
+    private CoordinateUtils coordUtils;
     private Task<Image> currentTask;
     private static TextArea console;
 
@@ -743,7 +745,7 @@ public class JavaFX extends Application {
             cancelCurrentTask(); // Отменяем текущую задачу
             loadingContainer.getChildren().clear();
             loadingContainer.getChildren().add(loadingLabel);
-            generateImage(loadingContainer, regenerateButton, manualButton, okayButton, swapButton);
+            generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton, manualButton, okayButton, swapButton);
         });
 
         // Размещение кнопок в контейнере
@@ -869,7 +871,7 @@ public class JavaFX extends Application {
         mainPane.getChildren().add(mainContainer);
 
         // Генерация изображения при первом открытии панели
-        generateImage(loadingContainer, regenerateButton, manualButton, okayButton, swapButton);
+        generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton, manualButton, okayButton, swapButton);
     }
 
     // Метод для настройки стилей скроллбара
@@ -964,7 +966,7 @@ public class JavaFX extends Application {
         return row;
     }
 
-    private void generateImage(StackPane imageContainer, Button... buttonsToDisable) {
+    private void generateImage(StackPane imageContainer, String imagePath, Button... buttonsToDisable) {
         // Отключаем кнопки перед началом генерации
         for (Button button : buttonsToDisable) {
             button.setDisable(true);
@@ -973,7 +975,8 @@ public class JavaFX extends Application {
         Task<Image> generateImageTask = new Task<>() {
             @Override
             protected Image call() {
-                Mandelbrot mandelbrot = new Mandelbrot();
+                Image image = new Image("file:" + imagePath);
+                Mandelbrot mandelbrot = new Mandelbrot((int) image.getWidth(), (int) image.getHeight());
                 BufferedImage mandelbrotImage = mandelbrot.generateImage();
 
                 // Проверяем, была ли задача отменена
@@ -1123,11 +1126,12 @@ public class JavaFX extends Application {
 
         // Создаем слой для рисования прямоугольников
         canvas = new Canvas(720, 540); // Размер canvas соответствует отображаемому изображению
+        coordUtils = new CoordinateUtils(canvas);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Коэффициенты масштабирования для перевода координат с 720x540 на 1024x768
-        double scaleX = 1024.0 / 720.0;
-        double scaleY = 768.0 / 540.0;
+        double scaleX = image.getWidth() / canvas.getWidth();
+        double scaleY = image.getHeight() / canvas.getHeight();
 
         canvas.setOnMousePressed(e -> {
             if (e.isPrimaryButtonDown()) {
@@ -1146,22 +1150,19 @@ public class JavaFX extends Application {
             if (e.getButton() == MouseButton.PRIMARY && !rectangleSelected) {
                 endPoint = new Point2D(e.getX(), e.getY());
                 drawingRectangle = false;
-                logger.info("Конечная точка: {}", endPoint); // Отладочный вывод
                 if (startPoint != null && endPoint != null && !startPoint.equals(endPoint)) {
                     double x = Math.min(startPoint.getX(), endPoint.getX());
                     double y = Math.min(startPoint.getY(), endPoint.getY());
                     double width = Math.abs(startPoint.getX() - endPoint.getX());
                     double height = Math.abs(startPoint.getY() - endPoint.getY());
 
-                    // Преобразуем координаты и размеры в оригинальный размер изображения
-                    double originalX = x * scaleX;
-                    double originalY = y * scaleY;
-                    double originalWidth = width * scaleX;
-                    double originalHeight = height * scaleY;
+                    // Используем новый метод преобразования координат
+                    Rectangle2D imageRect = coordUtils.convertCanvasToImageCoords(
+                            x, y, width, height,
+                            image.getWidth(), image.getHeight());
 
-                    rectangles.add(new Rectangle2D(originalX, originalY, originalWidth, originalHeight));
+                    rectangles.add(imageRect);
                     rectangleSelected = true;
-                    logger.info("Прямоугольник добавлен: {}", rectangles.getLast());
                 }
                 gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
                 drawRectangles(gc, scaleX, scaleY);
@@ -1571,7 +1572,7 @@ public class JavaFX extends Application {
                 double offsetY = (double) params[4];
                 int MAX_ITER = (int) params[5];
 
-                Mandelbrot mandelbrot = new Mandelbrot();
+                Mandelbrot mandelbrot = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
                 BufferedImage mandelbrotImage = mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight,
                         ZOOM, offsetX, offsetY, MAX_ITER);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
@@ -2042,6 +2043,18 @@ public class JavaFX extends Application {
                 Insets.EMPTY
         )));
 
+        // Загрузка изображения input.png из папки temp
+        String inputFilePath = getTempPath() + "input.png";
+        Image imageInput = loadImageFromTemp(inputFilePath);
+        if (imageInput == null) {
+            logger.error("Файл изображения не найден: {}", inputFilePath);
+            return;
+        }
+        ImageView imageView = new ImageView(imageInput);
+        imageView.setFitWidth(640);
+        imageView.setFitHeight(480);
+        imageView.setTranslateX(150); // Выглядывание на 150px
+
         // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Ваше изображение-ключ:");
         titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
@@ -2059,7 +2072,7 @@ public class JavaFX extends Application {
         BufferedImage mandelbrotImage;
 
         if (!mandelbrotFile.exists()) {
-            Mandelbrot mandelbrot = new Mandelbrot();
+            Mandelbrot mandelbrot = new Mandelbrot((int) imageInput.getWidth(), (int) imageInput.getHeight());
             mandelbrotImage = mandelbrot.generateAfterGetParams(imagePath);
             if (mandelbrotImage == null) {
                 logger.error("Ошибка: не удалось сгенерировать изображение!");
@@ -2094,18 +2107,6 @@ public class JavaFX extends Application {
         ImageView imageViewMandelbrot = new ImageView(imageMandelbrot);
         imageViewMandelbrot.setFitWidth(720);
         imageViewMandelbrot.setFitHeight(540);
-
-        // Загрузка изображения input.png из папки temp
-        String inputFilePath = getTempPath() + "input.png";
-        Image imageInput = loadImageFromTemp(inputFilePath);
-        if (imageInput == null) {
-            logger.error("Файл изображения не найден: {}", inputFilePath);
-            return;
-        }
-        ImageView imageView = new ImageView(imageInput);
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 150px
 
         // Создание кнопки "Сгенерировать заново" с иконкой
         Button regenerateButton = new Button();
@@ -2777,7 +2778,7 @@ public class JavaFX extends Application {
                     int MAX_ITER = (int) params[5];
 
                     // Генерируем изображение с помощью Mandelbrot
-                    Mandelbrot mandelbrot = new Mandelbrot();
+                    Mandelbrot mandelbrot = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
                     BufferedImage generatedImage = mandelbrot.generateImage(
                             startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER
                     );

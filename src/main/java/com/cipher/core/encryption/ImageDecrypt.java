@@ -60,7 +60,7 @@ public class ImageDecrypt {
 //            originalView.showImage();
 
             // Создаем изображение Мандельброта
-            Mandelbrot mandelbrotImage = new Mandelbrot();
+            Mandelbrot mandelbrotImage = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
             BufferedImage mandelbrotBufferedImage = mandelbrotImage.generateImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
 
             // Выделяем ту же часть Мандельброта, что и зашифрованная

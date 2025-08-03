@@ -56,9 +56,9 @@ public class Mandelbrot extends JPanel {
      * Конструктор класса com.cipher.core.utils.Mandelbrot.
      * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
      */
-    public Mandelbrot() {
-        this.startMandelbrotWidth = 1024; // Устанавливаем начальные значения ширины и высоты
-        this.startMandelbrotHeight = 720;
+    public Mandelbrot(int width, int height) {
+        this.startMandelbrotWidth = width; // Устанавливаем начальные значения ширины и высоты
+        this.startMandelbrotHeight = height;
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
