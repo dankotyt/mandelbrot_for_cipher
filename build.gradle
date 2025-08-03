@@ -31,12 +31,12 @@ dependencies {
 
     //Logger
     implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation 'ch.qos.logback:logback-classic:1.4.7'
+    implementation 'ch.qos.logback:logback-classic:1.5.18'
 }
 
 application {
     mainModule = 'com.cipher'
-    mainClass = 'com.cipher.View.JavaFX'
+    mainClass = 'com.cipher.view.javafx.JavaFX'
 }
 
 tasks.withType(JavaExec).configureEach {

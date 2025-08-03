@@ -1,6 +1,6 @@
 package com.cipher;
 
-import com.cipher.View.JavaFX;
+import com.cipher.view.javafx.JavaFX;
 
 public class Controller {
 
