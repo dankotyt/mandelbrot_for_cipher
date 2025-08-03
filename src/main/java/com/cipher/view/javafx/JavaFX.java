@@ -1114,12 +1114,15 @@ public class JavaFX extends Application {
         swapImageView.setFitHeight(50);
         Button swapButton = new Button("", swapImageView);
         swapButton.setStyle("-fx-background-color: transparent;");
-        swapButton.setOnAction(e -> createChoosenMandelbrotPanel(getTempPath() + "mandelbrot.png"));
+        swapButton.setOnAction(e -> {
+            createChoosenMandelbrotPanel(getTempPath() + "mandelbrot.png");
+            clearRectangles();
+        });
 
         StackPane imageContainer = new StackPane(imageView); // Canvas поверх изображения
 
         // Создаем слой для рисования прямоугольников
-        Canvas canvas = new Canvas(720, 540); // Размер canvas соответствует отображаемому изображению
+        canvas = new Canvas(720, 540); // Размер canvas соответствует отображаемому изображению
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Коэффициенты масштабирования для перевода координат с 720x540 на 1024x768
@@ -1622,10 +1625,14 @@ public class JavaFX extends Application {
 
     // Метод для очистки прямоугольников
     private void clearRectangles() {
+        logger.info("Очистка canvas от прямоугольников");
         rectangles.clear();
         rectangleSelected = false;
-        if (canvas != null && canvas.getGraphicsContext2D() != null) {
-            canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        if (canvas != null) {
+            GraphicsContext gc = canvas.getGraphicsContext2D();
+            gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+            gc.setStroke(Color.TRANSPARENT);
+            gc.strokeRect(0, 0, 0, 0);
         }
     }
 

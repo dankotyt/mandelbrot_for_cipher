@@ -28,66 +28,6 @@ public class ImageEncrypt {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-//    public static BufferedImage encryptSelectedArea(BufferedImage originalImage, BufferedImage selectedImage,
-//                                                    int startX, int startY,
-//                                                    int width, int height) {
-//        int selectedWidth = selectedImage.getWidth();
-//        int selectedHeight = selectedImage.getHeight();
-//
-//        // Проверка и корректировка размеров для сегментации
-//        int segmentWidthSize = 4; // Например, 32 сегмента по ширине
-//        int segmentHeightSize = 4; // Например, 16 сегментов по высоте
-//
-//        // Уменьшаем размеры сегментов, если они не делят размеры выделенной области без остатка
-//        while (selectedWidth % segmentWidthSize != 0) {
-//            segmentWidthSize--;
-//        }
-//        while (selectedHeight % segmentHeightSize != 0) {
-//            segmentHeightSize--;
-//        }
-//
-//        // Загружаем изображение множества Мандельброта
-//        BufferedImage mandelbrotImage = null;
-//        try {
-//            mandelbrotImage = ImageIO.read(new File(getTempPath() + "mandelbrot.png"));
-//        } catch (IOException e) {
-//            logger.error(e.getMessage());
-//        }
-//
-//        // Вырезаем соответствующую область из изображения Мандельброта
-//        if (mandelbrotImage != null) {
-//            BufferedImage mandelbrotSelectedArea = mandelbrotImage.getSubimage(
-//                    startX, startY, width, height);
-//            // Загружаем параметры из mandelbrot_params
-//            Object[] mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(getTempPath() + "mandelbrot_params.bin");
-//            int startMandelbrotWidth = (int) mandelbrotParams[0];
-//            int startMandelbrotHeight = (int) mandelbrotParams[1];
-//            double ZOOM = (double) mandelbrotParams[2];
-//            double offsetX = (double) mandelbrotParams[3];
-//            double offsetY = (double) mandelbrotParams[4];
-//            int MAX_ITER = (int) mandelbrotParams[5];
-//
-//            BufferedImage encryptedXORImage = XOR.performXOR(selectedImage, mandelbrotSelectedArea);
-//
-//            // Сегментируем и перемешиваем зашифрованную область
-//            ImageSegmentShuffler mandelbrotModel = new ImageSegmentShuffler(encryptedXORImage);
-//            Pair<BufferedImage, Map<Integer, Integer>> shuffledResult =
-//                    mandelbrotModel.shuffleSegments(encryptedXORImage, segmentWidthSize, segmentHeightSize);
-//            BufferedImage shuffledImage = shuffledResult.getKey();
-//            Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
-//
-//            // Заменяем выделенную область на зашифрованную в исходном изображении
-//            Graphics2D g2d = originalImage.createGraphics();
-//            g2d.drawImage(shuffledImage, startX, startY, null);
-//            g2d.dispose();
-//
-//            BinaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin",
-//                    startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER,
-//                    segmentWidthSize, segmentHeightSize, segmentMapping, startX, startY, width, height);
-//        }
-//        return originalImage;
-//    }
-
     public static BufferedImage encryptSelectedArea(BufferedImage originalImage, Rectangle2D selectedArea)
             throws IllegalArgumentException, RasterFormatException {
 
@@ -196,7 +136,7 @@ public class ImageEncrypt {
 
         // Изменяем размер изображения множества Мандельброта, если оно не совпадает с исходным изображением
         if (mandelbrotImage.getWidth() != width || mandelbrotImage.getHeight() != height) {
-            mandelbrotImage = ImageSegmentShuffler.resizeImage(mandelbrotImage, width, height);
+            mandelbrotImage = resizeImage(mandelbrotImage, width, height);
         }
 
         if (image.getWidth() != mandelbrotImage.getWidth() || image.getHeight() != mandelbrotImage.getHeight()) {
@@ -239,11 +179,11 @@ public class ImageEncrypt {
         return encryptedWholeImage;
     }
 
-    private static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) {
-        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics2D = resizedImage.createGraphics();
-        graphics2D.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
-        graphics2D.dispose();
+    public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
+        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = resizedImage.createGraphics();
+        g2d.drawImage(image, 0, 0, width, height, null);
+        g2d.dispose();
         return resizedImage;
     }
 

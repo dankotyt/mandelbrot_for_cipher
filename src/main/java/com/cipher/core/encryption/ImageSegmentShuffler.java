@@ -129,11 +129,4 @@ public class ImageSegmentShuffler {
 
         return result;
     }
-    public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
-        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = resizedImage.createGraphics();
-        g2d.drawImage(image, 0, 0, width, height, null);
-        g2d.dispose();
-        return resizedImage;
-    }
 }
