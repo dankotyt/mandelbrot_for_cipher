@@ -6,25 +6,24 @@ import java.util.logging.Logger;
 
 /**
  * @author @dankotyt Danil Kotlyarov
- *
- * Класс com.cipher.core.threading.MandelbrotThread реализует интерфейс Runnable и используется для генерации части изображения множества Мандельброта
+ * Класс MandelbrotThread реализует интерфейс Runnable и используется для генерации части изображения множества Мандельброта
  * в отдельном потоке.
  */
 public class MandelbrotThread implements Runnable {
 
-    private int startX; // Начальная координата X для генерации
-    private int startY; // Начальная координата Y для генерации
-    private int width; // Ширина изображения
-    private int height; // Высота изображения
-    private double ZOOM; // Уровень масштабирования
-    private int MAX_ITER; // Максимальное количество итераций
-    private double offsetX; // Смещение по оси X
-    private double offsetY; // Смещение по оси Y
-    private BufferedImage image; // Изображение для записи результатов
+    private final int startX;
+    private final int startY;
+    private final int width;
+    private final int height;
+    private final double ZOOM;
+    private final int MAX_ITER;
+    private final double offsetX;
+    private final double offsetY;
+    private final BufferedImage image;
     private static final Logger logger = Logger.getLogger(MandelbrotThread.class.getName());
 
     /**
-     * Конструктор класса com.cipher.core.threading.MandelbrotThread.
+     * Конструктор класса MandelbrotThread.
      *
      * @param startX Начальная координата X для генерации.
      * @param startY Начальная координата Y для генерации.

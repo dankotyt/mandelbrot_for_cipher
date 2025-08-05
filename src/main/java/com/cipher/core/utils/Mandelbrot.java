@@ -22,30 +22,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Класс com.cipher.core.utils.Mandelbrot представляет собой графический компонент Swing, который генерирует изображение множества Мандельброта.
+ * @author @dankotyt Danil Kotlyarov
+ * Класс Mandelbrot представляет собой графический компонент Swing, который генерирует изображение множества Мандельброта.
  * Он позволяет пользователю сохранять сгенерированные изображения на рабочий стол и использует многопоточность для ускорения
  * генерации изображения и проверки его разнообразия.
  */
 public class Mandelbrot extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(Mandelbrot.class);
 
-    private int startMandelbrotWidth; // Ширина изображения
-    private int startMandelbrotHeight; // Высота изображения
-    private double ZOOM; // Уровень масштабирования
-    private int MAX_ITER; // Максимальное количество итераций
-    private double offsetX; // Смещение по оси X
-    private double offsetY; // Смещение по оси Y
-    private BufferedImage image; // Изображение для записи результатов
-    private ExecutorService executor;
-
-    private static final String RESOURCES_PATH = "resources" + File.separator;
+    private int startMandelbrotWidth;
+    private int startMandelbrotHeight;
+    private double ZOOM;
+    private int MAX_ITER;
+    private double offsetX;
+    private double offsetY;
+    private BufferedImage image;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
-    }
-
-    private String getResourcesPath() {
-        return getProjectRootPath() + RESOURCES_PATH;
     }
 
     private String getTempPath() {
@@ -53,16 +47,19 @@ public class Mandelbrot extends JPanel {
     }
 
     /**
-     * Конструктор класса com.cipher.core.utils.Mandelbrot.
+     * Конструктор класса Mandelbrot.
      * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
+     *
+     * @param width Ширина шифруемого изображения, которое также применится и на изображение-ключ.
+     * @param height Высота шифруемого изображения, которое также применится и на изображение-ключ.
      */
     public Mandelbrot(int width, int height) {
-        this.startMandelbrotWidth = width; // Устанавливаем начальные значения ширины и высоты
+        this.startMandelbrotWidth = width;
         this.startMandelbrotHeight = height;
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) { //Повторная генерация
+                if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
                     generateImage();
                 }
             }
@@ -78,7 +75,7 @@ public class Mandelbrot extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (image != null) {
-            g.drawImage(image, 0, 0, null); // Рисуем сохраненное изображение
+            g.drawImage(image, 0, 0, null);
         }
     }
 
@@ -96,14 +93,23 @@ public class Mandelbrot extends JPanel {
 
     /**
      * Генерирует изображение множества Мандельброта и проверяет его разнообразие.
-     * Если изображение удовлетворяет условиям разнообразия, оно отображается и предлагается пользователю сохранить его.
-     * Если пользователь отказывается, генерируется новое изображение.
+     * <p>
+     * Алгоритм:
+     * <ol>
+     *   <li>Генерирует изображение с использованием многопоточной обработки</li>
+     *   <li>Проверяет качество изображения (достаточное разнообразие цветов)</li>
+     *   <li>Повторяет процесс, если изображение не удовлетворяет критериям</li>
+     *   <li>Сохраняет параметры генерации во временный файл</li>
+     * </ol>
+     *
+     * @return сгенерированное изображение или null, если поток был прерван
+     * @see #checkImageDiversity(BufferedImage)
      */
     public BufferedImage generateImage() {
         boolean validImage = false;
         int attempt = 0;
 
-        while (!validImage && !Thread.currentThread().isInterrupted()) { // Проверяем флаг прерывания
+        while (!validImage && !Thread.currentThread().isInterrupted()) {
             attempt++;
             randomPositionOnPlenty();
             image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
@@ -123,12 +129,12 @@ public class Mandelbrot extends JPanel {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-                    executor.shutdownNow(); // Принудительно завершаем выполнение, если тайм-аут истек
+                    executor.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                executor.shutdownNow(); // Принудительно завершаем выполнение при прерывании
-                Thread.currentThread().interrupt(); // Восстанавливаем флаг прерывания
-                return null; // Возвращаем null, так как задача была отменена
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+                return null;
             }
 
             validImage = checkImageDiversity(image);
@@ -139,12 +145,25 @@ public class Mandelbrot extends JPanel {
             }
         }
         repaint();
-        BinaryFile binaryFile = new BinaryFile();
-        binaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
+        BinaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
         saveImageToTemp(image);
         return image;
     }
 
+    /**
+     * Генерирует изображение множества Мандельброта с заданными параметрами.
+     * <p>
+     * Использует многопоточную обработку для ускорения генерации. Разделяет изображение
+     * на вертикальные полосы по количеству доступных процессоров.
+     *
+     * @param startMandelbrotWidth ширина генерируемого изображения
+     * @param startMandelbrotHeight высота генерируемого изображения
+     * @param ZOOM коэффициент масштабирования
+     * @param offsetX смещение по оси X
+     * @param offsetY смещение по оси Y
+     * @param MAX_ITER максимальное количество итераций для алгоритма
+     * @return сгенерированное изображение
+     */
     public BufferedImage generateImage(int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
         this.startMandelbrotWidth = startMandelbrotWidth;
         this.startMandelbrotHeight = startMandelbrotHeight;
@@ -157,39 +176,42 @@ public class Mandelbrot extends JPanel {
         ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
-        int chunkHeight = startMandelbrotHeight;
+        //int chunkHeight = startMandelbrotHeight; -----> startMandelbrotHeight = chunkHeight = height
 
         for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
             int startX = i * chunkWidth;
             int startY = 0;
             int width = (i == Runtime.getRuntime().availableProcessors() - 1) ? startMandelbrotWidth - startX : chunkWidth;
-            int height = chunkHeight;
+            //int height = chunkHeight;
 
-            executor.submit(new MandelbrotThread(startX, startY, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
+            executor.submit(new MandelbrotThread(startX, startY, width, startMandelbrotHeight, ZOOM, MAX_ITER, offsetX, offsetY, image));
         }
         executor.shutdown();
         try {
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+                executor.shutdownNow();
+            }
         } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
             logger.error(e.getMessage());
         }
         repaint();
         return image;
     }
 
-    public BufferedImage getImage() {
-        return image;
-    }
-
-    public BufferedImage getImage(String imagePath) {
-        return image;
-    }
-
     /**
-     * Проверяет разнообразие пикселей в изображении.
+     * Проверяет, удовлетворяет ли изображение критериям разнообразия.
+     * <p>
+     * Критерии могут включать:
+     * <ul>
+     *   <li>Достаточное количество цветов</li>
+     *   <li>Баланс между тёмными и светлыми областями</li>
+     *   <li>Отсутствие слишком больших монотонных областей</li>
+     * </ul>
      *
-     * @param image Изображение для проверки.
-     * @return true, если изображение удовлетворяет условиям разнообразия, иначе false.
+     * @param image изображение для проверки
+     * @return true если изображение удовлетворяет критериям, иначе false
      */
     public boolean checkImageDiversity(BufferedImage image) {
         Map<Integer, Integer> colorCount = new HashMap<>();
@@ -213,12 +235,18 @@ public class Mandelbrot extends JPanel {
         return (uniqueColors > 250 && percentage < 0.25);
     }
 
+    /**
+     * Проверяет, превышает ли процент чёрных пикселей в изображении заданный порог.
+     *
+     * @param image изображение для анализа
+     * @param threshold пороговое значение (от 0.0 до 1.0)
+     * @return true, если процент чёрных пикселей превышает порог, иначе false
+     */
     public static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
         int width = image.getWidth();
         int height = image.getHeight();
         int blackPixelCount = 0;
 
-        // Проход по всем пикселям изображения
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int pixel = image.getRGB(x, y);
@@ -228,20 +256,22 @@ public class Mandelbrot extends JPanel {
             }
         }
 
-        // Вычисление процента черных пикселей
         double percentageBlack = (double) blackPixelCount / (width * height);
 
-        // Сравнение с порогом
         return percentageBlack > threshold;
     }
 
+    /**
+     * Определяет, является ли пиксель чёрным (RGB = 0,0,0).
+     *
+     * @param pixel значение пикселя в формате RGB
+     * @return true если пиксель полностью чёрный, иначе false
+     */
     public static boolean isBlackPixel(int pixel) {
-        // Получение компонентов цвета (красный, зеленый, синий)
         int red = (pixel >> 16) & 0xFF;
         int green = (pixel >> 8) & 0xFF;
         int blue = pixel & 0xFF;
 
-        // Проверка, является ли пиксель черным
         return red == 0 && green == 0 && blue == 0;
     }
 
@@ -268,14 +298,12 @@ public class Mandelbrot extends JPanel {
      * @return Сгенерированное изображение.
      */
     public BufferedImage generateAfterGetParams(String imagePath) {
-        // Загрузка параметров из бинарного файла
         Object[] mandelbrotParams = BinaryFile.loadKeyDecoderFromBinaryFile(imagePath);
         if (mandelbrotParams.length < 6) {
             logger.error("Ошибка: не удалось загрузить параметры из бинарного файла.");
             return null;
         }
 
-        // Извлечение параметров
         int startMandelbrotWidth = (int) mandelbrotParams[0];
         int startMandelbrotHeight = (int) mandelbrotParams[1];
         double ZOOM = (double) mandelbrotParams[2];
@@ -283,16 +311,13 @@ public class Mandelbrot extends JPanel {
         double offsetY = (double) mandelbrotParams[4];
         int MAX_ITER = (int) mandelbrotParams[5];
 
-        // Проверка корректности параметров
         if (startMandelbrotWidth <= 0 || startMandelbrotHeight <= 0) {
             logger.error("Ошибка: ширина или высота некорректны: width={}, height={}", startMandelbrotWidth, startMandelbrotHeight);
             return null;
         }
 
-        // Генерация изображения с использованием параметров
         BufferedImage mandelbrotImage = generateImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
 
-        // Сохранение изображения в папку temp
         saveImageToTemp(mandelbrotImage);
 
         return mandelbrotImage;
