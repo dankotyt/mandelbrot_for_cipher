@@ -1,5 +1,7 @@
 package com.cipher.view.javafx;
 
+import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.encryption.EncryptionService;
 import com.cipher.core.utils.CoordinateUtils;
 import javafx.application.Application;
 import javafx.concurrent.Task;
@@ -703,7 +705,11 @@ public class JavaFX extends Application {
         okayButton.setOnAction(e -> {
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt);
+                try {
+                    createEncryptFinalPanel(imageToEncrypt);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         });
 
@@ -745,7 +751,8 @@ public class JavaFX extends Application {
             cancelCurrentTask(); // Отменяем текущую задачу
             loadingContainer.getChildren().clear();
             loadingContainer.getChildren().add(loadingLabel);
-            generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton, manualButton, okayButton, swapButton);
+            generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton,
+                    manualButton, okayButton, swapButton);
         });
 
         // Размещение кнопок в контейнере
@@ -871,7 +878,8 @@ public class JavaFX extends Application {
         mainPane.getChildren().add(mainContainer);
 
         // Генерация изображения при первом открытии панели
-        generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton, manualButton, okayButton, swapButton);
+        generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton,
+                manualButton, okayButton, swapButton);
     }
 
     // Метод для настройки стилей скроллбара
@@ -1091,7 +1099,11 @@ public class JavaFX extends Application {
         encryptWholeButton.setOnAction(e -> {
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt);
+                try {
+                    createEncryptFinalPanel(imageToEncrypt);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         });
 
@@ -1150,13 +1162,13 @@ public class JavaFX extends Application {
             if (e.getButton() == MouseButton.PRIMARY && !rectangleSelected) {
                 endPoint = new Point2D(e.getX(), e.getY());
                 drawingRectangle = false;
+                logger.info("Конечная точка: {}", endPoint);
                 if (startPoint != null && endPoint != null && !startPoint.equals(endPoint)) {
                     double x = Math.min(startPoint.getX(), endPoint.getX());
                     double y = Math.min(startPoint.getY(), endPoint.getY());
                     double width = Math.abs(startPoint.getX() - endPoint.getX());
                     double height = Math.abs(startPoint.getY() - endPoint.getY());
 
-                    // Используем новый метод преобразования координат
                     Rectangle2D imageRect = coordUtils.convertCanvasToImageCoords(
                             x, y, width, height,
                             image.getWidth(), image.getHeight());
@@ -1209,8 +1221,7 @@ public class JavaFX extends Application {
                 Rectangle2D selectedRectangle = getSelectedRectangle();
 
                 BufferedImage encryptedImage = ImageEncrypt.encryptSelectedArea(
-                        imageToEncrypt,
-                        selectedRectangle);
+                        imageToEncrypt, selectedRectangle);
 
                 createEncryptFinalPanelForSelectedImage(encryptedImage);
                 clearRectangles();
@@ -1440,7 +1451,11 @@ public class JavaFX extends Application {
         okayButton.setOnAction(e -> {
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt);
+                try {
+                    createEncryptFinalPanel(imageToEncrypt);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         });
 
@@ -1562,19 +1577,19 @@ public class JavaFX extends Application {
 
         Task<Image> generateImageTask = new Task<>() {
             @Override
-            protected Image call() {
-                Object[] params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
+            protected Image call() throws IOException {
+                MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
 
-                int startMandelbrotWidth = (int) params[0];
-                int startMandelbrotHeight = (int) params[1];
-                double ZOOM = (double) params[2];
-                double offsetX = (double) params[3];
-                double offsetY = (double) params[4];
-                int MAX_ITER = (int) params[5];
+                int startMandelbrotWidth = params.startMandelbrotWidth();
+                int startMandelbrotHeight = params.startMandelbrotHeight();
+                double zoom = params.zoom();
+                double offsetX = params.offsetX();
+                double offsetY = params.offsetY();
+                int maxIter = params.maxIter();
 
                 Mandelbrot mandelbrot = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
                 BufferedImage mandelbrotImage = mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight,
-                        ZOOM, offsetX, offsetY, MAX_ITER);
+                        zoom, offsetX, offsetY, maxIter);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
             }
         };
@@ -1645,7 +1660,7 @@ public class JavaFX extends Application {
         alert.showAndWait();
     }
 
-    private void createEncryptFinalPanel(BufferedImage image) {
+    private void createEncryptFinalPanel(BufferedImage image) throws IOException{
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
                 createGradient(),
@@ -1917,15 +1932,10 @@ public class JavaFX extends Application {
                 double x = Double.parseDouble(xField.getText());
                 double y = Double.parseDouble(yField.getText());
 
-                if (zoom <= 0 || iterations <= 0 || startMandelbrotWidth <= 0 || startMandelbrotHeight <= 0) {
-                    throw new IllegalArgumentException("Некорректные данные");
-                }
+                EncryptionService service = new EncryptionService();
+                service.saveMandelbrotParameters(startMandelbrotWidth, startMandelbrotHeight, zoom, iterations, x, y);
 
-                String filePath = getTempPath() + "mandelbrot_params.bin";
-                BinaryFile.saveMandelbrotParamsToBinaryFile(filePath, startMandelbrotWidth, startMandelbrotHeight,
-                        zoom, x, y, iterations);
-
-                createEncryptGeneratePanelWithParams(filePath);
+                createEncryptGeneratePanelWithParams(getTempPath() + "mandelbrot_params.bin");
             } catch (NumberFormatException ex) {
                 showErrorDialog("Некорректный формат данных");
             } catch (IllegalArgumentException ex) {
@@ -2147,7 +2157,11 @@ public class JavaFX extends Application {
         okayButton.setOnAction(e -> {
             BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
             if (imageToEncrypt != null) {
-                createEncryptFinalPanel(imageToEncrypt);
+                try {
+                    createEncryptFinalPanel(imageToEncrypt);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
         });
 
@@ -2692,10 +2706,8 @@ public class JavaFX extends Application {
             }
 
             try {
-                // Сохраняем изображение по выбранному пути
                 ImageIO.write(encryptedImage, "png", new File(imageFilePath));
 
-                // Сохраняем key_decoder.bin
                 //saveFileWithPathToEncryptImage(imageFilePath);
                 saveKeyDecoder(imageFilePath);
                 logger.info("Путь к файлу: {}", imageFilePath);
@@ -2715,23 +2727,17 @@ public class JavaFX extends Application {
         if (fileToSave != null) {
             keyDecoderFilePath = fileToSave.getAbsolutePath();
 
-            // Добавляем расширение файла, если оно не указано
             if (!keyDecoderFilePath.toLowerCase().endsWith(".bin")) {
                 keyDecoderFilePath += ".bin";
             }
 
             try {
-                // Получаем абсолютный путь к папке temp
                 String resourcesPath = getTempPath() + "key_decoder.bin";
                 Path sourcePath = Paths.get(resourcesPath);
                 Path destinationPath = Paths.get(keyDecoderFilePath);
 
-                // Копируем файл из папки resources в выбранный путь
                 Files.copy(sourcePath, destinationPath);
-
                 logger.info("key_decoder.bin сохранен в: {}", keyDecoderFilePath);
-
-                // Уведомление о том, что изображение и бинарный файл успешно сохранены
                 showSuccessDialog("Изображение и файл-ключ успешно сохранены:\n" +
                         "Изображение: " + imageFilePath + "\n" +
                         "Файл-ключ: " + keyDecoderFilePath);
@@ -2751,42 +2757,33 @@ public class JavaFX extends Application {
                 new FileChooser.ExtensionFilter("Бинарный файл", "*.bin")
         );
 
-        // Показываем диалог выбора файла
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
 
-        // Проверяем, был ли выбран файл
         if (selectedFile != null) {
             String extension = getFileExtension(selectedFile);
 
             if (extension.equals("bin")) {
-                // Если выбран бинарный файл, генерируем изображение с помощью Mandelbrot
                 try {
-                    Object[] params = BinaryFile.loadMandelbrotParamsFromBinaryFile(selectedFile.getAbsolutePath());
+                    MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(selectedFile.getAbsolutePath());
 
-                    // Проверяем, что параметры были успешно загружены
-                    if (params.length < 6) {
-                        showErrorDialog("Файл-ключ имеет неправильный формат: недостаточно данных.");
-                        return null;
-                    }
-
-                    // Извлекаем параметры для генерации изображения
-                    int startMandelbrotWidth = (int) params[0];
-                    int startMandelbrotHeight = (int) params[1];
-                    double ZOOM = (double) params[2];
-                    double offsetX = (double) params[3];
-                    double offsetY = (double) params[4];
-                    int MAX_ITER = (int) params[5];
-
-                    // Генерируем изображение с помощью Mandelbrot
-                    Mandelbrot mandelbrot = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
+                    Mandelbrot mandelbrot = new Mandelbrot(params.startMandelbrotWidth(), params.startMandelbrotHeight());
                     BufferedImage generatedImage = mandelbrot.generateImage(
-                            startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER
+                            params.startMandelbrotWidth(),
+                            params.startMandelbrotHeight(),
+                            params.zoom(),
+                            params.offsetX(),
+                            params.offsetY(),
+                            params.maxIter()
                     );
+
                     saveMandelbrotToTemp(generatedImage);
-                    BinaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin",
-                            startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
-                } catch (Exception e) {
+                    EncryptionService service = new EncryptionService();
+                    service.saveMandelbrotParameters(params);
+
+                } catch (IOException e) {
                     showErrorDialog("Ошибка при чтении файла-ключа: " + e.getMessage());
+                } catch (IllegalArgumentException e) {
+                    showErrorDialog("Некорректные параметры в файле: " + e.getMessage());
                 }
             }
         }

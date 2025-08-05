@@ -1,5 +1,6 @@
 package com.cipher.core.utils;
 
+import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.view.javafx.JavaFX;
 
@@ -108,27 +109,45 @@ public class Mandelbrot extends JPanel {
     public BufferedImage generateImage() {
         boolean validImage = false;
         int attempt = 0;
+        MandelbrotParams currentParams = null; // Объявляем здесь, чтобы сохранить последние валидные параметры
 
         while (!validImage && !Thread.currentThread().isInterrupted()) {
             attempt++;
-            randomPositionOnPlenty();
-            image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
-            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            randomPositionOnPlenty(); // Обновляем ZOOM, offsetX, offsetY, MAX_ITER
 
+            // Создаем изображение
+            image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+
+            // Параллельная обработка
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
-            int chunkHeight = startMandelbrotHeight;
 
             for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
                 int startX = i * chunkWidth;
-                int startY = 0;
-                int width = (i == Runtime.getRuntime().availableProcessors() - 1) ? startMandelbrotWidth - startX : chunkWidth;
-                int height = chunkHeight;
+                int width = (i == Runtime.getRuntime().availableProcessors() - 1)
+                        ? startMandelbrotWidth - startX
+                        : chunkWidth;
 
-                executor.submit(new MandelbrotThread(startX, startY, width, height, ZOOM, MAX_ITER, offsetX, offsetY, image));
+                executor.submit(new MandelbrotThread(
+                        startX, 0, width, startMandelbrotHeight,
+                        ZOOM, MAX_ITER, offsetX, offsetY, image
+                ));
             }
+
+            // Сохраняем текущие параметры ПОСЛЕ генерации
+            currentParams = new MandelbrotParams(
+                    startMandelbrotWidth,
+                    startMandelbrotHeight,
+                    ZOOM,
+                    offsetX,
+                    offsetY,
+                    MAX_ITER
+            );
+
+            // Завершение работы пула потоков
             executor.shutdown();
             try {
-                if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
+                if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
                     executor.shutdownNow();
                 }
             } catch (InterruptedException e) {
@@ -144,9 +163,16 @@ public class Mandelbrot extends JPanel {
                 JavaFX.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
             }
         }
+
+        if (validImage) {
+            BinaryFile.saveMandelbrotParamsToBinaryFile(
+                    getTempPath() + "mandelbrot_params.bin",
+                    currentParams
+            );
+            saveImageToTemp(image);
+        }
+
         repaint();
-        BinaryFile.saveMandelbrotParamsToBinaryFile(getTempPath() + "mandelbrot_params.bin", startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
-        saveImageToTemp(image);
         return image;
     }
 
@@ -298,28 +324,35 @@ public class Mandelbrot extends JPanel {
      * @return Сгенерированное изображение.
      */
     public BufferedImage generateAfterGetParams(String imagePath) {
-        Object[] mandelbrotParams = BinaryFile.loadKeyDecoderFromBinaryFile(imagePath);
-        if (mandelbrotParams.length < 6) {
-            logger.error("Ошибка: не удалось загрузить параметры из бинарного файла.");
+        try {
+            // Загрузка параметров
+            MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(imagePath);
+
+            // Проверка параметров
+            if (params.startMandelbrotWidth() <= 0 || params.startMandelbrotHeight() <= 0) {
+                logger.error("Некорректные размеры: width={}, height={}",
+                        params.startMandelbrotWidth(),
+                        params.startMandelbrotHeight());
+                return null;
+            }
+
+            // Генерация изображения
+            Mandelbrot mandelbrot = new Mandelbrot(params.startMandelbrotWidth(), params.startMandelbrotHeight());
+            BufferedImage generatedImage = mandelbrot.generateImage(
+                    params.startMandelbrotWidth(),
+                    params.startMandelbrotHeight(),
+                    params.zoom(),
+                    params.offsetX(),
+                    params.offsetY(),
+                    params.maxIter()
+            );
+
+            // Сохранение изображения
+            saveImageToTemp(generatedImage);
+            return generatedImage;
+        } catch (IOException e) {
+            logger.error("Ошибка при загрузке/генерации из файла {}", imagePath, e);
             return null;
         }
-
-        int startMandelbrotWidth = (int) mandelbrotParams[0];
-        int startMandelbrotHeight = (int) mandelbrotParams[1];
-        double ZOOM = (double) mandelbrotParams[2];
-        double offsetX = (double) mandelbrotParams[3];
-        double offsetY = (double) mandelbrotParams[4];
-        int MAX_ITER = (int) mandelbrotParams[5];
-
-        if (startMandelbrotWidth <= 0 || startMandelbrotHeight <= 0) {
-            logger.error("Ошибка: ширина или высота некорректны: width={}, height={}", startMandelbrotWidth, startMandelbrotHeight);
-            return null;
-        }
-
-        BufferedImage mandelbrotImage = generateImage(startMandelbrotWidth, startMandelbrotHeight, ZOOM, offsetX, offsetY, MAX_ITER);
-
-        saveImageToTemp(mandelbrotImage);
-
-        return mandelbrotImage;
     }
 }

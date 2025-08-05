@@ -1,11 +1,14 @@
 package com.cipher.core.utils;
 
+import com.cipher.core.dto.KeyDecoderParams;
+import com.cipher.core.dto.MandelbrotParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -14,107 +17,123 @@ import java.util.Map;
 public class BinaryFile {
     private static final Logger logger = LoggerFactory.getLogger(BinaryFile.class);
 
-    public static void saveMandelbrotParamsToBinaryFile(String filePath, int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+    public static void saveMandelbrotParamsToBinaryFile(String filePath, MandelbrotParams params) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            dos.writeInt(startMandelbrotWidth);
-            dos.writeInt(startMandelbrotHeight);
-            dos.writeDouble(ZOOM);
-            dos.writeDouble(offsetX);
-            dos.writeDouble(offsetY);
-            dos.writeInt(MAX_ITER);
+            dos.writeInt(params.startMandelbrotWidth());
+            dos.writeInt(params.startMandelbrotHeight());
+            dos.writeDouble(params.zoom());
+            dos.writeDouble(params.offsetX());
+            dos.writeDouble(params.offsetY());
+            dos.writeInt(params.maxIter());
             logger.info("Параметры сохранены в файл {}", filePath);
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Ошибка при сохранении параметров", e);
         }
-        logger.info("Параметры шифрования:");
-        logger.info("Start Mandelbrot Width: {}", startMandelbrotWidth);
-        logger.info("Start Mandelbrot Height: {}", startMandelbrotHeight);
-        logger.info("ZOOM: {}", ZOOM);
-        logger.info("offsetX: {}", offsetX);
-        logger.info("offsetY: {}", offsetY);
-        logger.info("MAX_ITER: {}", MAX_ITER);
     }
 
-    public static Object[] loadMandelbrotParamsFromBinaryFile(String filePath) {
-        Object[] params = new Object[6];
+    public static MandelbrotParams loadMandelbrotParamsFromBinaryFile(String filePath) throws IOException {
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readInt(); //startMandelbrotWidth
-            params[1] = dis.readInt(); //startMandelbrotHeight
-            params[2] = dis.readDouble(); // ZOOM
-            params[3] = dis.readDouble(); // offsetX
-            params[4] = dis.readDouble(); // offsetY
-            params[5] = dis.readInt();    // MAX_ITER
+            return new MandelbrotParams(
+                    dis.readInt(),    // startMandelbrotWidth
+                    dis.readInt(),    // startMandelbrotHeight
+                    dis.readDouble(), // zoom
+                    dis.readDouble(), // offsetX
+                    dis.readDouble(), // offsetY
+                    dis.readInt()     // maxIter
+            );
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Ошибка при загрузке параметров из файла {}", filePath, e);
+            throw e;
         }
-        return params;
     }
 
-    public static void saveKeyDecoderToBinaryFile(String filePath, int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER, int segmentWidthSize, int segmentHeightSize, Map<Integer, Integer> segmentMapping, int startX, int startY, int width, int height) {
+    public static void saveKeyDecoderToBinaryFile(String filePath,
+                                                  KeyDecoderParams params) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            dos.writeInt(startMandelbrotWidth);
-            dos.writeInt(startMandelbrotHeight);
-            dos.writeDouble(ZOOM);
-            dos.writeDouble(offsetX);
-            dos.writeDouble(offsetY);
-            dos.writeInt(MAX_ITER);
-            dos.writeInt(segmentWidthSize);
-            dos.writeInt(segmentHeightSize);
+            dos.writeInt(params.startMandelbrotWidth());
+            dos.writeInt(params.startMandelbrotHeight());
+            dos.writeDouble(params.zoom());
+            dos.writeDouble(params.offsetX());
+            dos.writeDouble(params.offsetY());
+            dos.writeInt(params.maxIter());
+
+            dos.writeInt(params.segmentWidthSize());
+            dos.writeInt(params.segmentHeightSize());
+
+            Map<Integer, Integer> segmentMapping = params.segmentMapping();
             dos.writeInt(segmentMapping.size());
             for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
                 dos.writeInt(entry.getKey());
                 dos.writeInt(entry.getValue());
             }
-            dos.writeInt(startX);
-            dos.writeInt(startY);
-            dos.writeInt(width);
-            dos.writeInt(height);
+
+            dos.writeInt(params.startX());
+            dos.writeInt(params.startY());
+            dos.writeInt(params.width());
+            dos.writeInt(params.height());
+
             logger.info("Параметры сохранены в файл {}", filePath);
+            logParams(params);
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Ошибка при сохранении параметров", e);
         }
-        logger.info("Параметры шифрования:");
-        logger.info("Start Mandelbrot Width: {}", startMandelbrotWidth);
-        logger.info("Start Mandelbrot Height: {}", startMandelbrotHeight);
-        logger.info("ZOOM: {}", ZOOM);
-        logger.info("offsetX: {}", offsetX);
-        logger.info("offsetY: {}", offsetY);
-        logger.info("MAX_ITER: {}", MAX_ITER);
-        logger.info("segmentWidthSize: {}", segmentWidthSize);
-        logger.info("segmentHeightSize: {}", segmentHeightSize);
-        logger.info("segmentMapping size: {}", segmentMapping.size());
-        logger.info("startX: {}", startX);
-        logger.info("startY: {}", startY);
-        logger.info("width: {}", width);
-        logger.info("height: {}", height);
     }
 
-    public static Object[] loadKeyDecoderFromBinaryFile(String filePath) {
-        Object[] params = new Object[13];
+    public static KeyDecoderParams loadKeyDecoderFromBinaryFile(String filePath) {
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            params[0] = dis.readInt();
-            params[1] = dis.readInt();
-            params[2] = dis.readDouble();
-            params[3] = dis.readDouble();
-            params[4] = dis.readDouble();
-            params[5] = dis.readInt();
-            params[6] = dis.readInt();
-            params[7] = dis.readInt();
+            int startMandelbrotWidth = dis.readInt();
+            int startMandelbrotHeight = dis.readInt();
+            double zoom = dis.readDouble();
+            double offsetX = dis.readDouble();
+            double offsetY = dis.readDouble();
+            int maxIter = dis.readInt();
+            int segmentWidthSize = dis.readInt();
+            int segmentHeightSize = dis.readInt();
+
             int segmentCount = dis.readInt();
             Map<Integer, Integer> segmentMapping = new HashMap<>();
             for (int i = 0; i < segmentCount; i++) {
-                int key = dis.readInt();
-                int value = dis.readInt();
-                segmentMapping.put(key, value);
+                segmentMapping.put(dis.readInt(), dis.readInt());
             }
-            params[8] = segmentMapping;
-            params[9] = dis.readInt();
-            params[10] = dis.readInt();
-            params[11] = dis.readInt();
-            params[12] = dis.readInt();
+            KeyDecoderParams params = new KeyDecoderParams(
+                    startMandelbrotWidth,
+                    startMandelbrotHeight,
+                    zoom,
+                    offsetX,
+                    offsetY,
+                    maxIter,
+                    segmentWidthSize,
+                    segmentHeightSize,
+                    segmentMapping,
+                    dis.readInt(), // startX
+                    dis.readInt(), // startY
+                    dis.readInt(), // width
+                    dis.readInt()  // height
+            );
+            logParams(params);
+            return params;
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Ошибка при загрузке параметров из файла {}", filePath, e);
+            throw new UncheckedIOException(e);
         }
-        return params;
+    }
+
+    private static void logParams(KeyDecoderParams params) {
+        logger.info("=== Параметры Мандельброта ===");
+        logger.info("Width: {}", params.startMandelbrotWidth());
+        logger.info("Height: {}", params.startMandelbrotHeight());
+        logger.info("Zoom: {}", params.zoom());
+        logger.info("Offset X: {}", params.offsetX());
+        logger.info("Offset Y: {}", params.offsetY());
+        logger.info("Max iterations: {}", params.maxIter());
+
+        logger.info("=== Параметры декодера ===");
+        logger.info("Segment width: {}", params.segmentWidthSize());
+        logger.info("Segment height: {}", params.segmentHeightSize());
+        logger.info("Segments count: {}", params.segmentMapping().size());
+        logger.info("Start X: {}", params.startX());
+        logger.info("Start Y: {}", params.startY());
+        logger.info("Width: {}", params.width());
+        logger.info("Height: {}", params.height());
     }
 }

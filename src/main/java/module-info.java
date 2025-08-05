@@ -14,6 +14,7 @@ module com.cipher {
     exports com.cipher.core.network.server;
     exports com.cipher.core.utils;
     exports com.cipher.core.threading;
+    exports com.cipher.core.dto;
     exports com.cipher.view.interfaces;
     exports com.cipher.view.javafx;
 }
