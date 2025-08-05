@@ -522,7 +522,7 @@ public class JavaFX extends Application {
         mainPane.getChildren().add(mainContainer);
     }
 
-    public BorderPane createEncryptModePanel() {
+    public void createEncryptModePanel() {
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
                 createGradient(),
@@ -549,7 +549,7 @@ public class JavaFX extends Application {
 
         ImageView imageView = loadInputImageFromTemp();
         if (imageView == null) {
-            return mainContainer;
+            return;
         }
 
         Button generateButton = new Button("Сгенерировать изображение-ключ");
@@ -641,7 +641,6 @@ public class JavaFX extends Application {
         mainPane.getChildren().clear();
         mainPane.getChildren().add(mainContainer);
 
-        return mainContainer;
     }
 
     private void createEncryptGeneratePanel() {
@@ -794,17 +793,19 @@ public class JavaFX extends Application {
             configureScrollBar(console, ".scroll-bar:vertical", scrollBarStyle + " -fx-pref-width: 10px;");
             configureScrollBar(console, ".scroll-bar:vertical .track", trackStyle);
             configureScrollBar(console, ".scroll-bar:vertical .thumb", thumbStyle);
+            configureScrollBar(console, ".scroll-bar:vertical .increment-button", arrowButtonStyle);
+            configureScrollBar(console, ".scroll-bar:vertical .decrement-button", arrowButtonStyle);
+            configureScrollBar(console, ".scroll-bar:vertical .increment-arrow", arrowStyle);
+            configureScrollBar(console, ".scroll-bar:vertical .decrement-arrow", arrowStyle);
 
             // Настройка горизонтального скроллбара
             configureScrollBar(console, ".scroll-bar:horizontal", scrollBarStyle + " -fx-pref-height: 10px;");
             configureScrollBar(console, ".scroll-bar:horizontal .track", trackStyle);
             configureScrollBar(console, ".scroll-bar:horizontal .thumb", thumbStyle);
-
-            // Настройка кнопок и стрелок
-            configureScrollBar(console, ".scroll-bar .increment-button, .scroll-bar .decrement-button",
-                    arrowButtonStyle);
-            configureScrollBar(console, ".scroll-bar .increment-arrow, .scroll-bar .decrement-arrow",
-                    arrowStyle);
+            configureScrollBar(console, ".scroll-bar:horizontal .increment-button", arrowButtonStyle);
+            configureScrollBar(console, ".scroll-bar:horizontal .decrement-button", arrowButtonStyle);
+            configureScrollBar(console, ".scroll-bar:horizontal .increment-arrow", arrowStyle);
+            configureScrollBar(console, ".scroll-bar:horizontal .decrement-arrow", arrowStyle);
         });
 
         // Устанавливаем консоль в статическую переменную
@@ -2941,34 +2942,47 @@ public class JavaFX extends Application {
 
         // Создаем папку temp, если она не существует
         if (!tempDir.exists()) {
-            tempDir.mkdir();
+            boolean created = tempDir.mkdir();
+            if (!created) {
+                logger.error("Не удалось создать временную директорию: {}", tempPath);
+                throw new RuntimeException("Не удалось создать временную директорию");
+            }
         }
 
         // Добавляем хук для удаления папки при завершении программы
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> deleteFolder(tempDir)));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            boolean deleted = deleteFolder(tempDir);
+            if (!deleted) {
+                logger.warn("Не удалось полностью удалить временную директорию: {}", tempPath);
+            }
+        }));
     }
 
-    // Метод для рекурсивного удаления папки
-    private void deleteFolder(File folder) {
+    private boolean deleteFolder(File folder) {
+        boolean success = true;
+
         if (folder.isDirectory()) {
             File[] files = folder.listFiles();
             if (files != null) {
                 for (File file : files) {
-                    deleteFolder(file); // Рекурсивно удаляем файлы в папке
+                    success &= deleteFolder(file);
                 }
             }
         }
-        folder.delete();
+
+        boolean deleted = folder.delete();
+        if (!deleted) {
+            logger.warn("Не удалось удалить: {}", folder.getAbsolutePath());
+        }
+
+        return success && deleted;
     }
 
     private void saveInputImageToTemp(File selectedFile) {
-        // Получаем путь к папке temp
         String tempPath = getTempPath();
-        File tempDir = new File(tempPath);
 
         createTempFolder();
 
-        // Путь к файлу input.png в папке temp
         String tempFilePath = tempPath + "input.png";
         File tempFile = new File(tempFilePath);
 
@@ -2985,7 +2999,6 @@ public class JavaFX extends Application {
 
             logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
 
-            // Убеждаемся, что файл существует
             if (tempFile.exists() && tempFile.canRead()) {
                 logger.info("Файл существует: {}", tempFile.getAbsolutePath());
             } else {
@@ -2998,21 +3011,17 @@ public class JavaFX extends Application {
         }
     }
 
-    // Загрузка изображения из папки temp
     private ImageView loadInputImageFromTemp() {
-        // Получаем путь к файлу input.png в папке temp
         String tempPath = getTempPath();
         String tempFilePath = tempPath + "input.png";
         File tempFile = new File(tempFilePath);
 
-        // Проверяем, существует ли файл и доступен ли он для чтения
         if (!tempFile.exists() || !tempFile.canRead()) {
             logger.error("Файл изображения не найден: {}", tempFilePath);
             showErrorDialog("Файл изображения не найден: " + tempFilePath);
             return null;
         }
 
-        // Загружаем изображение из файла
         Image image = new Image(tempFile.toURI().toString());
         ImageView imageView = new ImageView(image);
         imageView.setFitWidth(640);
@@ -3057,22 +3066,17 @@ public class JavaFX extends Application {
     }
 
     private void saveMandelbrotToTemp(BufferedImage image) {
-        // Получаем путь к папке temp
         String tempPath = getTempPath();
-        File tempDir = new File(tempPath);
 
         createTempFolder();
 
-        // Путь к файлу в папке temp
         String tempFilePath = tempPath + "mandelbrot.png";
         File tempFile = new File(tempFilePath);
 
         try {
-            // Сохраняем изображение в папку temp
             ImageIO.write(image, "png", tempFile);
             logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
 
-            // Убеждаемся, что файл существует
             if (tempFile.exists() && tempFile.canRead()) {
                 logger.info("Файл существует: {}", tempFile.getAbsolutePath());
             } else {
@@ -3082,19 +3086,6 @@ public class JavaFX extends Application {
         } catch (IOException e) {
             logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
             showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
-        }
-    }
-
-    private void saveFileWithPathToEncryptImage(String imageFilePath) {
-        String userDesktop = System.getProperty("user.home") + File.separator + "Desktop";
-        File file = new File(userDesktop, "encrypted_image_paths.txt"); // Файл на рабочем столе
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
-            writer.write(imageFilePath);
-            writer.newLine();
-            logger.info("Путь к изображению успешно записан в файл: {}", file.getAbsolutePath());
-        } catch (IOException e) {
-            logger.error("Ошибка при записи в файл: {}", e.getMessage());
         }
     }
 
