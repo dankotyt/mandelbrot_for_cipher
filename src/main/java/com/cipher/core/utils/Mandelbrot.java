@@ -12,12 +12,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,71 +105,66 @@ public class Mandelbrot extends JPanel {
     public BufferedImage generateImage() {
         boolean validImage = false;
         int attempt = 0;
-        MandelbrotParams currentParams = null; // Объявляем здесь, чтобы сохранить последние валидные параметры
+        MandelbrotParams currentParams;
+        BufferedImage resultImage = null;
 
         while (!validImage && !Thread.currentThread().isInterrupted()) {
             attempt++;
-            randomPositionOnPlenty(); // Обновляем ZOOM, offsetX, offsetY, MAX_ITER
+            randomPositionOnPlenty(); // Обновляем параметры
 
-            // Создаем изображение
-            image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+            try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+                resultImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+                int processors = Runtime.getRuntime().availableProcessors();
+                int chunkWidth = startMandelbrotWidth / processors;
 
-            // Параллельная обработка
-            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
+                List<Future<?>> futures = new ArrayList<>();
+                for (int i = 0; i < processors; i++) {
+                    int startX = i * chunkWidth;
+                    int width = (i == processors - 1) ? startMandelbrotWidth - startX : chunkWidth;
 
-            for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
-                int startX = i * chunkWidth;
-                int width = (i == Runtime.getRuntime().availableProcessors() - 1)
-                        ? startMandelbrotWidth - startX
-                        : chunkWidth;
+                    futures.add(executor.submit(new MandelbrotThread(
+                            startX, 0, width, startMandelbrotHeight,
+                            ZOOM, MAX_ITER, offsetX, offsetY, resultImage
+                    )));
+                }
 
-                executor.submit(new MandelbrotThread(
-                        startX, 0, width, startMandelbrotHeight,
-                        ZOOM, MAX_ITER, offsetX, offsetY, image
-                ));
-            }
+                // Ожидаем завершения всех задач
+                for (Future<?> future : futures) {
+                    future.get();
+                }
 
-            // Сохраняем текущие параметры ПОСЛЕ генерации
-            currentParams = new MandelbrotParams(
-                    startMandelbrotWidth,
-                    startMandelbrotHeight,
-                    ZOOM,
-                    offsetX,
-                    offsetY,
-                    MAX_ITER
-            );
+                currentParams = new MandelbrotParams(
+                        startMandelbrotWidth,
+                        startMandelbrotHeight,
+                        ZOOM,
+                        offsetX,
+                        offsetY,
+                        MAX_ITER
+                );
 
-            // Завершение работы пула потоков
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
-                    executor.shutdownNow();
+                validImage = checkImageDiversity(resultImage);
+
+                if (!validImage) {
+                    JavaFX.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
+                } else {
+                    JavaFX.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
+                    BinaryFile.saveMandelbrotParamsToBinaryFile(
+                            getTempPath() + "mandelbrot_params.bin",
+                            currentParams
+                    );
+                    saveImageToTemp(resultImage);
                 }
             } catch (InterruptedException e) {
-                executor.shutdownNow();
                 Thread.currentThread().interrupt();
+                logger.error("Генерация прервана", e);
                 return null;
+            } catch (ExecutionException e) {
+                logger.error("Ошибка в потоке вычислений (попытка " + attempt + ")", e);
             }
-
-            validImage = checkImageDiversity(image);
-            if (!validImage) {
-                JavaFX.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
-            } else {
-                JavaFX.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
-            }
-        }
-
-        if (validImage) {
-            BinaryFile.saveMandelbrotParamsToBinaryFile(
-                    getTempPath() + "mandelbrot_params.bin",
-                    currentParams
-            );
-            saveImageToTemp(image);
         }
 
         repaint();
-        return image;
+        return resultImage;
     }
 
     /**
@@ -190,7 +181,8 @@ public class Mandelbrot extends JPanel {
      * @param MAX_ITER максимальное количество итераций для алгоритма
      * @return сгенерированное изображение
      */
-    public BufferedImage generateImage(int startMandelbrotWidth, int startMandelbrotHeight, double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+    public BufferedImage generateImage(int startMandelbrotWidth, int startMandelbrotHeight,
+                                       double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
         this.startMandelbrotWidth = startMandelbrotWidth;
         this.startMandelbrotHeight = startMandelbrotHeight;
         this.ZOOM = ZOOM;
@@ -199,29 +191,35 @@ public class Mandelbrot extends JPanel {
         this.MAX_ITER = MAX_ITER;
 
         image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        int chunkWidth = startMandelbrotWidth / Runtime.getRuntime().availableProcessors();
-        //int chunkHeight = startMandelbrotHeight; -----> startMandelbrotHeight = chunkHeight = height
+        try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+            int processors = Runtime.getRuntime().availableProcessors();
+            int chunkWidth = startMandelbrotWidth / processors;
 
-        for (int i = 0; i < Runtime.getRuntime().availableProcessors(); i++) {
-            int startX = i * chunkWidth;
-            int startY = 0;
-            int width = (i == Runtime.getRuntime().availableProcessors() - 1) ? startMandelbrotWidth - startX : chunkWidth;
-            //int height = chunkHeight;
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < processors; i++) {
+                int startX = i * chunkWidth;
+                int width = (i == processors - 1) ? startMandelbrotWidth - startX : chunkWidth;
 
-            executor.submit(new MandelbrotThread(startX, startY, width, startMandelbrotHeight, ZOOM, MAX_ITER, offsetX, offsetY, image));
-        }
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)) {
-                executor.shutdownNow();
+                futures.add(executor.submit(new MandelbrotThread(
+                        startX, 0, width, startMandelbrotHeight,
+                        ZOOM, MAX_ITER, offsetX, offsetY, image
+                )));
+            }
+
+            // Ожидаем завершения всех задач
+            for (Future<?> future : futures) {
+                future.get(); // Дожидаемся завершения каждого потока
             }
         } catch (InterruptedException e) {
-            executor.shutdownNow();
             Thread.currentThread().interrupt();
-            logger.error(e.getMessage());
+            logger.error("Генерация прервана", e);
+            return null;
+        } catch (ExecutionException e) {
+            logger.error("Ошибка в потоке вычислений", e);
+            throw new RuntimeException("Ошибка генерации фрактала", e);
         }
+
         repaint();
         return image;
     }
