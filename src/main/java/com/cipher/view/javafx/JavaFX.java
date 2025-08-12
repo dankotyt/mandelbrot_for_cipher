@@ -33,6 +33,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RasterFormatException;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.*;
@@ -2737,7 +2738,8 @@ public class JavaFX extends Application {
                 Path sourcePath = Paths.get(resourcesPath);
                 Path destinationPath = Paths.get(keyDecoderFilePath);
 
-                Files.copy(sourcePath, destinationPath);
+                Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+
                 logger.info("key_decoder.bin сохранен в: {}", keyDecoderFilePath);
                 showSuccessDialog("Изображение и файл-ключ успешно сохранены:\n" +
                         "Изображение: " + imageFilePath + "\n" +
@@ -2811,6 +2813,9 @@ public class JavaFX extends Application {
 
         if (selectedFile != null) {
             // Сохраняем выбранное изображение в папку temp
+            String tempPath = getTempPath();
+            File tempDir = new File(tempPath);
+            deleteFolder(tempDir);
             saveInputImageToTemp(selectedFile);
             // Возвращаем путь к файлу input.png в папке temp
             return getTempPath() + "input.png";
@@ -2833,6 +2838,9 @@ public class JavaFX extends Application {
                 BufferedImage image = ImageIO.read(selectedFile);
                 if (image != null) {
                     // Сохраняем изображение в папку temp
+                    String tempPath = getTempPath();
+                    File tempDir = new File(tempPath);
+                    deleteFolder(tempDir);
                     saveInputImageToTemp(selectedFile);
                     logger.info("Изображение сохранено в папку temp: {}", selectedFile.getName());
                     return selectedFile.getAbsolutePath();

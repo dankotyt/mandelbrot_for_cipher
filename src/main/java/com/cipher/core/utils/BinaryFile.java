@@ -50,8 +50,6 @@ public class BinaryFile {
     public static void saveKeyDecoderToBinaryFile(String filePath,
                                                   KeyDecoderParams params) {
         try (DataOutputStream dos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-            dos.writeInt(params.startMandelbrotWidth());
-            dos.writeInt(params.startMandelbrotHeight());
             dos.writeDouble(params.zoom());
             dos.writeDouble(params.offsetX());
             dos.writeDouble(params.offsetY());
@@ -81,8 +79,6 @@ public class BinaryFile {
 
     public static KeyDecoderParams loadKeyDecoderFromBinaryFile(String filePath) {
         try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
-            int startMandelbrotWidth = dis.readInt();
-            int startMandelbrotHeight = dis.readInt();
             double zoom = dis.readDouble();
             double offsetX = dis.readDouble();
             double offsetY = dis.readDouble();
@@ -96,8 +92,6 @@ public class BinaryFile {
                 segmentMapping.put(dis.readInt(), dis.readInt());
             }
             KeyDecoderParams params = new KeyDecoderParams(
-                    startMandelbrotWidth,
-                    startMandelbrotHeight,
                     zoom,
                     offsetX,
                     offsetY,
@@ -120,8 +114,6 @@ public class BinaryFile {
 
     private static void logParams(KeyDecoderParams params) {
         logger.info("=== Параметры Мандельброта ===");
-        logger.info("Width: {}", params.startMandelbrotWidth());
-        logger.info("Height: {}", params.startMandelbrotHeight());
         logger.info("Zoom: {}", params.zoom());
         logger.info("Offset X: {}", params.offsetX());
         logger.info("Offset Y: {}", params.offsetY());

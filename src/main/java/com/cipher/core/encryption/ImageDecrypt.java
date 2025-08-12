@@ -27,10 +27,10 @@ public class ImageDecrypt {
 
     public static void decryptImage(String keyFilePath) {
         try {
+            // 1. Загружаем параметры дешифровки и зашифрованное изображение
             KeyDecoderParams keyDecoderParams = BinaryFile.loadKeyDecoderFromBinaryFile(keyFilePath);
+            BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
 
-            int startMandelbrotWidth = keyDecoderParams.startMandelbrotWidth();
-            int startMandelbrotHeight = keyDecoderParams.startMandelbrotHeight();
             double zoom = keyDecoderParams.zoom();
             double offsetX = keyDecoderParams.offsetX();
             double offsetY = keyDecoderParams.offsetY();
@@ -43,39 +43,42 @@ public class ImageDecrypt {
             int width = keyDecoderParams.width();
             int height = keyDecoderParams.height();
 
-            BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
-
-            BufferedImage encryptedSelectedArea = encryptedImage.getSubimage(startX, startY, width, height);
-
-            BufferedImage unshuffledSelectedImage = ImageSegmentShuffler.unshuffledSegments(encryptedSelectedArea,
-                    segmentMapping, segmentWidthSize, segmentHeightSize);
-
-            Mandelbrot mandelbrotImage = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
-            BufferedImage mandelbrotBufferedImage = mandelbrotImage.generateImage(startMandelbrotWidth,
-                    startMandelbrotHeight, zoom, offsetX, offsetY, maxIter);
-
-            BufferedImage selectedMandelbrotImage = mandelbrotBufferedImage.getSubimage(startX, startY, width, height);
-
-            // Преобразование типов изображений в BufferedImage.TYPE_INT_RGB
-            selectedMandelbrotImage = ImageUtils.convertToType(selectedMandelbrotImage, BufferedImage.TYPE_INT_RGB);
-            unshuffledSelectedImage = ImageUtils.convertToType(unshuffledSelectedImage, BufferedImage.TYPE_INT_RGB);
-
-            // Проверка кодировки пикселей
-            if (selectedMandelbrotImage.getType() != BufferedImage.TYPE_INT_RGB ||
-                    unshuffledSelectedImage.getType() != BufferedImage.TYPE_INT_RGB) {
-                throw new IllegalArgumentException("Изображения должны быть типа BufferedImage.TYPE_INT_RGB");
+            // Выделяем область для дешифровки (если работаем с частью изображения)
+            BufferedImage encryptedArea = encryptedImage;
+            if (width != encryptedImage.getWidth() || height != encryptedImage.getHeight()) {
+                encryptedArea = encryptedImage.getSubimage(startX, startY, width, height);
             }
 
-            BufferedImage xorResultImage = XOR.performXOR(selectedMandelbrotImage, unshuffledSelectedImage);
+            // 2. Генерируем изображение Мандельброта с нужными параметрами и размерами
+            Mandelbrot mandelbrotGenerator = new Mandelbrot(width, height);
+            BufferedImage mandelbrotImage = mandelbrotGenerator.generateImage(
+                    width, height, zoom, offsetX, offsetY, maxIter);
 
-            Graphics2D g2d = encryptedImage.createGraphics();
-            g2d.drawImage(xorResultImage, startX, startY, null);
-            g2d.dispose();
+            // 3. Применяем XOR между зашифрованным изображением и Мандельбротом
+            // Преобразование типов изображений в BufferedImage.TYPE_INT_RGB
+            mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
+            encryptedArea = ImageUtils.convertToType(encryptedArea, BufferedImage.TYPE_INT_RGB);
 
-            saveDecryptedImage(encryptedImage);
+            BufferedImage xorResult = XOR.performXOR(encryptedArea, mandelbrotImage);
+
+            // 4. Выполняем десегментацию (восстановление порядка сегментов)
+            BufferedImage unshuffledImage = ImageSegmentShuffler.unshuffledSegments(
+                    xorResult, segmentMapping, segmentWidthSize, segmentHeightSize);
+
+            // 5. Сохраняем или возвращаем результат
+            if (width != encryptedImage.getWidth() || height != encryptedImage.getHeight()) {
+                // Если работали с частью изображения, вставляем расшифрованную область обратно
+                Graphics2D g2d = encryptedImage.createGraphics();
+                g2d.drawImage(unshuffledImage, startX, startY, null);
+                g2d.dispose();
+                saveDecryptedImage(encryptedImage);
+            } else {
+                // Если работали со всем изображением
+                saveDecryptedImage(unshuffledImage);
+            }
 
         } catch (IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Ошибка при дешифровании изображения: " + e.getMessage());
         }
     }
 
