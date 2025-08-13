@@ -2,7 +2,7 @@ package com.cipher.view.javafx;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.EncryptionService;
-import com.cipher.core.utils.CoordinateUtils;
+import com.cipher.core.utils.*;
 import javafx.application.Application;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -45,7 +45,6 @@ import java.util.function.UnaryOperator;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageDecrypt;
-import com.cipher.core.utils.BinaryFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,8 +64,9 @@ public class JavaFX extends Application {
     private final List<Rectangle2D> rectangles = new ArrayList<>();
     private boolean rectangleSelected = false;
 
-    public static String imageFilePath;
-    public static String keyDecoderFilePath;
+    private final DialogDisplayer dialogDisplayer = new DialogDisplayer();
+    private final TempFileManager tempFileManager = new TempFileManager();
+    private final NumberFilter numberFilter = new NumberFilter();
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -252,18 +252,13 @@ public class JavaFX extends Application {
         titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.CENTER);
 
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitHeight(50);
-        backImageView.setFitWidth(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createStartPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createStartPanel();
+                }
+        );
 
         // Логика расположения объектов: создаем BorderPane = mainContainer. Далее создаем еще один
         // BorderPane = topContainer, в котором мы расположим backButton и titleLabel, который
@@ -361,23 +356,18 @@ public class JavaFX extends Application {
             if (imagePath != null) {
                 createEncryptLoadPanel(imagePath); // Передаем путь к файлу в метод
             } else {
-                showErrorDialog("Файл не выбран!");
+                dialogDisplayer.showErrorDialog("Файл не выбран!");
             }
         });
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createStartPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createStartPanel();
+                }
+        );
 
         HBox topCenterContainer = new HBox(titleLabel);
         topCenterContainer.setAlignment(Pos.CENTER);
@@ -462,18 +452,13 @@ public class JavaFX extends Application {
         continueButton.setOnAction(e -> createEncryptModePanel());
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createEncryptBeginPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createEncryptBeginPanel();
+                }
+        );
 
         HBox topCenterContainer = new HBox(titleLabel);
         topCenterContainer.setAlignment(Pos.CENTER);
@@ -548,7 +533,7 @@ public class JavaFX extends Application {
         darkGrayRect.setMinSize(720, 540);
         darkGrayRect.setMaxSize(720, 540);
 
-        ImageView imageView = loadInputImageFromTemp();
+        ImageView imageView = tempFileManager.loadInputImageFromTemp();
         if (imageView == null) {
             return;
         }
@@ -580,23 +565,17 @@ public class JavaFX extends Application {
                 String getImagePath = selectedFile.getAbsolutePath();
                 createChoosenMandelbrotPanel(getImagePath);
             } else {
-                showErrorDialog("Файл не выбран!");
+                dialogDisplayer.showErrorDialog("Файл не выбран!");
             }
         });
 
-        // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createEncryptBeginPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createEncryptBeginPanel();
+                }
+        );
 
         // Размещение кнопок в контейнере
         VBox buttonContainer = new VBox(20, generateButton, manualButton, chooseButton);
@@ -670,7 +649,7 @@ public class JavaFX extends Application {
         darkGrayRect.setMaxSize(720, 540);
 
         // Загрузка изображения из папки temp
-        ImageView imageView = loadInputImageFromTemp();
+        ImageView imageView = tempFileManager.loadInputImageFromTemp();
         if (imageView == null) {
             return;
         }
@@ -682,80 +661,58 @@ public class JavaFX extends Application {
         StackPane loadingContainer = new StackPane(loadingLabel);
         loadingContainer.setAlignment(Pos.CENTER);
 
-        Image writeParamsImage = loadImageResource("/elements/icon_writeParams.png");
-        ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50);
-        writeParamsImageView.setFitHeight(50);
-        Button manualButton = new Button("", writeParamsImageView);
-        manualButton.setStyle("-fx-background-color: transparent;");
-        manualButton.setPrefSize(50, 50);
-        manualButton.setOnAction(e -> {
-            cancelCurrentTask();
-            createManualEncryptionPanel();
-        });
+        // Создание кнопки "Сгенерировать заново вручную"
+        Button manualButton = createIconButton(
+                "/elements/icon_writeParams.png",
+                () -> {
+                    cancelCurrentTask();
+                    createManualEncryptionPanel();
+                }
+        );
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
-        Image nextImage = loadImageResource("/elements/icon_next.png");
-        ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50);
-        nextImageView.setFitHeight(50);
-        Button okayButton = new Button("", nextImageView);
-        okayButton.setStyle("-fx-background-color: transparent;");
-        okayButton.setPrefSize(50, 50);
-        okayButton.setOnAction(e -> {
-            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
-            if (imageToEncrypt != null) {
-                try {
-                    createEncryptFinalPanel(imageToEncrypt);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                } finally {
-                    imageToEncrypt.flush();
+        Button okayButton = createIconButton(
+                "/elements/icon_next.png",
+                () -> {
+                    BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(getTempPath() + "input.png");
+                    if (imageToEncrypt != null) {
+                        try {
+                            createEncryptFinalPanel(imageToEncrypt);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        } finally {
+                            imageToEncrypt.flush();
+                        }
+                    }
                 }
-            }
-        });
+        );
 
-        // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
-        backButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
-            mainPane.getChildren().clear();
-            createEncryptModePanel();
-        });
+        // Создание кнопки "Назад"
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    cancelCurrentTask();
+                    mainPane.getChildren().clear();
+                    createEncryptModePanel();
+                }
+        );
 
         // Добавление иконки swap
-        Image swapImage = loadImageResource("/elements/icon_swap.png");
-        ImageView swapImageView = new ImageView(swapImage);
-        swapImageView.setFitWidth(50);
-        swapImageView.setFitHeight(50);
-
-        Button swapButton = new Button("", swapImageView);
-        swapButton.setStyle("-fx-background-color: transparent;");
-        swapButton.setOnAction(e -> panelForChooseAreaForEncrypt());
+       Button swapButton = createIconButton(
+                "/elements/icon_swap.png",
+                this::panelForChooseAreaForEncrypt
+        );
 
         // Создание кнопки "Сгенерировать заново" с иконкой
-        Button regenerateButton = new Button();
-        Image repeatIcon = loadImageResource("/elements/icon_repeat.png");
-        ImageView repeatIconView = new ImageView(repeatIcon);
-        repeatIconView.setFitWidth(50); // Установите нужный размер иконки
-        repeatIconView.setFitHeight(50);
-        regenerateButton.setGraphic(repeatIconView);
-        regenerateButton.setStyle("-fx-background-color: transparent;");
-        regenerateButton.setPrefSize(50, 50);
-        regenerateButton.setOnAction(e -> {
-            cancelCurrentTask(); // Отменяем текущую задачу
-            loadingContainer.getChildren().clear();
-            loadingContainer.getChildren().add(loadingLabel);
-            generateImage(loadingContainer, getTempPath() + "input.png", regenerateButton,
-                    manualButton, okayButton, swapButton);
-        });
+        Button regenerateButton = createIconButton(
+                "/elements/icon_repeat.png",
+                () -> {
+                    cancelCurrentTask();
+                    loadingContainer.getChildren().clear();
+                    loadingContainer.getChildren().add(loadingLabel);
+                    createEncryptGeneratePanel();
+                }
+        );
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, regenerateButton, manualButton, okayButton, swapButton);
@@ -979,7 +936,6 @@ public class JavaFX extends Application {
     }
 
     private void generateImage(StackPane imageContainer, String imagePath, Button... buttonsToDisable) {
-        // Отключаем кнопки перед началом генерации
         for (Button button : buttonsToDisable) {
             button.setDisable(true);
         }
@@ -992,7 +948,6 @@ public class JavaFX extends Application {
                         new MandelbrotService((int) image.getWidth(), (int) image.getHeight());
                 BufferedImage mandelbrotImage = mandelbrotService.generateImage();
 
-                // Проверяем, была ли задача отменена
                 if (isCancelled()) {
                     updateMessage("Задача отменена");
                     mandelbrotImage.flush();
@@ -1011,7 +966,6 @@ public class JavaFX extends Application {
             imageContainer.getChildren().clear();
             imageContainer.getChildren().add(imageView);
 
-            // Включаем кнопки после успешного завершения
             for (Button button : buttonsToDisable) {
                 button.setDisable(false);
             }
@@ -1019,18 +973,15 @@ public class JavaFX extends Application {
 
         generateImageTask.setOnFailed(e -> {
             logger.error("Ошибка при генерации изображения: {}", generateImageTask.getException().getMessage());
-            showErrorDialog("Ошибка при генерации изображения: " + generateImageTask.getMessage());
+            dialogDisplayer.showErrorDialog("Ошибка при генерации изображения: " + generateImageTask.getMessage());
 
-            // Включаем кнопки в случае сбоя
             for (Button button : buttonsToDisable) {
                 button.setDisable(false);
             }
         });
 
-        // Обработка отмены задачи
         generateImageTask.setOnCancelled(e -> {
             logger.info("Задача генерации изображения отменена");
-            // Включаем кнопки после отмены
             for (Button button : buttonsToDisable) {
                 button.setDisable(false);
             }
@@ -1038,7 +989,6 @@ public class JavaFX extends Application {
 
         new Thread(generateImageTask).start();
 
-        // Сохраняем текущую задачу для возможности отмены
         currentTask = generateImageTask;
     }
 
@@ -1057,7 +1007,6 @@ public class JavaFX extends Application {
                 Insets.EMPTY
         )));
 
-        // Создание текста "Ваше изображение-ключ:"
         Label titleLabel = new Label("Шифруемое изображение:");
         titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
         titleLabel.setAlignment(Pos.TOP_CENTER);
@@ -1066,13 +1015,12 @@ public class JavaFX extends Application {
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
         spaceBelowTitle.setPrefHeight(35);
 
-        // Загрузка изображения input.png из папки temp
         String tempPath = getTempPath();
         String inputFilePath = tempPath + "input.png";
         File inputFile = new File(inputFilePath);
         if (!inputFile.exists() || !inputFile.canRead()) {
             logger.error("Файл изображения не найден: {}", inputFilePath);
-            showErrorDialog("Выбранный файл изображения не найден: " + inputFilePath);
+            dialogDisplayer.showErrorDialog("Выбранный файл изображения не найден: " + inputFilePath);
             return;
         }
         Image image = new Image(inputFile.toURI().toString());
@@ -1080,12 +1028,11 @@ public class JavaFX extends Application {
         imageView.setFitWidth(720);
         imageView.setFitHeight(540);
 
-        // Загрузка изображения mandelbrot.png из папки temp
         String mandelbrotFilePath = tempPath + "mandelbrot.png";
         File mandelbrotFile = new File(mandelbrotFilePath);
         if (!mandelbrotFile.exists() || !mandelbrotFile.canRead()) {
             logger.error("Файл изображения не найден: {}", mandelbrotFilePath);
-            showErrorDialog("Изображение-ключ не найден: " + mandelbrotFilePath);
+            dialogDisplayer.showErrorDialog("Изображение-ключ не найден: " + mandelbrotFilePath);
             return;
         }
         Image mandelbrotImage = new Image(mandelbrotFile.toURI().toString());
@@ -1094,62 +1041,48 @@ public class JavaFX extends Application {
         mandelbrotImageView.setFitHeight(480);
         mandelbrotImageView.setTranslateX(150); // Выглядывание на 150px
 
-        // Создание кнопки "Зашифровать изображение полностью" с иконкой
-        Image encryptWholeImage = loadImageResource("/elements/icon_encryptWhole.png");
-        ImageView encryptWholeImageView = new ImageView(encryptWholeImage);
-        encryptWholeImageView.setFitWidth(50);
-        encryptWholeImageView.setFitHeight(50);
-        Button encryptWholeButton = new Button("", encryptWholeImageView);
-        encryptWholeButton.setStyle("-fx-background-color: transparent;");
-        encryptWholeButton.setPrefSize(50, 50);
-        encryptWholeButton.setOnAction(e -> {
-            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-            if (imageToEncrypt != null) {
-                try {
-                    createEncryptFinalPanel(imageToEncrypt);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                } finally {
-                    imageToEncrypt.flush();
+        Button encryptWholeButton = createIconButton(
+                "/elements/icon_encryptWhole.png",
+                () -> {
+                    BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(inputFilePath);
+                    if (imageToEncrypt != null) {
+                        try {
+                            createEncryptFinalPanel(imageToEncrypt);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        } finally {
+                            imageToEncrypt.flush();
+                        }
+                    }
                 }
-            }
-        });
+        );
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            cancelCurrentTask();
-            clearRectangles();
-            mainPane.getChildren().clear();
-            createEncryptModePanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    cancelCurrentTask();
+                    clearRectangles();
+                    mainPane.getChildren().clear();
+                    createEncryptModePanel();
+                }
+        );
 
         // Добавление иконки swap
-        Image swapImage = loadImageResource("/elements/icon_swap.png");
-        ImageView swapImageView = new ImageView(swapImage);
-        swapImageView.setFitWidth(50);
-        swapImageView.setFitHeight(50);
-        Button swapButton = new Button("", swapImageView);
-        swapButton.setStyle("-fx-background-color: transparent;");
-        swapButton.setOnAction(e -> {
-            createChoosenMandelbrotPanel(getTempPath() + "mandelbrot.png");
-            clearRectangles();
-        });
+        Button swapButton = createIconButton(
+                "/elements/icon_swap.png",
+                () -> {
+                    createChoosenMandelbrotPanel(getTempPath() + "mandelbrot.png");
+                    clearRectangles();
+                }
+        );
 
         StackPane imageContainer = new StackPane(imageView); // Canvas поверх изображения
 
-        // Создаем слой для рисования прямоугольников
         canvas = new Canvas(720, 540); // Размер canvas соответствует отображаемому изображению
         coordUtils = new CoordinateUtils(canvas);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        // Коэффициенты масштабирования для перевода координат с 720x540 на 1024x768
         double scaleX = image.getWidth() / canvas.getWidth();
         double scaleY = image.getHeight() / canvas.getHeight();
 
@@ -1211,55 +1144,46 @@ public class JavaFX extends Application {
         imageContainer.getChildren().add(canvas);
 
         // Создание кнопки "Продолжить шифрование" с иконкой
-        Image encryptPartImage = loadImageResource("/elements/icon_encryptPart.png");
-        ImageView encryptPartImageView = new ImageView(encryptPartImage);
-        encryptPartImageView.setFitWidth(50);
-        encryptPartImageView.setFitHeight(50);
-        Button encryptPartButton = new Button("", encryptPartImageView);
-        encryptPartButton.setStyle("-fx-background-color: transparent;");
-        encryptPartButton.setPrefSize(50, 50);
-        encryptPartButton.setOnAction(e -> {
-            if (!hasRectangle()) {
-                showErrorMessage("Необходимо выделить зону шифрования!");
-                return;
-            }
+        Button encryptPartButton = createIconButton(
+                "/elements/icon_encryptPart.png",
+                () -> {
+                    if (!hasRectangle()) {
+                        dialogDisplayer.showErrorMessage("Необходимо выделить зону шифрования!");
+                        return;
+                    }
 
-            try {
-                BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-                Rectangle2D selectedRectangle = getSelectedRectangle();
+                    try {
+                        BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(inputFilePath);
+                        Rectangle2D selectedRectangle = getSelectedRectangle();
 
-                BufferedImage encryptedImage = ImageEncrypt.encryptSelectedArea(
-                        imageToEncrypt, selectedRectangle);
+                        BufferedImage encryptedImage = ImageEncrypt.encryptSelectedArea(
+                                imageToEncrypt, selectedRectangle);
 
-                createEncryptFinalPanelForSelectedImage(encryptedImage);
-                clearRectangles();
-            } catch (IllegalArgumentException | IllegalStateException ex) {
-                showErrorMessage("Ошибка: " + ex.getMessage());
-                logger.error("Validation error: {}", ex.getMessage());
-            } catch (RasterFormatException ex) {
-                showErrorMessage("Выделенная область выходит за границы изображения!");
-                logger.error("Bounds error: {}", ex.getMessage());
-            } catch (Exception ex) {
-                showErrorMessage("Произошла ошибка при шифровании");
-                logger.error("Encryption error: {}", ex.getMessage(), ex);
-            }
-        });
+                        createEncryptFinalPanelForSelectedImage(encryptedImage);
+                        clearRectangles();
+                    } catch (IllegalArgumentException | IllegalStateException ex) {
+                        dialogDisplayer.showErrorMessage("Ошибка: " + ex.getMessage());
+                        logger.error("Validation error: {}", ex.getMessage());
+                    } catch (RasterFormatException ex) {
+                        dialogDisplayer.showErrorMessage("Выделенная область выходит за границы изображения!");
+                        logger.error("Bounds error: {}", ex.getMessage());
+                    } catch (Exception ex) {
+                        dialogDisplayer.showErrorMessage("Произошла ошибка при шифровании");
+                        logger.error("Encryption error: {}", ex.getMessage(), ex);
+                    }
+                }
+        );
 
         // Создание кнопки "Выбрать другую область" с иконкой
-        Image resetPartImage = loadImageResource("/elements/icon_resetPart.png");
-        ImageView resetPartImageView = new ImageView(resetPartImage);
-        resetPartImageView.setFitWidth(50);
-        resetPartImageView.setFitHeight(50);
-        Button resetPartButton = new Button("", resetPartImageView);
-        resetPartButton.setStyle("-fx-background-color: transparent;");
-        resetPartButton.setPrefSize(50, 50);
-        resetPartButton.setOnAction(e -> {
-            rectangles.clear();
-            rectangleSelected = false;
-            gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()); // Очищаем canvas
-            clearRectangles();
-        });
-
+        Button resetPartButton = createIconButton(
+                "/elements/icon_resetPart.png",
+                () -> {
+                    rectangles.clear();
+                    rectangleSelected = false;
+                    gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()); // Очищаем canvas
+                    clearRectangles();
+                }
+        );
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, encryptWholeButton, encryptPartButton, resetPartButton, swapButton);
@@ -1421,7 +1345,7 @@ public class JavaFX extends Application {
         darkGrayRect.setMaxSize(720, 540);
 
         // Загрузка изображения из папки temp
-        ImageView imageView = loadInputImageFromTemp();
+        ImageView imageView = tempFileManager.loadInputImageFromTemp();
         if (imageView == null) {
             return;
         }
@@ -1436,78 +1360,57 @@ public class JavaFX extends Application {
         loadingContainer.setAlignment(Pos.CENTER);
 
         // Создание кнопки "Сгенерировать заново вручную" с иконкой
-        Image writeParamsImage = loadImageResource("/elements/icon_writeParams.png");
-        ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50);
-        writeParamsImageView.setFitHeight(50);
-        Button manualButton = new Button("", writeParamsImageView);
-        manualButton.setStyle("-fx-background-color: transparent;");
-        manualButton.setPrefSize(50, 50);
-        manualButton.setOnAction(e -> {
-            cancelCurrentTask();
-            createManualEncryptionPanel();
-        });
+        Button manualButton = createIconButton(
+                "/elements/writeParams.png",
+                () -> {
+                    cancelCurrentTask();
+                    createManualEncryptionPanel();
+                }
+        );
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
-        Image nextImage = loadImageResource("/elements/icon_next.png");
-        ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50);
-        nextImageView.setFitHeight(50);
-        Button okayButton = new Button("", nextImageView);
-        okayButton.setStyle("-fx-background-color: transparent;");
-        okayButton.setPrefSize(50, 50);
-        okayButton.setOnAction(e -> {
-            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(getTempPath() + "input.png");
-            if (imageToEncrypt != null) {
-                try {
-                    createEncryptFinalPanel(imageToEncrypt);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                } finally {
-                    imageToEncrypt.flush();
+        Button okayButton = createIconButton(
+                "/elements/icon_next.png",
+                () -> {
+                    BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(getTempPath() + "input.png");
+                    if (imageToEncrypt != null) {
+                        try {
+                            createEncryptFinalPanel(imageToEncrypt);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        } finally {
+                            imageToEncrypt.flush();
+                        }
+                    }
                 }
-            }
-        });
+        );
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            cancelCurrentTask();
-            mainPane.getChildren().clear();
-            createEncryptModePanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    cancelCurrentTask();
+                    mainPane.getChildren().clear();
+                    createEncryptModePanel();
+                }
+        );
 
         // Создание кнопки "Сгенерировать заново" с иконкой
-        Button regenerateButton = new Button();
-        Image repeatIcon = loadImageResource("/elements/icon_repeat.png");
-        ImageView repeatIconView = new ImageView(repeatIcon);
-        repeatIconView.setFitWidth(50);
-        repeatIconView.setFitHeight(50);
-        regenerateButton.setGraphic(repeatIconView);
-        regenerateButton.setStyle("-fx-background-color: transparent;");
-        regenerateButton.setPrefSize(50, 50);
-        regenerateButton.setOnAction(e -> {
-            cancelCurrentTask();
-            loadingContainer.getChildren().clear();
-            loadingContainer.getChildren().add(loadingLabel);
-            createEncryptGeneratePanel();
-        });
+        Button regenerateButton = createIconButton(
+                "/elements/icon_repeat.png",
+                () -> {
+                    cancelCurrentTask();
+                    loadingContainer.getChildren().clear();
+                    loadingContainer.getChildren().add(loadingLabel);
+                    createEncryptGeneratePanel();
+                }
+        );
 
         // Добавление иконки swap
-        Image swapImage = loadImageResource("/elements/icon_swap.png");
-        ImageView swapImageView = new ImageView(swapImage);
-        swapImageView.setFitWidth(50);
-        swapImageView.setFitHeight(50);
-
-        Button swapButton = new Button("", swapImageView);
-        swapButton.setStyle("-fx-background-color: transparent;");
-        swapButton.setOnAction(e -> panelForChooseAreaForEncrypt());
+        Button swapButton = createIconButton(
+                "/elements/icon_swap.png",
+                this::panelForChooseAreaForEncrypt
+        );
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, regenerateButton, manualButton, okayButton, swapButton);
@@ -1614,12 +1517,12 @@ public class JavaFX extends Application {
             imageContainer.getChildren().clear();
             imageContainer.getChildren().add(imageView);
 
-            saveMandelbrotToTemp(SwingFXUtils.fromFXImage(mandelbrotImage, null));
+            tempFileManager.saveMandelbrotToTemp(SwingFXUtils.fromFXImage(mandelbrotImage, null));
         });
 
         generateImageTask.setOnFailed(e -> {
             logger.error("Ошибка при генерации изображения: {}", generateImageTask.getException().getMessage());
-            showErrorMessage("Ошибка при генерации изображения: " + generateImageTask.getMessage());
+            dialogDisplayer.showErrorMessage("Ошибка при генерации изображения: " + generateImageTask.getMessage());
         });
 
         new Thread(generateImageTask).start();
@@ -1663,14 +1566,6 @@ public class JavaFX extends Application {
         }
     }
 
-    private void showErrorMessage(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Ошибка выделения");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
     private void createEncryptFinalPanel(BufferedImage image) throws IOException{
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
@@ -1706,28 +1601,19 @@ public class JavaFX extends Application {
         imageContainer.setAlignment(Pos.CENTER);
 
         // Создание кнопки "Сохранить изображение" с иконкой
-        Image saveIcon = loadImageResource("/elements/icon_save.png");
-        ImageView saveIconView = new ImageView(saveIcon);
-        saveIconView.setFitWidth(50);
-        saveIconView.setFitHeight(50);
-        Button saveButton = new Button("", saveIconView);
-        saveButton.setStyle("-fx-background-color: transparent;");
-        saveButton.setPrefSize(50, 50);
-        saveButton.setOnAction(e -> saveEncryptedImage(encryptedImage));
+        Button saveButton = createIconButton(
+                "/elements/icon_save.png",
+                () -> saveEncryptedImage(encryptedImage)
+        );
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            panelForChooseAreaForEncrypt();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    panelForChooseAreaForEncrypt();
+                }
+        );
 
         HBox topCenterContainer = new HBox(titleLabel);
         topCenterContainer.setAlignment(Pos.CENTER);
@@ -1801,31 +1687,22 @@ public class JavaFX extends Application {
         imageContainer.setAlignment(Pos.CENTER);
 
         // Создание кнопки "Сохранить изображение" с иконкой
-        Image saveIcon = loadImageResource("/elements/icon_save.png");
-        ImageView saveIconView = new ImageView(saveIcon);
-        saveIconView.setFitWidth(50);
-        saveIconView.setFitHeight(50);
-        Button saveButton = new Button("", saveIconView);
-        saveButton.setStyle("-fx-background-color: transparent;");
-        saveButton.setPrefSize(50, 50);
-        saveButton.setOnAction(e -> {
-            saveEncryptedImage(image);
-            createStartPanel();
-        });
+        Button saveButton = createIconButton(
+                "/elements/icon_save.png",
+                () -> {
+                    saveEncryptedImage(image);
+                    createStartPanel();
+                }
+        );
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            panelForChooseAreaForEncrypt();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    panelForChooseAreaForEncrypt();
+                }
+        );
 
         HBox topCenterContainer = new HBox(titleLabel);
         topCenterContainer.setAlignment(Pos.CENTER);
@@ -1893,28 +1770,28 @@ public class JavaFX extends Application {
         TextField zoomField = new TextField();
         zoomField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
         zoomField.setPromptText("135000");
-        zoomField.setTextFormatter(new TextFormatter<>(createIntegerFilter(7)));
+        zoomField.setTextFormatter(new TextFormatter<>(numberFilter.createIntegerFilter(7)));
 
         Label iterationsLabel = new Label("Число итераций:");
         iterationsLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField iterationsField = new TextField();
         iterationsField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
         iterationsField.setPromptText("1000");
-        iterationsField.setTextFormatter(new TextFormatter<>(createIntegerFilter(5)));
+        iterationsField.setTextFormatter(new TextFormatter<>(numberFilter.createIntegerFilter(5)));
 
         Label xLabel = new Label("Смещение по оси X:");
         xLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField xField = new TextField();
         xField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
         xField.setPromptText("-0.9999");
-        xField.setTextFormatter(new TextFormatter<>(createDoubleFilter()));
+        xField.setTextFormatter(new TextFormatter<>(numberFilter.createDoubleFilter()));
 
         Label yLabel = new Label("Смещение по оси Y:");
         yLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField yField = new TextField();
         yField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
         yField.setPromptText("0.9999");
-        yField.setTextFormatter(new TextFormatter<>(createDoubleFilter()));
+        yField.setTextFormatter(new TextFormatter<>(numberFilter.createDoubleFilter()));
 
         Button saveButton = new Button("Сохранить сгенерированный ключ");
         saveButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
@@ -1935,9 +1812,9 @@ public class JavaFX extends Application {
 
                 createEncryptGeneratePanelWithParams(getTempPath() + "mandelbrot_params.bin");
             } catch (NumberFormatException ex) {
-                showErrorDialog("Некорректный формат данных");
+                dialogDisplayer.showErrorDialog("Некорректный формат данных");
             } catch (IllegalArgumentException ex) {
-                showErrorDialog(ex.getMessage());
+                dialogDisplayer.showErrorDialog(ex.getMessage());
             }
         });
 
@@ -1946,22 +1823,13 @@ public class JavaFX extends Application {
         saveButtonContainer.setAlignment(Pos.CENTER); // Выравнивание по центру
 
         // Кнопка "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;"); // Убираем обводку
-        backButton.setPrefSize(50, 50); // Устанавливаем размер иконки
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            if (!imageFilePath.equals(getTempPath() + "mandelbrot.png")) {
-                createEncryptModePanel();
-            } else {
-                panelForChooseAreaForEncrypt();
-            }
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createEncryptModePanel();
+                }
+        );
 
         HBox topCenterContainer = new HBox(titleLabel);
         topCenterContainer.setAlignment(Pos.CENTER);
@@ -2009,36 +1877,6 @@ public class JavaFX extends Application {
         mainPane.getChildren().add(mainContainer);
     }
 
-    // Метод для создания фильтра для целых чисел
-    private UnaryOperator<TextFormatter.Change> createIntegerFilter(int maxLength) {
-        return change -> {
-            String newText = change.getControlNewText();
-            if (newText.isEmpty()) {
-                return change;
-            }
-            if (newText.matches("([1-9]\\d*|0)?") && newText.length() <= maxLength) {
-                return change;
-            } else {
-                return null;
-            }
-        };
-    }
-
-    // Метод для создания фильтра для чисел с плавающей точкой
-    private UnaryOperator<TextFormatter.Change> createDoubleFilter() {
-        return change -> {
-            String newText = change.getControlNewText();
-            if (newText.isEmpty()) {
-                return change;
-            }
-            if (newText.matches("-?([1-9]\\d*|0)?(\\.\\d*)?") && newText.length() <= 15) {
-                return change;
-            } else {
-                return null;
-            }
-        };
-    }
-
     private void createChoosenMandelbrotPanel(String imagePath) {
         BorderPane mainContainer = new BorderPane();
         mainContainer.setBackground(new Background(new BackgroundFill(
@@ -2049,7 +1887,7 @@ public class JavaFX extends Application {
 
         // Загрузка изображения input.png из папки temp
         String inputFilePath = getTempPath() + "input.png";
-        Image imageInput = loadImageFromTemp(inputFilePath);
+        Image imageInput = tempFileManager.loadImageFromTemp(inputFilePath);
         if (imageInput == null) {
             logger.error("Файл изображения не найден: {}", inputFilePath);
             return;
@@ -2080,7 +1918,7 @@ public class JavaFX extends Application {
             mandelbrotImage = mandelbrotService.generateAfterGetParams(imagePath);
             if (mandelbrotImage == null) {
                 logger.error("Ошибка: не удалось сгенерировать изображение!");
-                showErrorMessage("Ошибка: не удалось сгенерировать изображение!");
+                dialogDisplayer.showErrorMessage("Ошибка: не удалось сгенерировать изображение!");
                 return;
             }
 
@@ -2089,22 +1927,22 @@ public class JavaFX extends Application {
                 ImageIO.write(mandelbrotImage, "png", mandelbrotFile);
             } catch (IOException e) {
                 logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-                showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
+                dialogDisplayer.showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
                 return;
             }
         } else {
             // Если файл существует, загружаем изображение из файла
             try {
-                mandelbrotImage = ImageIO.read(mandelbrotFile);
+                ImageIO.read(mandelbrotFile);
             } catch (IOException e) {
                 logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-                showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
+                dialogDisplayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
                 return;
             }
         }
 
         // Загрузка изображения mandelbrot.png из папки temp
-        Image imageMandelbrot = loadImageFromTemp(mandelbrotFilePath);
+        Image imageMandelbrot = tempFileManager.loadImageFromTemp(mandelbrotFilePath);
         if (imageMandelbrot == null) {
             return;
         }
@@ -2113,78 +1951,56 @@ public class JavaFX extends Application {
         imageViewMandelbrot.setFitHeight(540);
 
         // Создание кнопки "Сгенерировать заново" с иконкой
-        Button regenerateButton = new Button();
-        Image repeatIcon = loadImageResource("/elements/icon_repeat.png");
-        ImageView repeatIconView = new ImageView(repeatIcon);
-        repeatIconView.setFitWidth(50);
-        repeatIconView.setFitHeight(50);
-        regenerateButton.setGraphic(repeatIconView);
-        regenerateButton.setStyle("-fx-background-color: transparent;");
-        regenerateButton.setPrefSize(50, 50);
-        regenerateButton.setOnAction(e -> {
-            cancelCurrentTask();
-            createEncryptGeneratePanel();
-            logger.info("Кнопка 'Сгенерировать заново' нажата");
-        });
+        Button regenerateButton = createIconButton(
+                "/elements/icon_repeat.png",
+                () -> {
+                    cancelCurrentTask();
+                    createEncryptGeneratePanel();
+                    logger.info("Кнопка 'Сгенерировать заново' нажата");
+                }
+        );
 
         // Создание кнопки "Сгенерировать заново вручную"
-        Image writeParamsImage = loadImageResource("/elements/icon_writeParams.png");
-        ImageView writeParamsImageView = new ImageView(writeParamsImage);
-        writeParamsImageView.setFitWidth(50);
-        writeParamsImageView.setFitHeight(50);
-        Button manualButton = new Button("", writeParamsImageView);
-        manualButton.setStyle("-fx-background-color: transparent;");
-        manualButton.setPrefSize(50, 50);
-        manualButton.setOnAction(e -> {
-            cancelCurrentTask();
-            createManualEncryptionPanel();
-        });
+        Button manualButton = createIconButton(
+                "/elements/icon_writeParams.png",
+                () -> {
+                    cancelCurrentTask();
+                    createManualEncryptionPanel();
+                }
+        );
 
         // Создание кнопки "Зашифровать изображение полностью" с иконкой
-        Image nextImage = loadImageResource("/elements/icon_next.png");
-        ImageView nextImageView = new ImageView(nextImage);
-        nextImageView.setFitWidth(50);
-        nextImageView.setFitHeight(50);
-        Button okayButton = new Button("", nextImageView);
-        okayButton.setStyle("-fx-background-color: transparent;");
-        okayButton.setPrefSize(50, 50);
-        okayButton.setOnAction(e -> {
-            BufferedImage imageToEncrypt = loadBufferedImageFromTemp(inputFilePath);
-            if (imageToEncrypt != null) {
-                try {
-                    createEncryptFinalPanel(imageToEncrypt);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                } finally {
-                    imageToEncrypt.flush();
+        Button okayButton = createIconButton(
+                "/elements/icon_next.png",
+                () -> {
+                    BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(inputFilePath);
+                    if (imageToEncrypt != null) {
+                        try {
+                            createEncryptFinalPanel(imageToEncrypt);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        } finally {
+                            imageToEncrypt.flush();
+                        }
+                    }
                 }
-            }
-        });
+        );
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            cancelCurrentTask();
-            mainPane.getChildren().clear();
-            createEncryptModePanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    cancelCurrentTask();
+                    mainPane.getChildren().clear();
+                    createEncryptModePanel();
+                }
+        );
 
         // Добавление иконки swap
-        Image swapImage = loadImageResource("/elements/icon_swap.png");
-        ImageView swapImageView = new ImageView(swapImage);
-        swapImageView.setFitWidth(50);
-        swapImageView.setFitHeight(50);
-
-        Button swapButton = new Button("", swapImageView);
-        swapButton.setStyle("-fx-background-color: transparent;");
-        swapButton.setOnAction(e -> panelForChooseAreaForEncrypt());
+        Button swapButton = createIconButton(
+                "/elements/icon_swap.png",
+                this::panelForChooseAreaForEncrypt
+        );
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, regenerateButton, manualButton, okayButton, swapButton);
@@ -2298,23 +2114,18 @@ public class JavaFX extends Application {
             if (imagePath != null) {
                 createDecryptLoadPanel(imagePath); // Передаем путь к файлу в метод
             } else {
-                showErrorDialog("Файл не выбран!");
+                dialogDisplayer.showErrorDialog("Файл не выбран!");
             }
         });
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createStartPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createStartPanel();
+                }
+        );
 
         // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
@@ -2400,18 +2211,13 @@ public class JavaFX extends Application {
         continueButton.setOnAction(e -> createDecryptModePanel());
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createDecryptBeginPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createDecryptBeginPanel();
+                }
+        );
 
         // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
@@ -2501,23 +2307,18 @@ public class JavaFX extends Application {
             if (selectedFile != null) {
                 createDecryptFinalPanel(selectedFile.getAbsolutePath());
             } else {
-                showErrorDialog("Файл-ключ не выбран!");
+                dialogDisplayer.showErrorDialog("Файл-ключ не выбран!");
             }
         });
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createDecryptBeginPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createDecryptBeginPanel();
+                }
+        );
 
         // Размещение кнопки "Загрузить файл-ключ" по центру светло-серого прямоугольника
         StackPane buttonContainer = new StackPane(manualButton);
@@ -2595,17 +2396,13 @@ public class JavaFX extends Application {
         rectContainer.setAlignment(Pos.CENTER);
 
         // Создание кнопки "Вернуться назад" с иконкой
-        Image backImage = loadImageResource("/elements/icon_back.png");
-        ImageView backImageView = new ImageView(backImage);
-        backImageView.setFitWidth(50);
-        backImageView.setFitHeight(50);
-        Button backButton = new Button("", backImageView);
-        backButton.setStyle("-fx-background-color: transparent;");
-        backButton.setPrefSize(50, 50);
-        backButton.setOnAction(e -> {
-            mainPane.getChildren().clear();
-            createStartPanel();
-        });
+        Button backButton = createIconButton(
+                "/elements/icon_back.png",
+                () -> {
+                    mainPane.getChildren().clear();
+                    createStartPanel();
+                }
+        );
 
         // Размещение кнопки "Вернуться назад" в левом верхнем углу
         HBox topLeftContainer = new HBox(backButton);
@@ -2621,15 +2418,10 @@ public class JavaFX extends Application {
         topContainer.setCenter(topCenterContainer);
 
         // Создание кнопки "Сохранить изображение" с иконкой
-        Image saveIcon = loadImageResource("/elements/icon_save.png");
-        ImageView saveIconView = new ImageView(saveIcon);
-        saveIconView.setFitWidth(50);
-        saveIconView.setFitHeight(50);
-
-        Button saveButton = new Button("", saveIconView); // Иконка вместо текста
-        saveButton.setStyle("-fx-background-color: transparent;"); // Прозрачный фон
-        saveButton.setPrefSize(50, 50);
-        saveButton.setOnAction(e -> saveDecryptedImage());
+        Button saveButton = createIconButton(
+                "/elements/icon_save.png",
+                this::saveDecryptedImage
+        );
 
         // Размещение кнопок в контейнере
         HBox buttonContainer = new HBox(20, saveButton);
@@ -2676,12 +2468,12 @@ public class JavaFX extends Application {
                 imageContainer.getChildren().clear();
                 imageContainer.getChildren().add(imageView);
             } catch (Exception ex) {
-                showErrorDialog("Ошибка при загрузке расшифрованного изображения: " + ex.getMessage());
+                dialogDisplayer.showErrorDialog("Ошибка при загрузке расшифрованного изображения: " + ex.getMessage());
             }
         });
 
         decryptImageTask.setOnFailed(e ->
-                showErrorDialog("Ошибка при расшифровке изображения: " + decryptImageTask.getException().getMessage()));
+                dialogDisplayer.showErrorDialog("Ошибка при расшифровке изображения: " + decryptImageTask.getException().getMessage()));
 
         new Thread(decryptImageTask).start();
     }
@@ -2694,7 +2486,7 @@ public class JavaFX extends Application {
         File fileToSave = fileChooser.showSaveDialog(primaryStage);
 
         if (fileToSave != null) {
-            imageFilePath = fileToSave.getAbsolutePath();
+            String imageFilePath = fileToSave.getAbsolutePath();
 
             // Добавляем расширение файла, если оно не указано
             if (!imageFilePath.toLowerCase().endsWith(".png")) {
@@ -2708,7 +2500,7 @@ public class JavaFX extends Application {
                 saveKeyDecoder(imageFilePath);
                 logger.info("Путь к файлу: {}", imageFilePath);
             } catch (IOException e) {
-                showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
+                dialogDisplayer.showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
             }
         }
     }
@@ -2721,7 +2513,7 @@ public class JavaFX extends Application {
         File fileToSave = fileChooser.showSaveDialog(primaryStage);
 
         if (fileToSave != null) {
-            keyDecoderFilePath = fileToSave.getAbsolutePath();
+            String keyDecoderFilePath = fileToSave.getAbsolutePath();
 
             if (!keyDecoderFilePath.toLowerCase().endsWith(".bin")) {
                 keyDecoderFilePath += ".bin";
@@ -2735,14 +2527,14 @@ public class JavaFX extends Application {
                 Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
 
                 logger.info("key_decoder.bin сохранен в: {}", keyDecoderFilePath);
-                showSuccessDialog("Изображение и файл-ключ успешно сохранены:\n" +
+                dialogDisplayer.showSuccessDialog("Изображение и файл-ключ успешно сохранены:\n" +
                         "Изображение: " + imageFilePath + "\n" +
                         "Файл-ключ: " + keyDecoderFilePath);
 
                 createStartPanel();
             } catch (Exception e) {
                 logger.error("Ошибка при сохранении key_decoder.bin: {}", e.getMessage());
-                showErrorDialog("Ошибка при сохранении файл-ключа: " + e.getMessage());
+                dialogDisplayer.showErrorDialog("Ошибка при сохранении файл-ключа: " + e.getMessage());
             }
         }
     }
@@ -2773,19 +2565,18 @@ public class JavaFX extends Application {
                             params.maxIter()
                     );
 
-                    saveMandelbrotToTemp(generatedImage);
+                    tempFileManager.saveMandelbrotToTemp(generatedImage);
                     EncryptionService service = new EncryptionService();
                     service.saveMandelbrotParameters(params);
 
                 } catch (IOException e) {
-                    showErrorDialog("Ошибка при чтении файла-ключа: " + e.getMessage());
+                    dialogDisplayer.showErrorDialog("Ошибка при чтении файла-ключа: " + e.getMessage());
                 } catch (IllegalArgumentException e) {
-                    showErrorDialog("Некорректные параметры в файле: " + e.getMessage());
+                    dialogDisplayer.showErrorDialog("Некорректные параметры в файле: " + e.getMessage());
                 }
             }
         }
 
-        // Возвращаем выбранный файл
         return selectedFile;
     }
 
@@ -2796,26 +2587,23 @@ public class JavaFX extends Application {
     }
 
     private String selectImageFileForEncrypt() {
-        // Создаем FileChooser для выбора изображения
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Выберите изображение для шифрования");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png",
                 "*.jpg", "*.jpeg"));
 
-        // Открываем диалоговое окно и получаем выбранный файл
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
 
         if (selectedFile != null) {
-            // Сохраняем выбранное изображение в папку temp
+
             String tempPath = getTempPath();
             File tempDir = new File(tempPath);
-            deleteFolder(tempDir);
-            saveInputImageToTemp(selectedFile);
-            // Возвращаем путь к файлу input.png в папке temp
+            tempFileManager.deleteFolder(tempDir);
+            tempFileManager.saveInputImageToTemp(selectedFile);
             return getTempPath() + "input.png";
         } else {
             logger.info("Файл не выбран.");
-            return null; // Возвращаем null, если файл не выбран
+            return null;
         }
     }
 
@@ -2828,48 +2616,25 @@ public class JavaFX extends Application {
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
         if (selectedFile != null) {
             try {
-                // Загружаем выбранное изображение
                 BufferedImage image = ImageIO.read(selectedFile);
                 if (image != null) {
-                    // Сохраняем изображение в папку temp
+
                     String tempPath = getTempPath();
                     File tempDir = new File(tempPath);
-                    deleteFolder(tempDir);
-                    saveInputImageToTemp(selectedFile);
+                    tempFileManager.deleteFolder(tempDir);
+                    tempFileManager.saveInputImageToTemp(selectedFile);
                     logger.info("Изображение сохранено в папку temp: {}", selectedFile.getName());
                     return selectedFile.getAbsolutePath();
                 } else {
                     logger.error("Ошибка при загрузке изображения: {}", selectedFile.getAbsolutePath());
-                    showErrorMessage("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
+                    dialogDisplayer.showErrorMessage("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
                 }
             } catch (IOException e) {
                 logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-                showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
+                dialogDisplayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
             }
         }
         return null;
-    }
-
-    public void showErrorDialog(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Ошибка");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    private BufferedImage loadImage(String filePath) {
-        try {
-            File imageFile = new File(filePath);
-            if (!imageFile.exists()) {
-                throw new FileNotFoundException("Не удалось найти изображение по пути: " + filePath);
-            }
-            return ImageIO.read(imageFile);
-        } catch (Exception e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
-            return null;
-        }
     }
 
     public void saveDecryptedImage() {
@@ -2888,35 +2653,24 @@ public class JavaFX extends Application {
             }
 
             try {
-                // Загружаем расшифрованное изображение
                 BufferedImage decryptedImage = ImageIO.read(new File(getTempPath() + "decrypted_image.png"));
 
-                // Сохраняем изображение по выбранному пути
                 ImageIO.write(decryptedImage, "png", new File(filePath));
 
                 // Дублируем изображение в src/temp под именем decrypted_image.png
                 String resourcesPath = getTempPath() + "decrypted_image.png";
                 ImageIO.write(decryptedImage, "png", new File(resourcesPath));
 
-                // Уведомление о том, что изображение успешно сохранено
-                showSuccessDialog("Изображение успешно сохранено в: " + filePath);
+                dialogDisplayer.showSuccessDialog("Изображение успешно сохранено в: " + filePath);
 
                 logger.info("Изображение сохранено в: {}", filePath);
 
                 createStartPanel();
             } catch (IOException e) {
                 logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-                showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
+                dialogDisplayer.showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
             }
         }
-    }
-
-    private void showSuccessDialog(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Успех");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     private File selectKeyFileForDecrypt() {
@@ -2938,159 +2692,6 @@ public class JavaFX extends Application {
         }
     }
 
-    private void createTempFolder() {
-        String tempPath = getTempPath();
-        File tempDir = new File(tempPath);
-
-        // Создаем папку temp, если она не существует
-        if (!tempDir.exists()) {
-            boolean created = tempDir.mkdir();
-            if (!created) {
-                logger.error("Не удалось создать временную директорию: {}", tempPath);
-                throw new RuntimeException("Не удалось создать временную директорию");
-            }
-        }
-
-        // Добавляем хук для удаления папки при завершении программы
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            boolean deleted = deleteFolder(tempDir);
-            if (!deleted) {
-                logger.warn("Не удалось полностью удалить временную директорию: {}", tempPath);
-            }
-        }));
-    }
-
-    private boolean deleteFolder(File folder) {
-        boolean success = true;
-
-        if (folder.isDirectory()) {
-            File[] files = folder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    success &= deleteFolder(file);
-                }
-            }
-        }
-
-        boolean deleted = folder.delete();
-        if (!deleted) {
-            logger.warn("Не удалось удалить: {}", folder.getAbsolutePath());
-        }
-
-        return success && deleted;
-    }
-
-    private void saveInputImageToTemp(File selectedFile) {
-        String tempPath = getTempPath();
-
-        createTempFolder();
-
-        String tempFilePath = tempPath + "input.png";
-        File tempFile = new File(tempFilePath);
-
-        try {
-            // Копируем выбранный файл в папку temp
-            try (InputStream inputStream = new FileInputStream(selectedFile);
-                 OutputStream outputStream = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-            }
-
-            logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
-
-            if (tempFile.exists() && tempFile.canRead()) {
-                logger.info("Файл существует: {}", tempFile.getAbsolutePath());
-            } else {
-                logger.error("Файл не существует или не доступен для чтения: {}", tempFile.getAbsolutePath());
-                showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-            showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
-        }
-    }
-
-    private ImageView loadInputImageFromTemp() {
-        String tempPath = getTempPath();
-        String tempFilePath = tempPath + "input.png";
-        File tempFile = new File(tempFilePath);
-
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", tempFilePath);
-            showErrorDialog("Файл изображения не найден: " + tempFilePath);
-            return null;
-        }
-
-        Image image = new Image(tempFile.toURI().toString());
-        ImageView imageView = new ImageView(image);
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 50px
-
-        return imageView;
-    }
-
-    private BufferedImage loadBufferedImageFromTemp(String filePath) {
-        File tempFile = new File(filePath);
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", filePath);
-            showErrorDialog("Файл изображения не найден: " + filePath);
-            return null;
-        }
-
-        try {
-            return ImageIO.read(tempFile);
-        } catch (IOException e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            showErrorDialog("Ошибка при загрузке изображения: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private Image loadImageFromTemp(String filePath) {
-        File tempFile = new File(filePath);
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", filePath);
-            showErrorMessage("Файл изображения не найден: " + filePath);
-            return null;
-        }
-
-        try {
-            return new Image(tempFile.toURI().toString());
-        } catch (Exception e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private void saveMandelbrotToTemp(BufferedImage image) {
-        String tempPath = getTempPath();
-
-        createTempFolder();
-
-        String tempFilePath = tempPath + "mandelbrot.png";
-        File tempFile = new File(tempFilePath);
-
-        try {
-            ImageIO.write(image, "png", tempFile);
-            logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
-
-            if (tempFile.exists() && tempFile.canRead()) {
-                logger.info("Файл существует: {}", tempFile.getAbsolutePath());
-            } else {
-                logger.error("Файл не существует или не доступен для чтения: {}", tempFile.getAbsolutePath());
-                showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-            showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
-        }
-    }
-
     private Image loadImageResource(String resourcePath) {
         try {
             InputStream inputStream = getClass().getResourceAsStream(resourcePath);
@@ -3107,5 +2708,19 @@ public class JavaFX extends Application {
             );
             return null;
         }
+    }
+
+    private Button createIconButton(String iconPath, Runnable onClickAction) {
+        Image icon = loadImageResource(iconPath);
+        ImageView iconView = new ImageView(icon);
+        iconView.setFitWidth(50);
+        iconView.setFitHeight(50);
+
+        Button button = new Button("", iconView);
+        button.setStyle("-fx-background-color: transparent;");
+        button.setPrefSize(50, 50);
+        button.setOnAction(e -> onClickAction.run());
+
+        return button;
     }
 }
