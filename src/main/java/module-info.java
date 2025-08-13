@@ -10,12 +10,9 @@ module com.cipher {
     opens com.cipher.view.javafx to javafx.fxml;
 
     exports com.cipher.core.encryption;
-    exports com.cipher.core.network.client;
-    exports com.cipher.core.network.server;
     exports com.cipher.core.utils;
     exports com.cipher.core.threading;
     exports com.cipher.core.dto;
-    exports com.cipher.view.interfaces;
     exports com.cipher.view.javafx;
     exports com.cipher.core.service;
     opens com.cipher.core.service to javafx.graphics;
