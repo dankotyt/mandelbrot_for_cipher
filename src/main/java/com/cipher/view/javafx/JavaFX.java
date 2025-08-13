@@ -1580,17 +1580,19 @@ public class JavaFX extends Application {
         Task<Image> generateImageTask = new Task<>() {
             @Override
             protected Image call() throws IOException {
+                Image image = new Image("file:" + getTempPath() + "input.png");
                 MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
 
-                int startMandelbrotWidth = params.startMandelbrotWidth();
-                int startMandelbrotHeight = params.startMandelbrotHeight();
                 double zoom = params.zoom();
                 double offsetX = params.offsetX();
                 double offsetY = params.offsetY();
                 int maxIter = params.maxIter();
 
-                Mandelbrot mandelbrot = new Mandelbrot(startMandelbrotWidth, startMandelbrotHeight);
-                BufferedImage mandelbrotImage = mandelbrot.generateImage(startMandelbrotWidth, startMandelbrotHeight,
+                int width = (int) image.getWidth();
+                int height = (int) image.getHeight();
+
+                Mandelbrot mandelbrot = new Mandelbrot(width, height);
+                BufferedImage mandelbrotImage = mandelbrot.generateImage(width, height,
                         zoom, offsetX, offsetY, maxIter);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
             }
@@ -1604,7 +1606,6 @@ public class JavaFX extends Application {
             imageContainer.getChildren().clear();
             imageContainer.getChildren().add(imageView);
 
-            // Сохраняем изображение после отображения
             saveMandelbrotToTemp(SwingFXUtils.fromFXImage(mandelbrotImage, null));
         });
 
@@ -1879,20 +1880,6 @@ public class JavaFX extends Application {
         Label titleLabel = new Label("Введите значения параметров:");
         titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
 
-        Label widthLabel = new Label("Ширина изображения:");
-        widthLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
-        TextField widthField = new TextField();
-        widthField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
-        widthField.setPromptText("1024");
-        widthField.setTextFormatter(new TextFormatter<>(createIntegerFilter(4)));
-
-        Label heightLabel = new Label("Высота изображения:");
-        heightLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
-        TextField heightField = new TextField();
-        heightField.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: black; -fx-font-size: 22px;");
-        heightField.setPromptText("768");
-        heightField.setTextFormatter(new TextFormatter<>(createIntegerFilter(4)));
-
         Label zoomLabel = new Label("Масштаб множества:");
         zoomLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 24px;");
         TextField zoomField = new TextField();
@@ -1927,15 +1914,16 @@ public class JavaFX extends Application {
                 " -fx-border-color: white;");
         saveButton.setOnAction(e -> {
             try {
-                int startMandelbrotWidth = Integer.parseInt(widthField.getText());
-                int startMandelbrotHeight = Integer.parseInt(heightField.getText());
                 double zoom = Double.parseDouble(zoomField.getText());
                 int iterations = Integer.parseInt(iterationsField.getText());
                 double x = Double.parseDouble(xField.getText());
                 double y = Double.parseDouble(yField.getText());
 
                 EncryptionService service = new EncryptionService();
-                service.saveMandelbrotParameters(startMandelbrotWidth, startMandelbrotHeight, zoom, iterations, x, y);
+                Image image = new Image("file:" + getTempPath() + "input.png");
+                int width = (int) image.getWidth();
+                int height = (int) image.getHeight();
+                service.saveMandelbrotParameters(width, height, zoom, iterations, x, y);
 
                 createEncryptGeneratePanelWithParams(getTempPath() + "mandelbrot_params.bin");
             } catch (NumberFormatException ex) {
@@ -1980,18 +1968,14 @@ public class JavaFX extends Application {
         topContainer.setLeft(topLeftContainer);
 
         // Добавляем элементы в GridPane
-        manualEncryptPanel.add(widthLabel, 0, 1); // Метка для ширины
-        manualEncryptPanel.add(widthField, 1, 1); // Поле для ширины
-        manualEncryptPanel.add(heightLabel, 0, 2); // Метка для высоты
-        manualEncryptPanel.add(heightField, 1, 2); // Поле для высоты
-        manualEncryptPanel.add(zoomLabel, 0, 3);
-        manualEncryptPanel.add(zoomField, 1, 3);
-        manualEncryptPanel.add(iterationsLabel, 0, 4);
-        manualEncryptPanel.add(iterationsField, 1, 4);
-        manualEncryptPanel.add(xLabel, 0, 5);
-        manualEncryptPanel.add(xField, 1, 5);
-        manualEncryptPanel.add(yLabel, 0, 6);
-        manualEncryptPanel.add(yField, 1, 6);
+        manualEncryptPanel.add(zoomLabel, 0, 1);
+        manualEncryptPanel.add(zoomField, 1, 1);
+        manualEncryptPanel.add(iterationsLabel, 0, 2);
+        manualEncryptPanel.add(iterationsField, 1, 2);
+        manualEncryptPanel.add(xLabel, 0, 3);
+        manualEncryptPanel.add(xField, 1, 3);
+        manualEncryptPanel.add(yLabel, 0, 4);
+        manualEncryptPanel.add(yField, 1, 4);
 
         HBox saveButtonBox = new HBox(saveButton);
         saveButtonBox.setPadding(new Insets(0, 0, 0, 20));
