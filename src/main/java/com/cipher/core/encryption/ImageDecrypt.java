@@ -10,7 +10,7 @@ import java.awt.Graphics2D;
 import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.ImageUtils;
-import com.cipher.core.utils.Mandelbrot;
+import com.cipher.core.service.MandelbrotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +50,8 @@ public class ImageDecrypt {
             }
 
             // 2. Генерируем изображение Мандельброта с нужными параметрами и размерами
-            Mandelbrot mandelbrotGenerator = new Mandelbrot(width, height);
-            BufferedImage mandelbrotImage = mandelbrotGenerator.generateImage(
+            MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(width, height);
+            BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                     width, height, zoom, offsetX, offsetY, maxIter);
 
             // 3. Применяем XOR между зашифрованным изображением и Мандельбротом

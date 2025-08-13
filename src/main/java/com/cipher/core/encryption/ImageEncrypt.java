@@ -13,9 +13,8 @@ import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.ImageUtils;
-import com.cipher.core.utils.Mandelbrot;
+import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.Pair;
-import com.cipher.view.javafx.JavaFX;
 import javafx.geometry.Rectangle2D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,8 +85,8 @@ public class ImageEncrypt {
                 getTempPath() + "mandelbrot_params.bin");
 
         // 3. Генерируем Мандельброт с теми же параметрами, но под новые размеры
-        Mandelbrot mandelbrotGenerator = new Mandelbrot(newWidth, newHeight);
-        BufferedImage mandelbrotImage = mandelbrotGenerator.generateImage(
+        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
+        BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                 newWidth, newHeight,
                 mandelbrotParams.zoom(),
                 mandelbrotParams.offsetX(),
@@ -154,8 +153,8 @@ public class ImageEncrypt {
         int newHeight = shuffledImage.getHeight();
 
         // 3. Генерируем финальный Мандельброт с теми же параметрами, но новыми размерами
-        Mandelbrot mandelbrotGenerator = new Mandelbrot(newWidth, newHeight);
-        BufferedImage mandelbrotImage = mandelbrotGenerator.generateImage(
+        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
+        BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                 newWidth, newHeight,
                 previewParams.zoom(),
                 previewParams.offsetX(),
@@ -169,8 +168,7 @@ public class ImageEncrypt {
         shuffledImage = ImageUtils.convertToType(shuffledImage, BufferedImage.TYPE_INT_RGB);
         mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
 
-        BufferedImage encryptedXORImage = XOR.performXOR(shuffledImage, mandelbrotImage);
-        encryptedWholeImage = encryptedXORImage;
+        encryptedWholeImage = XOR.performXOR(shuffledImage, mandelbrotImage);
 
         KeyDecoderParams keyDecoderParams = new KeyDecoderParams(
                 previewParams.zoom(), previewParams.offsetX(), previewParams.offsetY(),

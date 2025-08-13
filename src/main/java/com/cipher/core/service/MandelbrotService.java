@@ -1,7 +1,8 @@
-package com.cipher.core.utils;
+package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.threading.MandelbrotThread;
+import com.cipher.core.utils.BinaryFile;
 import com.cipher.view.javafx.JavaFX;
 
 import javax.imageio.ImageIO;
@@ -24,8 +25,8 @@ import org.slf4j.LoggerFactory;
  * Он позволяет пользователю сохранять сгенерированные изображения на рабочий стол и использует многопоточность для ускорения
  * генерации изображения и проверки его разнообразия.
  */
-public class Mandelbrot extends JPanel {
-    private static final Logger logger = LoggerFactory.getLogger(Mandelbrot.class);
+public class MandelbrotService extends JPanel {
+    private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -50,7 +51,7 @@ public class Mandelbrot extends JPanel {
      * @param width Ширина шифруемого изображения, которое также применится и на изображение-ключ.
      * @param height Высота шифруемого изображения, которое также применится и на изображение-ключ.
      */
-    public Mandelbrot(int width, int height) {
+    public MandelbrotService(int width, int height) {
         this.startMandelbrotWidth = width;
         this.startMandelbrotHeight = height;
         addMouseListener(new MouseAdapter() {
@@ -335,8 +336,8 @@ public class Mandelbrot extends JPanel {
             }
 
             // Генерация изображения
-            Mandelbrot mandelbrot = new Mandelbrot(params.startMandelbrotWidth(), params.startMandelbrotHeight());
-            BufferedImage generatedImage = mandelbrot.generateImage(
+            MandelbrotService mandelbrotService = new MandelbrotService(params.startMandelbrotWidth(), params.startMandelbrotHeight());
+            BufferedImage generatedImage = mandelbrotService.generateImage(
                     params.startMandelbrotWidth(),
                     params.startMandelbrotHeight(),
                     params.zoom(),

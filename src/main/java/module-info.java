@@ -17,4 +17,6 @@ module com.cipher {
     exports com.cipher.core.dto;
     exports com.cipher.view.interfaces;
     exports com.cipher.view.javafx;
+    exports com.cipher.core.service;
+    opens com.cipher.core.service to javafx.graphics;
 }

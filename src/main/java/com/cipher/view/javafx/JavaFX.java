@@ -1,7 +1,7 @@
 package com.cipher.view.javafx;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.encryption.EncryptionService;
+import com.cipher.core.service.EncryptionService;
 import com.cipher.core.utils.CoordinateUtils;
 import javafx.application.Application;
 import javafx.concurrent.Task;
@@ -42,7 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.function.UnaryOperator;
 
-import com.cipher.core.utils.Mandelbrot;
+import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageDecrypt;
 import com.cipher.core.utils.BinaryFile;
@@ -709,6 +709,8 @@ public class JavaFX extends Application {
                     createEncryptFinalPanel(imageToEncrypt);
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
+                } finally {
+                    imageToEncrypt.flush();
                 }
             }
         });
@@ -986,12 +988,14 @@ public class JavaFX extends Application {
             @Override
             protected Image call() {
                 Image image = new Image("file:" + imagePath);
-                Mandelbrot mandelbrot = new Mandelbrot((int) image.getWidth(), (int) image.getHeight());
-                BufferedImage mandelbrotImage = mandelbrot.generateImage();
+                MandelbrotService mandelbrotService =
+                        new MandelbrotService((int) image.getWidth(), (int) image.getHeight());
+                BufferedImage mandelbrotImage = mandelbrotService.generateImage();
 
                 // Проверяем, была ли задача отменена
                 if (isCancelled()) {
                     updateMessage("Задача отменена");
+                    mandelbrotImage.flush();
                     return null;
                 }
 
@@ -1105,6 +1109,8 @@ public class JavaFX extends Application {
                     createEncryptFinalPanel(imageToEncrypt);
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
+                } finally {
+                    imageToEncrypt.flush();
                 }
             }
         });
@@ -1457,6 +1463,8 @@ public class JavaFX extends Application {
                     createEncryptFinalPanel(imageToEncrypt);
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
+                } finally {
+                    imageToEncrypt.flush();
                 }
             }
         });
@@ -1591,8 +1599,8 @@ public class JavaFX extends Application {
                 int width = (int) image.getWidth();
                 int height = (int) image.getHeight();
 
-                Mandelbrot mandelbrot = new Mandelbrot(width, height);
-                BufferedImage mandelbrotImage = mandelbrot.generateImage(width, height,
+                MandelbrotService mandelbrotService = new MandelbrotService(width, height);
+                BufferedImage mandelbrotImage = mandelbrotService.generateImage(width, height,
                         zoom, offsetX, offsetY, maxIter);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
             }
@@ -2068,8 +2076,8 @@ public class JavaFX extends Application {
         BufferedImage mandelbrotImage;
 
         if (!mandelbrotFile.exists()) {
-            Mandelbrot mandelbrot = new Mandelbrot((int) imageInput.getWidth(), (int) imageInput.getHeight());
-            mandelbrotImage = mandelbrot.generateAfterGetParams(imagePath);
+            MandelbrotService mandelbrotService = new MandelbrotService((int) imageInput.getWidth(), (int) imageInput.getHeight());
+            mandelbrotImage = mandelbrotService.generateAfterGetParams(imagePath);
             if (mandelbrotImage == null) {
                 logger.error("Ошибка: не удалось сгенерировать изображение!");
                 showErrorMessage("Ошибка: не удалось сгенерировать изображение!");
@@ -2147,6 +2155,8 @@ public class JavaFX extends Application {
                     createEncryptFinalPanel(imageToEncrypt);
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
+                } finally {
+                    imageToEncrypt.flush();
                 }
             }
         });
@@ -2753,8 +2763,8 @@ public class JavaFX extends Application {
                 try {
                     MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(selectedFile.getAbsolutePath());
 
-                    Mandelbrot mandelbrot = new Mandelbrot(params.startMandelbrotWidth(), params.startMandelbrotHeight());
-                    BufferedImage generatedImage = mandelbrot.generateImage(
+                    MandelbrotService mandelbrotService = new MandelbrotService(params.startMandelbrotWidth(), params.startMandelbrotHeight());
+                    BufferedImage generatedImage = mandelbrotService.generateImage(
                             params.startMandelbrotWidth(),
                             params.startMandelbrotHeight(),
                             params.zoom(),
