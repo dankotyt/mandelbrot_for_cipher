@@ -3,8 +3,9 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
-### Project Temp ###
+### Project ###
 temp
+config.xml
 
 ###Gradle###
 .gradle/

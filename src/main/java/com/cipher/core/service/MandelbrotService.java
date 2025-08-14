@@ -3,7 +3,7 @@ package com.cipher.core.service;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
-import com.cipher.view.javafx.JavaFX;
+import com.cipher.view.javafx.JavaFXImpl;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -146,9 +146,9 @@ public class MandelbrotService extends JPanel {
                 validImage = checkImageDiversity(resultImage);
 
                 if (!validImage) {
-                    JavaFX.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
+                    JavaFXImpl.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
                 } else {
-                    JavaFX.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
+                    JavaFXImpl.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
                     BinaryFile.saveMandelbrotParamsToBinaryFile(
                             getTempPath() + "mandelbrot_params.bin",
                             currentParams

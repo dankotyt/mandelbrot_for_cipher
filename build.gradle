@@ -2,52 +2,104 @@ plugins {
     id 'java'
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.beryx.jlink' version '3.1.1'
+    //id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
-    modularity.inferModulePath = true
 }
+
+version = '1.0.0-beta.1'
 
 repositories {
     mavenCentral()
 }
 
+// Настройка JavaFX для работы в IDE и JAR
 javafx {
     version = "21.0.8"
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing']
-    configuration = 'compileOnly'
 }
 
 dependencies {
-    //JavaFX
-    implementation "org.openjfx:javafx-base:21.0.8"
-    implementation "org.openjfx:javafx-graphics:21.0.8"
-    implementation "org.openjfx:javafx-controls:21.0.8"
-    implementation "org.openjfx:javafx-fxml:21.0.8"
-    implementation "org.openjfx:javafx-swing:21.0.8"
-
-    //Logger
     implementation 'org.slf4j:slf4j-api:2.0.7'
     implementation 'ch.qos.logback:logback-classic:1.5.18'
 }
 
 application {
-    mainModule = 'com.cipher'
-    mainClass = 'com.cipher.view.javafx.JavaFX'
+    mainClass = 'com.cipher.Launcher';
+    mainModule = 'com.cipher';
 }
 
-tasks.withType(JavaExec).configureEach {
-    systemProperty "file.encoding", "UTF-8"
-    jvmArgs "-Dfile.encoding=UTF-8"
+jlink {
+    options = ['--strip-debug', '--no-header-files', '--no-man-pages']
+
+    launcher {
+        name = 'Mandelbrot For Cipher'
+    }
+
+    jpackage {
+        def semver = project.version.toString()
+        def m = (semver =~ /(\d+)\.(\d+)\.(\d+)/)
+        appVersion = m ? "${m[0][1]}.${m[0][2]}.${m[0][3]}" : "1.0.0"
+
+        vendor = 'BODROST'
+        description = 'Mandelbrot For Cipher Application'
+        skipInstaller = false
+
+        installerOutputDir = layout.buildDirectory.dir('dist').get().asFile
+
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+            installerType = 'exe'
+            def iconFile = file('src/main/resources/icon.ico')
+            if (iconFile.exists()) {
+                imageOptions += ['--icon', iconFile.absolutePath]
+                installerOptions += ['--icon', iconFile.absolutePath]
+            }
+            installerOptions += [
+                    '--win-per-user-install',
+                    '--win-dir-chooser',
+                    '--win-menu',
+                    '--win-shortcut'
+            ]
+        }
+
+        imageOptions += ['--verbose']
+    }
 }
 
-compileJava {
-    options.encoding = "UTF-8"
+tasks.register('fatJar', Jar) {
+    archiveFileName = "mandelbrot_for_cipher-${version}-all.jar"
+    destinationDirectory = layout.buildDirectory.dir('libs')
+
+    manifest {
+        attributes(
+                'Main-Class': 'com.cipher.Launcher',
+                'Implementation-Version': version
+        )
+    }
+
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it).matching {
+                exclude 'META-INF/*.SF'
+                exclude 'META-INF/*.DSA'
+                exclude 'META-INF/*.RSA'
+            }
+        }
+    }
+    from sourceSets.main.output
+
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-compileTestJava {
-    options.encoding = "UTF-8"
+// Для запуска в IDE через Gradle
+tasks.named('run') {
+    jvmArgs = [
+            '--module-path', classpath.asPath,
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.graphics'
+    ]
 }

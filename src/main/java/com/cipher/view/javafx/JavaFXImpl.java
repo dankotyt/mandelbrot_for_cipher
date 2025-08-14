@@ -40,7 +40,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.function.UnaryOperator;
 
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
@@ -48,8 +47,8 @@ import com.cipher.core.encryption.ImageDecrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JavaFX extends Application {
-    private static final Logger logger = LoggerFactory.getLogger(JavaFX.class);
+public class JavaFXImpl extends Application {
+    private static final Logger logger = LoggerFactory.getLogger(JavaFXImpl.class);
 
     private StackPane mainPane;
     private Stage primaryStage;
@@ -77,7 +76,7 @@ public class JavaFX extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        launch(JavaFXImpl.class, args);
     }
 
     @Override
@@ -2682,7 +2681,7 @@ public class JavaFX extends Application {
 
     // Метод для установки консоли
     public static void setConsole(TextArea console) {
-        JavaFX.console = console;
+        JavaFXImpl.console = console;
     }
 
     // Метод для добавления текста в консоль
