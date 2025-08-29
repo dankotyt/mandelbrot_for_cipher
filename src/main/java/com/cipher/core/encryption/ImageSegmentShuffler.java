@@ -43,8 +43,8 @@ public class ImageSegmentShuffler {
         if (dataBuffer instanceof DataBufferInt) {
             this.pixels = ((DataBufferInt) dataBuffer).getData();
         } else {
-            // Преобразование изображения в тип BufferedImage.TYPE_INT_RGB
-            BufferedImage convertedImage = new BufferedImage(my_image.getWidth(), my_image.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+            BufferedImage convertedImage = new BufferedImage(my_image.getWidth(), my_image.getHeight(), BufferedImage.TYPE_INT_ARGB);
             Graphics2D g2d = convertedImage.createGraphics();
             g2d.drawImage(my_image, 0, 0, null);
             g2d.dispose();
@@ -64,7 +64,7 @@ public class ImageSegmentShuffler {
 
         List<Rectangle> segments = createSegments(image, segmentWidth, segmentHeight);
         BufferedImage result = new BufferedImage(
-                image.getWidth(), image.getHeight(), image.getType());
+                image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
         // Создаем список индексов и перемешиваем его
         List<Integer> indices = new ArrayList<>();
@@ -108,7 +108,7 @@ public class ImageSegmentShuffler {
 
         List<Rectangle> segments = createSegments(shuffledImage, segmentWidth, segmentHeight);
         BufferedImage result = new BufferedImage(
-                shuffledImage.getWidth(), shuffledImage.getHeight(), shuffledImage.getType());
+                shuffledImage.getWidth(), shuffledImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
         // Создаем обратную карту соответствия
         Map<Integer, Integer> reverseMapping = new HashMap<>();

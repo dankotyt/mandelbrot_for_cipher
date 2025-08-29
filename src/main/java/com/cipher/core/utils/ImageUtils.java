@@ -7,16 +7,18 @@ import java.awt.image.BufferedImage;
 
 @Component
 public class ImageUtils {
-    public static BufferedImage convertToType(BufferedImage image, int type) {
-        if (image.getType() == type) {
+    public static BufferedImage convertToARGB(BufferedImage image) {
+        if (image.getType() == BufferedImage.TYPE_INT_ARGB) {
             return image;
         }
 
-        BufferedImage convertedImage = new BufferedImage(image.getWidth(), image.getHeight(), type);
-        Graphics2D g2d = convertedImage.createGraphics();
-        g2d.drawImage(image, 0, 0, null);
-        g2d.dispose();
+        BufferedImage argbImage = new BufferedImage(
+                image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
-        return convertedImage;
+        Graphics2D g = argbImage.createGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+
+        return argbImage;
     }
 }
