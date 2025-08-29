@@ -1,4 +1,5 @@
 ### IntelliJ IDEA ###
+.idea
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
@@ -8,7 +9,7 @@ temp
 config.xml
 
 ###Gradle###
-.gradle/
+.gradle
 build/
 *.lock
 *.jar
