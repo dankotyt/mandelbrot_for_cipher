@@ -13,7 +13,9 @@ import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ImageDecrypt {
     private static final Logger logger = LoggerFactory.getLogger(ImageDecrypt.class);
 

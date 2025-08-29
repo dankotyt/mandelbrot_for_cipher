@@ -18,7 +18,9 @@ import com.cipher.core.utils.Pair;
 import javafx.geometry.Rectangle2D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ImageEncrypt {
     private static final Logger logger = LoggerFactory.getLogger(ImageEncrypt.class);
     private static BufferedImage encryptedWholeImage;

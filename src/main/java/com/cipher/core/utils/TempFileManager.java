@@ -1,6 +1,5 @@
 package com.cipher.core.utils;
 
-import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -10,7 +9,9 @@ import java.io.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class TempFileManager {
     private static final Logger logger = LoggerFactory.getLogger(TempFileManager.class);
     private final DialogDisplayer displayer = new DialogDisplayer();

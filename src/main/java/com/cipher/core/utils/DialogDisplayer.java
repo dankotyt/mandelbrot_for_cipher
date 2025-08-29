@@ -1,7 +1,9 @@
 package com.cipher.core.utils;
 
 import javafx.scene.control.Alert;
+import org.springframework.stereotype.Component;
 
+@Component
 public class DialogDisplayer {
 
     public void showErrorMessage(String message) {

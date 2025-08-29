@@ -4,6 +4,7 @@ import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -14,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+@Component
 public class BinaryFile {
     private static final Logger logger = LoggerFactory.getLogger(BinaryFile.class);
 

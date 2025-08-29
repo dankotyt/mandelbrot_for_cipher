@@ -40,14 +40,23 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageDecrypt;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.stereotype.Component;
 
-public class JavaFXImpl extends Application {
+@Component
+public class JavaFXImpl extends Application implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(JavaFXImpl.class);
 
     private StackPane mainPane;
@@ -56,6 +65,10 @@ public class JavaFXImpl extends Application {
     private CoordinateUtils coordUtils;
     private Task<Image> currentTask;
     private static TextArea console;
+    private ExecutorService executorService;
+
+    @Setter
+    private static ConfigurableApplicationContext springContext;
 
     private Point2D startPoint;
     private Point2D endPoint;
@@ -80,7 +93,13 @@ public class JavaFXImpl extends Application {
     }
 
     @Override
+    public void run(ApplicationArguments args) throws Exception {
+        launch(JavaFXImpl.class, (String[]) null);
+    }
+
+    @Override
     public void start(Stage primaryStage) {
+        this.executorService = Executors.newCachedThreadPool();
         this.primaryStage = primaryStage;
         mainPane = new StackPane();
         Scene scene = new Scene(mainPane, 1920, 980);
@@ -92,6 +111,50 @@ public class JavaFXImpl extends Application {
         primaryStage.getIcons().add(icon);
         primaryStage.show();
         showLoadingScreen();
+
+        // В методе start() вашего JavaFXImpl
+        primaryStage.setOnCloseRequest(event -> {
+            event.consume(); // Предотвращаем immediate close
+            shutdownApplication(); // Правильное завершение
+        });
+    }
+
+    private void shutdownExecutors() {
+        try {
+            // Пытаемся gracefully shutdown
+            executorService.shutdown();
+
+            // Ждем завершения 5 секунд
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                // Принудительно завершаем если не успели
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public void shutdownApplication() {
+        try {
+            // 1. Завершаем все фоновые потоки
+            shutdownExecutors();
+
+            // 2. Если есть Spring контекст - закрываем его
+            if (springContext != null) {
+                springContext.close();
+            }
+
+            // 3. Закрываем JavaFX
+            Platform.exit();
+
+            // 4. Принудительно завершаем JVM (если нужно)
+            System.exit(0);
+
+        } catch (Exception e) {
+            logger.error("Error during shutdown: " + e.getMessage());
+            System.exit(1);
+        }
     }
 
     // Метод для создания градиента
@@ -109,7 +172,6 @@ public class JavaFXImpl extends Application {
     }
 
     private void showLoadingScreen() {
-
         VBox loadingContainer = new VBox(20);
         loadingContainer.setAlignment(Pos.CENTER);
         loadingContainer.setPadding(new Insets(20));
@@ -119,41 +181,51 @@ public class JavaFXImpl extends Application {
                 Insets.EMPTY
         )));
 
-        // Создаем метку "Загрузка"
         Label loadingLabel = new Label("Mandelbrot Cipher");
         loadingLabel.setFont(Font.font("Intro Regular", 96));
         loadingLabel.setTextFill(Color.WHITE);
 
-        // Создаем прогресс-бар
         ProgressBar progressBar = new ProgressBar(0);
         progressBar.setPrefWidth(900);
-        progressBar.setStyle("-fx-accent: #0065CA;"); // Зеленый цвет прогресс-бара
+        progressBar.setStyle("-fx-accent: #0065CA;");
 
         loadingContainer.getChildren().addAll(loadingLabel, progressBar);
-
         mainPane.getChildren().add(loadingContainer);
 
         Task<Void> loadingTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 for (int i = 0; i <= 100; i++) {
-                    updateProgress(i, 100); // Обновляем прогресс
-                    Thread.sleep(20); // Задержка для имитации загрузки
+                    if (isCancelled()) {
+                        break;
+                    }
+                    updateProgress(i, 100);
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException e) {
+                        if (isCancelled()) {
+                            break;
+                        }
+                    }
                 }
                 return null;
             }
         };
 
-        // Привязываем прогресс-бар к Task
         progressBar.progressProperty().bind(loadingTask.progressProperty());
 
-        // После завершения задачи переключаемся на startPanel
         loadingTask.setOnSucceeded(event -> {
             mainPane.getChildren().remove(loadingContainer);
             createStartPanel();
         });
 
-        new Thread(loadingTask).start();
+        loadingTask.setOnFailed(event -> {
+            Throwable ex = loadingTask.getException();
+            System.err.println("Loading failed: " + ex.getMessage());
+            // Показать сообщение об ошибке
+        });
+
+        executorService.execute(loadingTask);
     }
 
     private void createStartPanel() {
@@ -189,7 +261,7 @@ public class JavaFXImpl extends Application {
                 " -fx-border-color: #3A5975; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
                 " -fx-font-size: 28px;");
         exitButton.setPrefSize(350, 68);
-        exitButton.setOnAction(e -> Platform.exit());
+        exitButton.setOnAction(e -> shutdownApplication());
 
         Button connectButton = new Button("Подключение к серверу");
         connectButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
@@ -552,22 +624,6 @@ public class JavaFXImpl extends Application {
         manualButton.setPrefSize(400, 65);
         manualButton.setOnAction(e -> createManualEncryptionPanel());
 
-        // Создание кнопки "Выбрать изображение-ключ"
-        Button chooseButton = new Button("Выбрать изображение-ключ");
-        chooseButton.setStyle("-fx-background-color: transparent; -fx-font-family: 'Intro Regular';" +
-                " -fx-border-color: white; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
-                " -fx-font-size: 20px;");
-        chooseButton.setPrefSize(350, 65);
-        chooseButton.setOnAction(e -> {
-            File selectedFile = selectMandelbrotForEncrypt();
-            if (selectedFile != null) {
-                String getImagePath = selectedFile.getAbsolutePath();
-                createChoosenMandelbrotPanel(getImagePath);
-            } else {
-                dialogDisplayer.showErrorDialog("Файл не выбран!");
-            }
-        });
-
         Button backButton = createIconButton(
                 "/elements/icon_back.png",
                 () -> {
@@ -577,7 +633,7 @@ public class JavaFXImpl extends Application {
         );
 
         // Размещение кнопок в контейнере
-        VBox buttonContainer = new VBox(20, generateButton, manualButton, chooseButton);
+        VBox buttonContainer = new VBox(20, generateButton, manualButton);
         buttonContainer.setAlignment(Pos.CENTER);
 
         // Размещение темно-серого прямоугольника с кнопками
@@ -1360,7 +1416,7 @@ public class JavaFXImpl extends Application {
 
         // Создание кнопки "Сгенерировать заново вручную" с иконкой
         Button manualButton = createIconButton(
-                "/elements/writeParams.png",
+                "/elements/icon_writeParams.png",
                 () -> {
                     cancelCurrentTask();
                     createManualEncryptionPanel();
@@ -2695,18 +2751,24 @@ public class JavaFXImpl extends Application {
         try {
             InputStream inputStream = getClass().getResourceAsStream(resourcePath);
             if (inputStream == null) {
-                throw new FileNotFoundException("Ресурс не найден: " + resourcePath);
+                showErrorAlert("Ошибка ресурса", "Ресурс не найден: " + resourcePath);
+                return null;
             }
             return new Image(inputStream);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Ошибка загрузки изображения: " + e.getMessage(),
-                    "Ошибка ресурса",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            showErrorAlert("Ошибка загрузки", "Ошибка загрузки изображения: " + e.getMessage());
             return null;
         }
+    }
+
+    private void showErrorAlert(String title, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
     }
 
     private Button createIconButton(String iconPath, Runnable onClickAction) {

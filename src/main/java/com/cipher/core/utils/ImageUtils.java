@@ -1,8 +1,11 @@
 package com.cipher.core.utils;
 
+import org.springframework.stereotype.Component;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
+@Component
 public class ImageUtils {
     public static BufferedImage convertToType(BufferedImage image, int type) {
         if (image.getType() == type) {

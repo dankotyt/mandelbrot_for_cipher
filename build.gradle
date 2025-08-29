@@ -4,7 +4,18 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.1.0'
     id 'org.beryx.jlink' version '3.1.1'
     id 'org.springframework.boot' version '3.2.0'
-    //id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+// ↓↓↓ ДОБАВЬТЕ ЭТОТ БЛОК ↓↓↓
+ext {
+    set('springCloudVersion', "2023.0.0")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
 
 java {
@@ -26,32 +37,46 @@ javafx {
 }
 
 dependencies {
-    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.0'
+    //===JavaFX зависимости===========
+    implementation 'org.openjfx:javafx-controls:21.0.8'
+    implementation 'org.openjfx:javafx-fxml:21.0.8'
+    //=======================
 
-    implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation 'ch.qos.logback:logback-classic:1.5.18'
+    //===Spring зависимости=======================
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    //implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    //implementation 'org.springframework.boot:spring-boot-starter-security'
+    //implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.postgresql:postgresql'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 
     compileOnly 'org.springframework.boot:spring-boot-starter-security'
+    //=======================
+
+    //===Другие зависимости============
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    //implementation 'ch.qos.logback:logback-classic:1.5.18'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+
     compileOnly 'org.projectlombok:lombok'
 
     annotationProcessor 'org.projectlombok:lombok'
+    //========================
 
-    runtimeOnly 'org.postgresql:postgresql'
+    //===БД===================
+    //implementation 'org.postgresql:postgresql'
+
+    //runtimeOnly 'org.postgresql:postgresql'
+    //=======================
 }
 
 application {
     mainClass = 'com.cipher.Launcher';
-    mainModule = 'com.cipher';
 }
 
+// Остальной код остается без изменений...
 jlink {
     options = ['--strip-debug', '--no-header-files', '--no-man-pages']
 
@@ -117,7 +142,7 @@ tasks.register('fatJar', Jar) {
 // Для запуска в IDE через Gradle
 tasks.named('run') {
     jvmArgs = [
-            '--module-path', classpath.asPath,
-            '--add-modules', 'javafx.controls,javafx.fxml,javafx.graphics'
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
     ]
 }

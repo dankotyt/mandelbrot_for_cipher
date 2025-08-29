@@ -1,6 +1,7 @@
 package com.cipher.core.encryption;
 
 import com.cipher.core.utils.Pair;
+import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;

@@ -16,8 +16,11 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 /**
  * @author @dankotyt Danil Kotlyarov
@@ -312,7 +315,14 @@ public class MandelbrotService extends JPanel {
         try {
             ImageIO.write(image, "png", file);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Ошибка при сохранении изображения: " + e.getMessage());
+            // Заменяем JOptionPane на JavaFX Alert
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Ошибка сохранения");
+                alert.setHeaderText(null);
+                alert.setContentText("Ошибка при сохранении изображения: " + e.getMessage());
+                alert.showAndWait();
+            });
         }
     }
 

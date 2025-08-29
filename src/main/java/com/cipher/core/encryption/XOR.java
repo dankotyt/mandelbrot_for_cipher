@@ -1,7 +1,10 @@
 package com.cipher.core.encryption;
 
+import org.springframework.stereotype.Component;
+
 import java.awt.image.BufferedImage;
 
+@Component
 public class XOR {
     protected static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
         int width = image1.getWidth();
