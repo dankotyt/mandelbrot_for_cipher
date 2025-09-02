@@ -28,6 +28,7 @@ version = '1.0.0-beta.1'
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
 }
 
 // Настройка JavaFX для работы в IDE и JAR
@@ -46,19 +47,27 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    //implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     //implementation 'org.springframework.boot:spring-boot-starter-security'
     //implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-    compileOnly 'org.springframework.boot:spring-boot-starter-security'
+    //compileOnly 'org.springframework.boot:spring-boot-starter-security'
     //=======================
 
     //===Другие зависимости============
     implementation 'org.slf4j:slf4j-api:2.0.7'
-    //implementation 'ch.qos.logback:logback-classic:1.5.18'
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+    implementation 'org.bitcoinj:bitcoinj-core:0.17-alpha2'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot2:2.2.0'
+    implementation 'io.github.resilience4j:resilience4j-ratelimiter:2.2.0'
+    implementation 'io.github.resilience4j:resilience4j-framework-common:2.2.0'
 
     compileOnly 'org.projectlombok:lombok'
 
@@ -66,10 +75,17 @@ dependencies {
     //========================
 
     //===БД===================
-    //implementation 'org.postgresql:postgresql'
+    implementation 'org.postgresql:postgresql'
 
-    //runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
     //=======================
+}
+
+configurations {
+    configureEach {
+        exclude group: 'org.xerial', module: 'sqlite-jdbc'
+        exclude group: 'org.bitcoinj', module: 'bitcoinj-leveldb'
+    }
 }
 
 application {

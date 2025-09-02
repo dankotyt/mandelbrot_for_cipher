@@ -8,33 +8,24 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.swing.*;
 
 @SpringBootApplication
+@EnableFeignClients
 @Getter
 public class Launcher {
 
-    private static ConfigurableApplicationContext springContext;
+    private static ConfigurableApplicationContext context;
 
     public static void main(String[] args) {
-        try {
-            springContext = SpringApplication.run(Launcher.class, args);
+        new Thread(() -> {
+            context = SpringApplication.run(Launcher.class, args);
+            JavaFXImpl.setSpringContext(context);
+        }).start();
 
-            // Запускаем JavaFX и передаем контекст
-            JavaFXImpl.setSpringContext(springContext);
-            Application.launch(JavaFXImpl.class, args);
-
-        } catch (Throwable t) {
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Ошибка запуска");
-                alert.setHeaderText("Launch failed:");
-                alert.setContentText(t.getMessage());
-                alert.showAndWait();
-            });
-        }
+        Application.launch(JavaFXImpl.class, args);
     }
-
 }
