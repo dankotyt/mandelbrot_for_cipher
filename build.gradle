@@ -68,6 +68,7 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot2:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-ratelimiter:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-framework-common:2.2.0'
+    implementation 'org.redisson:redisson-spring-boot-starter:3.51.0'
 
     compileOnly 'org.projectlombok:lombok'
 

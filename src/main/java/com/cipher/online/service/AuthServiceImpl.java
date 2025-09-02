@@ -8,6 +8,9 @@ import com.cipher.common.entity.User;
 import com.cipher.online.exception.SeedNotFoundException;
 import com.cipher.online.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,6 +30,7 @@ public class AuthServiceImpl {
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final SecureRandom secureRandom = new SecureRandom();
+    private final RedissonClient redissonClient;
 
     private static final String NONCE_KEY_PREFIX = "auth_nonce:";
 
@@ -51,17 +55,17 @@ public class AuthServiceImpl {
 
         String redisKey = NONCE_KEY_PREFIX + userId;
 
-        //todo Сделать операции атомарными
-        // Временное решение - не атомарно, но работает
-        String nonce = redisTemplate.opsForValue().get(redisKey);
         logger.info("login by userId: {}, signature: {}", userId, signatureBase64);
-        if (nonce != null) {
-            logger.info("This key already exists: {}", redisKey);
-            redisTemplate.delete(redisKey);
-            logger.info("This key deleted: {}", redisKey);
-        }
+        RBucket<String> nonceBucket = redissonClient.getBucket(
+                redisKey,
+                StringCodec.INSTANCE
+        );
+
+        String nonce = nonceBucket.getAndDelete();
+        logger.info("Nonce retrieved and deleted for key: {}", redisKey);
 
         if (nonce == null) {
+            logger.warn("Nonce not found for user: {}", userId);
             throw new SecurityException("Nonce expired or not found!");
         }
 
