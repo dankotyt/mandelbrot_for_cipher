@@ -73,6 +73,7 @@ public class AuthServiceImpl implements AuthApi {
      */
     @Override
     public AuthResponse login(LoginRequest request) {
+        //todo добавить механизм сессий с разным временем жизни + таймаут неактивности
         String userId = request.userId();
         String signatureBase64 = request.signature();
 

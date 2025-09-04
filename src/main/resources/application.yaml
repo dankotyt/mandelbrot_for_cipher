@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/com_db?currentSchema=public
-    username: postgres
-    password: admin
+    username: ${BD_LOGIN}
+    password: ${BD_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -16,8 +16,8 @@ spring:
     database: postgresql
   data:
     redis:
-      host: localhost # Адрес вашего Redis-сервера
-      port: 6379
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
       # password:
       # database: 0
 

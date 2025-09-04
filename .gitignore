@@ -7,6 +7,7 @@ out/
 ### Project ###
 temp
 config.xml
+.env
 
 ###Gradle###
 .gradle
