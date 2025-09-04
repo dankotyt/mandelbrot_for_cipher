@@ -18,17 +18,17 @@ spring:
     redis:
       host: localhost # Адрес вашего Redis-сервера
       port: 6379
-      # password: your-password # Раскомментируйте, если у Redis есть пароль
-      # database: 0 # Можно указать конкретную БД (по умолчанию 0)
+      # password:
+      # database: 0
 
 resilience4j:
   ratelimiter:
     instances:
       accountCreation: # <- Это имя, на которое ссылается аннотация
-        limit-for-period: 3    # Количество запросов <- ваш параметр LIMIT
-        limit-refresh-period: 1h # Период обновления <- ваш параметр DURATION
+        limit-for-period: 3    # Количество запросов <- параметр LIMIT
+        limit-refresh-period: 1h # Период обновления <- параметр DURATION
         timeout-duration: 0     # Время ожидания (0 = сразу исключение)
 
 server:
-  port: 8080 # Порт вашего Spring Boot приложения
+  port: 8080
   url: "http://localhost:8080"

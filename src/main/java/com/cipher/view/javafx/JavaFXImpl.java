@@ -1,6 +1,10 @@
 package com.cipher.view.javafx;
 
 import com.cipher.client.service.ClientAuthService;
+import com.cipher.client.utils.NetworkUtils;
+import com.cipher.common.exception.AuthException;
+import com.cipher.common.exception.CryptoException;
+import com.cipher.common.exception.NetworkException;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.EncryptionService;
 import com.cipher.core.utils.*;
@@ -36,7 +40,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.RasterFormatException;
 import java.nio.file.StandardCopyOption;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.*;
@@ -50,23 +53,15 @@ import java.util.concurrent.TimeUnit;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageDecrypt;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.stereotype.Component;
 
 public class JavaFXImpl extends Application {
     private static final Logger logger = LoggerFactory.getLogger(JavaFXImpl.class);
 
     private static TextArea console;
 
-    @Setter
     private static ConfigurableApplicationContext springContext;
 
     private StackPane mainPane;
@@ -80,16 +75,13 @@ public class JavaFXImpl extends Application {
     private boolean drawingRectangle = false;
     private boolean rectangleSelected = false;
     private TextField[] wordFields = new TextField[12];
-
     private SeedServiceImpl seedService;
     private ClientAuthService clientAuthService;
+
     private final List<Rectangle2D> rectangles = new ArrayList<>();
     private final DialogDisplayer dialogDisplayer = new DialogDisplayer();
     private final TempFileManager tempFileManager = new TempFileManager();
     private final NumberFilter numberFilter = new NumberFilter();
-
-    public JavaFXImpl() {
-    }
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -103,23 +95,10 @@ public class JavaFXImpl extends Application {
         launch(JavaFXImpl.class, args);
     }
 
-//    @Override
-//    public void run(ApplicationArguments args) throws Exception {
-//        // Получаем бины из Spring контекста
-//        if (springContext != null) {
-//            this.seedService = springContext.getBean(SeedServiceImpl.class);
-//            this.clientAuthService = springContext.getBean(ClientAuthService.class);
-//        } else {
-//            logger.error("Spring context is not available!");
-//        }
-//    }
-
     @Override
-    public void init() throws Exception {
-        // Ждем пока Spring контекст инициализируется
+    public void init() {
         waitForSpringContext();
 
-        // Получаем сервисы из Spring контекста
         if (springContext != null && springContext.isActive()) {
             this.seedService = springContext.getBean(SeedServiceImpl.class);
             this.clientAuthService = springContext.getBean(ClientAuthService.class);
@@ -163,7 +142,7 @@ public class JavaFXImpl extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Шифр Мандельброта");
 
-        Image icon = loadImageResource("/elements/icon.png");
+        Image icon = tempFileManager.loadImageResource("/elements/icon.png");
         primaryStage.getIcons().add(icon);
         primaryStage.show();
         showLoadingScreen();
@@ -237,7 +216,7 @@ public class JavaFXImpl extends Application {
 
         Task<Void> loadingTask = new Task<>() {
             @Override
-            protected Void call() throws Exception {
+            protected Void call() {
                 for (int i = 0; i <= 100; i++) {
                     if (isCancelled()) {
                         break;
@@ -264,7 +243,7 @@ public class JavaFXImpl extends Application {
 
         loadingTask.setOnFailed(event -> {
             Throwable ex = loadingTask.getException();
-            logger.error("Loading failed: " + ex.getMessage());
+            logger.error("Loading failed: {}", ex.getMessage());
         });
 
         executorService.execute(loadingTask);
@@ -278,8 +257,8 @@ public class JavaFXImpl extends Application {
                 Insets.EMPTY
         )));
 
-        Image lockImage = loadImageResource("/elements/icon_lock.png");
-        Image unlockImage = loadImageResource("/elements/icon_unlock.png");
+        Image lockImage = tempFileManager.loadImageResource("/elements/icon_lock.png");
+        Image unlockImage = tempFileManager.loadImageResource("/elements/icon_unlock.png");
 
         ImageView lockImageView = new ImageView(lockImage);
         lockImageView.setFitWidth(615);
@@ -308,7 +287,20 @@ public class JavaFXImpl extends Application {
                 " -fx-border-color: #3A5975; -fx-border-width: 5px; -fx-border-radius: 10px; -fx-text-fill: white;" +
                 " -fx-font-size: 28px;");
         connectButton.setPrefSize(380, 68);
-        connectButton.setOnAction(e -> createStartConnectionPanel());
+        connectButton.setOnAction(e -> {
+            try {
+                NetworkUtils.checkNetworkConnection();
+                createStartConnectionPanel();
+            } catch (NetworkException ex) {
+                dialogDisplayer.showErrorAlert("Нет подключения",
+                        "Необходимо интернет-соединение для выхода в сеть\n\n" +
+                                "Пожалуйста, проверьте подключение и попробуйте снова"
+                );
+            } catch (Exception ex) {
+                logger.error("Ошибка при входе", ex);
+                dialogDisplayer.showErrorAlert("Ошибка", "Не удалось открыть форму входа");
+            }
+        });
 
         String buttonStyle = "-fx-background-color: transparent;";
         encryptButton.setStyle(buttonStyle);
@@ -394,13 +386,13 @@ public class JavaFXImpl extends Application {
                 if (seedService != null) {
                     String seedPhrase = seedService.generateAccount();
                     logger.info("Seed phrase generated: {}", seedPhrase);
-                    createSeedGenerationPanel(seedPhrase); // Передаем фразу
+                    createSeedGenerationPanel(seedPhrase);
                 } else {
-                    showAlert("Ошибка", "Сервис не инициализирован");
+                    dialogDisplayer.showAlert("Ошибка", "Сервис не инициализирован");
                 }
             } catch (Exception ex) {
                 logger.error("Registration failed", ex);
-                showAlert("Ошибка", "Не удалось создать аккаунт: " + ex.getMessage());
+                dialogDisplayer.showAlert("Ошибка", "Не удалось создать аккаунт: " + ex.getMessage());
             }
         });
 
@@ -427,211 +419,234 @@ public class JavaFXImpl extends Application {
 
     //=========================================
     private void createSeedGenerationPanel(String seedPhrase) {
-        BorderPane mainContainer = new BorderPane();
-        mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(),
-                CornerRadii.EMPTY,
-                Insets.EMPTY
-        )));
+        try {
+            BorderPane mainContainer = new BorderPane();
+            mainContainer.setBackground(new Background(new BackgroundFill(
+                    createGradient(),
+                    CornerRadii.EMPTY,
+                    Insets.EMPTY
+            )));
 
-        // Кнопка назад
-        Button backButton = createIconButton(
-                "/elements/icon_back.png",
-                () -> {
+            // Кнопка назад
+            Button backButton = createIconButton(
+                    "/elements/icon_back.png",
+                    () -> {
+                        mainPane.getChildren().clear();
+                        createStartConnectionPanel();
+                    }
+            );
+
+            HBox topLeftContainer = new HBox(backButton);
+            topLeftContainer.setAlignment(Pos.TOP_LEFT);
+            topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
+
+            Label titleLabel = new Label("Ваша seed-фраза:");
+            titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
+
+            HBox topCenterContainer = new HBox(titleLabel);
+            topCenterContainer.setAlignment(Pos.CENTER);
+            topCenterContainer.setPadding(new Insets(40, 0, 30, 0));
+
+            BorderPane topContainer = new BorderPane();
+            topContainer.setLeft(topLeftContainer);
+            topContainer.setCenter(topCenterContainer);
+
+            // Разбиваем фразу на отдельные слова
+            String[] words = seedPhrase.split(" ");
+
+            // Создаем сетку для 12 слов (4 строки x 3 столбца)
+            GridPane gridPane = new GridPane();
+            gridPane.setAlignment(Pos.CENTER);
+            gridPane.setHgap(30); // Увеличиваем расстояние между колонками
+            gridPane.setVgap(20); // Увеличиваем расстояние между строками
+            gridPane.setPadding(new Insets(30));
+
+            // Отображаем 12 слов с нумерацией и крупным шрифтом (48px)
+            for (int i = 0; i < 12; i++) {
+                int wordNumber = i + 1;
+
+                // Создаем метку с номером слова
+                Label numberLabel = new Label(wordNumber + ".");
+                numberLabel.setStyle("-fx-text-fill: white; -fx-font-size: 36px; -fx-font-family: 'Intro Regular';");
+                numberLabel.setMinWidth(50);
+                numberLabel.setAlignment(Pos.CENTER_RIGHT);
+
+                // Создаем метку с самим словом (48px как requested)
+                Label wordLabel = new Label(words[i]);
+                wordLabel.setStyle("-fx-text-fill: white; -fx-font-size: 48px; -fx-font-family: 'Intro Regular';" +
+                        " -fx-font-weight: bold; -fx-background-color: rgba(255,255,255,0.1);" +
+                        " -fx-padding: 10px 15px; -fx-background-radius: 8px;");
+                wordLabel.setMinWidth(200);
+                wordLabel.setAlignment(Pos.CENTER);
+
+                // Создаем контейнер для метки и слова
+                HBox wordContainer = new HBox(15, numberLabel, wordLabel);
+                wordContainer.setAlignment(Pos.CENTER_LEFT);
+
+                // Размещаем в сетке (4 строки, 3 столбца)
+                int row = i / 3;
+                int col = i % 3;
+                gridPane.add(wordContainer, col, row);
+            }
+
+            // Предупреждение для пользователя
+            Label warningLabel = new Label("ЗАПИШИТЕ эти слова в безопасном месте!\nЭто единственный способ восстановить доступ к аккаунту.");
+            warningLabel.setStyle("-fx-text-fill: #FF6B6B; -fx-font-size: 20px; -fx-font-family: 'Intro Regular';" +
+                    " -fx-text-alignment: center; -fx-alignment: center;");
+            warningLabel.setTextAlignment(TextAlignment.CENTER);
+            warningLabel.setWrapText(true);
+
+            // Кнопка подтверждения
+            Button confirmButton = new Button("Я записал слова");
+            confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-font-family: 'Intro Regular';" +
+                    " -fx-text-fill: white; -fx-font-size: 24px; -fx-background-radius: 10px; -fx-padding: 15px 30px;");
+            confirmButton.setOnAction(e -> {
+                try {
+                    dialogDisplayer.showAlert("Успех", "Аккаунт успешно создан!");
                     mainPane.getChildren().clear();
                     createStartConnectionPanel();
+                } catch (Exception ex) {
+                    logger.error("Ошибка при создании аккаунта", ex);
+                    dialogDisplayer.showErrorAlert("Ошибка", "Не удалось создать аккаунт: " + ex.getMessage());
                 }
-        );
+            });
 
-        HBox topLeftContainer = new HBox(backButton);
-        topLeftContainer.setAlignment(Pos.TOP_LEFT);
-        topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
+            VBox centerContainer = new VBox(30, gridPane, warningLabel, confirmButton);
+            centerContainer.setAlignment(Pos.CENTER);
+            centerContainer.setPadding(new Insets(20));
 
-        Label titleLabel = new Label("Ваша seed-фраза:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 48px;");
+            mainContainer.setTop(topContainer);
+            mainContainer.setCenter(centerContainer);
 
-        HBox topCenterContainer = new HBox(titleLabel);
-        topCenterContainer.setAlignment(Pos.CENTER);
-        topCenterContainer.setPadding(new Insets(40, 0, 30, 0));
-
-        BorderPane topContainer = new BorderPane();
-        topContainer.setLeft(topLeftContainer);
-        topContainer.setCenter(topCenterContainer);
-
-        // Разбиваем фразу на отдельные слова
-        String[] words = seedPhrase.split(" ");
-
-        // Создаем сетку для 12 слов (4 строки x 3 столбца)
-        GridPane gridPane = new GridPane();
-        gridPane.setAlignment(Pos.CENTER);
-        gridPane.setHgap(30); // Увеличиваем расстояние между колонками
-        gridPane.setVgap(20); // Увеличиваем расстояние между строками
-        gridPane.setPadding(new Insets(30));
-
-        // Отображаем 12 слов с нумерацией и крупным шрифтом (48px)
-        for (int i = 0; i < 12; i++) {
-            int wordNumber = i + 1;
-
-            // Создаем метку с номером слова
-            Label numberLabel = new Label(wordNumber + ".");
-            numberLabel.setStyle("-fx-text-fill: white; -fx-font-size: 36px; -fx-font-family: 'Intro Regular';");
-            numberLabel.setMinWidth(50);
-            numberLabel.setAlignment(Pos.CENTER_RIGHT);
-
-            // Создаем метку с самим словом (48px как requested)
-            Label wordLabel = new Label(words[i]);
-            wordLabel.setStyle("-fx-text-fill: white; -fx-font-size: 48px; -fx-font-family: 'Intro Regular';" +
-                    " -fx-font-weight: bold; -fx-background-color: rgba(255,255,255,0.1);" +
-                    " -fx-padding: 10px 15px; -fx-background-radius: 8px;");
-            wordLabel.setMinWidth(200);
-            wordLabel.setAlignment(Pos.CENTER);
-
-            // Создаем контейнер для метки и слова
-            HBox wordContainer = new HBox(15, numberLabel, wordLabel);
-            wordContainer.setAlignment(Pos.CENTER_LEFT);
-
-            // Размещаем в сетке (4 строки, 3 столбца)
-            int row = i / 3;
-            int col = i % 3;
-            gridPane.add(wordContainer, col, row);
-        }
-
-        // Предупреждение для пользователя
-        Label warningLabel = new Label("ЗАПИШИТЕ эти слова в безопасном месте!\nЭто единственный способ восстановить доступ к аккаунту.");
-        warningLabel.setStyle("-fx-text-fill: #FF6B6B; -fx-font-size: 20px; -fx-font-family: 'Intro Regular';" +
-                " -fx-text-alignment: center; -fx-alignment: center;");
-        warningLabel.setTextAlignment(TextAlignment.CENTER);
-        warningLabel.setWrapText(true);
-
-        // Кнопка подтверждения
-        Button confirmButton = new Button("Я записал слова");
-        confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-font-family: 'Intro Regular';" +
-                " -fx-text-fill: white; -fx-font-size: 24px; -fx-background-radius: 10px; -fx-padding: 15px 30px;");
-        confirmButton.setOnAction(e -> {
-            showAlert("Успех", "Аккаунт успешно создан!");
-            // Возврат к начальному экрану
             mainPane.getChildren().clear();
+            mainPane.getChildren().add(mainContainer);
+        } catch (Exception e) {
+            logger.error("Ошибка создания панели генерации seed", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось создать интерфейс: " + e.getMessage());
             createStartConnectionPanel();
-        });
-
-        VBox centerContainer = new VBox(30, gridPane, warningLabel, confirmButton);
-        centerContainer.setAlignment(Pos.CENTER);
-        centerContainer.setPadding(new Insets(20));
-
-        mainContainer.setTop(topContainer);
-        mainContainer.setCenter(centerContainer);
-
-        mainPane.getChildren().clear();
-        mainPane.getChildren().add(mainContainer);
+        }
     }
 
     public void createLoginPanel() {
-        BorderPane mainContainer = new BorderPane();
-        mainContainer.setBackground(new Background(new BackgroundFill(
-                createGradient(),
-                CornerRadii.EMPTY,
-                Insets.EMPTY
-        )));
+        try {
+            BorderPane mainContainer = new BorderPane();
+            mainContainer.setBackground(new Background(new BackgroundFill(
+                    createGradient(),
+                    CornerRadii.EMPTY,
+                    Insets.EMPTY
+            )));
 
-        // Кнопка назад
-        Button backButton = createIconButton(
-                "/elements/icon_back.png",
-                () -> {
-                    mainPane.getChildren().clear();
-                    createStartConnectionPanel();
-                }
-        );
-
-        HBox topLeftContainer = new HBox(backButton);
-        topLeftContainer.setAlignment(Pos.TOP_LEFT);
-        topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
-
-        Label titleLabel = new Label("Введите seed-фразу:");
-        titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 36px;");
-
-        HBox topCenterContainer = new HBox(titleLabel);
-        topCenterContainer.setAlignment(Pos.CENTER);
-        topCenterContainer.setPadding(new Insets(40, 0, 30, 0));
-
-        BorderPane topContainer = new BorderPane();
-        topContainer.setLeft(topLeftContainer);
-        topContainer.setCenter(topCenterContainer);
-
-        // Создаем сетку для 12 полей ввода (4 строки x 3 столбца)
-        GridPane gridPane = new GridPane();
-        gridPane.setAlignment(Pos.CENTER);
-        gridPane.setHgap(15);
-        gridPane.setVgap(15);
-        gridPane.setPadding(new Insets(20));
-
-        // Создаем 12 текстовых полей с нумерацией
-        for (int i = 0; i < 12; i++) {
-            int wordNumber = i + 1;
-
-            // Создаем метку с номером слова
-            Label numberLabel = new Label(wordNumber + ".");
-            numberLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-family: 'Intro Regular';");
-            numberLabel.setMinWidth(30);
-
-            // Создаем поле для ввода слова
-            TextField wordField = new TextField();
-            wordField.setPromptText("Слово " + wordNumber);
-            wordField.setStyle("-fx-font-size: 16px; -fx-font-family: 'Intro Regular'; -fx-background-radius: 5px;");
-            wordField.setPrefWidth(150);
-
-            // Сохраняем ссылку на поле в массив
-            wordFields[i] = wordField;
-
-            // Создаем контейнер для метки и поля ввода
-            HBox wordContainer = new HBox(5, numberLabel, wordField);
-            wordContainer.setAlignment(Pos.CENTER_LEFT);
-
-            // Размещаем в сетке (4 строки, 3 столбца)
-            int row = i / 3;
-            int col = i % 3;
-            gridPane.add(wordContainer, col, row);
-        }
-
-        // Кнопка подтверждения
-        Button confirmButton = new Button("Подтвердить");
-        confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-font-family: 'Intro Regular';" +
-                " -fx-text-fill: white; -fx-font-size: 20px; -fx-background-radius: 10px; -fx-padding: 10px 20px;");
-        confirmButton.setOnAction(e -> {
-            try {
-                if (clientAuthService != null) {
-                    // Получаем слова из полей ввода с помощью нашего метода
-                    List<String> words = getWordsFromFields();
-
-                    // Проверяем, что введено ровно 12 слов
-                    if (words.size() != 12) {
-                        showAlert("Ошибка", "Введите все 12 слов seed-фразы");
-                        return;
+            // Кнопка назад
+            Button backButton = createIconButton(
+                    "/elements/icon_back.png",
+                    () -> {
+                        mainPane.getChildren().clear();
+                        createStartConnectionPanel();
                     }
+            );
 
-                    String authToken = clientAuthService.login(words);
-                    showAlert("Успех", "Авторизация прошла успешно!");
+            HBox topLeftContainer = new HBox(backButton);
+            topLeftContainer.setAlignment(Pos.TOP_LEFT);
+            topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
 
-                    // Здесь можно перейти к главному интерфейсу приложения
-                    // openMainInterface(authToken);
+            Label titleLabel = new Label("Введите seed-фразу:");
+            titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 36px;");
 
-                } else {
-                    showAlert("Ошибка", "Сервис авторизации не доступен");
-                }
-            } catch (Exception ex) {
-                logger.error("Login failed", ex);
-                showAlert("Ошибка авторизации", "Неверная seed-фраза: " + ex.getMessage());
+            HBox topCenterContainer = new HBox(titleLabel);
+            topCenterContainer.setAlignment(Pos.CENTER);
+            topCenterContainer.setPadding(new Insets(40, 0, 30, 0));
+
+            BorderPane topContainer = new BorderPane();
+            topContainer.setLeft(topLeftContainer);
+            topContainer.setCenter(topCenterContainer);
+
+            // Создаем сетку для 12 полей ввода (4 строки x 3 столбца)
+            GridPane gridPane = new GridPane();
+            gridPane.setAlignment(Pos.CENTER);
+            gridPane.setHgap(15);
+            gridPane.setVgap(15);
+            gridPane.setPadding(new Insets(20));
+
+            // Создаем 12 текстовых полей с нумерацией
+            for (int i = 0; i < 12; i++) {
+                int wordNumber = i + 1;
+
+                // Создаем метку с номером слова
+                Label numberLabel = new Label(wordNumber + ".");
+                numberLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-family: 'Intro Regular';");
+                numberLabel.setMinWidth(30);
+
+                // Создаем поле для ввода слова
+                TextField wordField = new TextField();
+                wordField.setPromptText("Слово " + wordNumber);
+                wordField.setStyle("-fx-font-size: 16px; -fx-font-family: 'Intro Regular'; -fx-background-radius: 5px;");
+                wordField.setPrefWidth(150);
+
+                // Сохраняем ссылку на поле в массив
+                wordFields[i] = wordField;
+
+                // Создаем контейнер для метки и поля ввода
+                HBox wordContainer = new HBox(5, numberLabel, wordField);
+                wordContainer.setAlignment(Pos.CENTER_LEFT);
+
+                // Размещаем в сетке (4 строки, 3 столбца)
+                int row = i / 3;
+                int col = i % 3;
+                gridPane.add(wordContainer, col, row);
             }
-        });
 
-        VBox centerContainer = new VBox(20, gridPane, confirmButton);
-        centerContainer.setAlignment(Pos.CENTER);
-        centerContainer.setPadding(new Insets(20));
+            // Кнопка подтверждения
+            Button confirmButton = new Button("Подтвердить");
+            confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-font-family: 'Intro Regular';" +
+                    " -fx-text-fill: white; -fx-font-size: 20px; -fx-background-radius: 10px; -fx-padding: 10px 20px;");
+            confirmButton.setOnAction(e -> {
+                try {
+                    if (clientAuthService != null) {
+                        List<String> words = getWordsFromFields();
 
-        mainContainer.setTop(topContainer);
-        mainContainer.setCenter(centerContainer);
+                        if (words.size() != 12) {
+                            dialogDisplayer.showAlert("Ошибка", "Введите все 12 слов seed-фразы");
+                            return;
+                        }
 
-        mainPane.getChildren().clear();
-        mainPane.getChildren().add(mainContainer);
+                        String authToken = clientAuthService.login(words);
+                        dialogDisplayer.showAlert("Успех", "Авторизация прошла успешно!");
+
+                        // Здесь можно перейти к главному интерфейсу приложения
+                        // openMainInterface(authToken);
+
+                    } else {
+                        dialogDisplayer.showAlert("Ошибка", "Сервис авторизации не доступен");
+                    }
+                } catch (NetworkException ex) {
+                    logger.warn("Сетевая ошибка при авторизации", ex);
+                    dialogDisplayer.showErrorAlert("Сетевая ошибка", ex.getMessage());
+                } catch (AuthException ex) {
+                    logger.warn("Ошибка авторизации", ex);
+                    dialogDisplayer.showErrorAlert("Ошибка авторизации", ex.getMessage());
+                } catch (CryptoException ex) {
+                    logger.error("Криптографическая ошибка", ex);
+                    dialogDisplayer.showErrorAlert("Ошибка безопасности", "Криптографическая ошибка: " + ex.getMessage());
+                } catch (Exception ex) {
+                    logger.error("Неизвестная ошибка при авторизации", ex);
+                    dialogDisplayer.showErrorAlert("Ошибка", "Неизвестная ошибка: " + ex.getMessage());
+                }
+            });
+
+            VBox centerContainer = new VBox(20, gridPane, confirmButton);
+            centerContainer.setAlignment(Pos.CENTER);
+            centerContainer.setPadding(new Insets(20));
+
+            mainContainer.setTop(topContainer);
+            mainContainer.setCenter(centerContainer);
+
+            mainPane.getChildren().clear();
+            mainPane.getChildren().add(mainContainer);
+        } catch (Exception e) {
+            logger.error("Ошибка создания панели входа", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось создать интерфейс входа: " + e.getMessage());
+            createStartConnectionPanel();
+        }
     }
 
     private List<String> getWordsFromFields() {
@@ -649,14 +664,6 @@ public class JavaFXImpl extends Application {
         return words;
     }
 
-    // Вспомогательный метод для показа alert'ов
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
     //=========================================
 
     public void createEncryptBeginPanel() {
@@ -1140,22 +1147,22 @@ public class JavaFXImpl extends Application {
         hintText.setFont(Font.font("Intro Regular", 14));
         hintText.setWrappingWidth(280);
 
-        Image repeatIcon = loadImageResource("/elements/icon_repeat.png");
+        Image repeatIcon = tempFileManager.loadImageResource("/elements/icon_repeat.png");
         ImageView repeatIconView = new ImageView(repeatIcon);
         repeatIconView.setFitWidth(30);
         repeatIconView.setFitHeight(30);
 
-        Image manualIcon = loadImageResource("/elements/icon_writeParams.png");
+        Image manualIcon = tempFileManager.loadImageResource("/elements/icon_writeParams.png");
         ImageView manualIconView = new ImageView(manualIcon);
         manualIconView.setFitWidth(30);
         manualIconView.setFitHeight(30);
 
-        Image nextIcon = loadImageResource("/elements/icon_next.png");
+        Image nextIcon = tempFileManager.loadImageResource("/elements/icon_next.png");
         ImageView nextIconView = new ImageView(nextIcon);
         nextIconView.setFitWidth(30);
         nextIconView.setFitHeight(30);
 
-        Image swapIcon = loadImageResource("/elements/icon_swap.png");
+        Image swapIcon = tempFileManager.loadImageResource("/elements/icon_swap.png");
         ImageView swapIconView = new ImageView(swapIcon);
         swapIconView.setFitWidth(30);
         swapIconView.setFitHeight(30);
@@ -1532,17 +1539,17 @@ public class JavaFXImpl extends Application {
         hintText.setFont(Font.font("Intro Regular", 14));
         hintText.setWrappingWidth(270); // Ширина с учетом отступов
 
-        Image encryptWholeIcon = loadImageResource("/elements/icon_encryptWhole.png");
+        Image encryptWholeIcon = tempFileManager.loadImageResource("/elements/icon_encryptWhole.png");
         ImageView encryptWholeIconView = new ImageView(encryptWholeIcon);
         encryptWholeIconView.setFitWidth(25); // Уменьшаем иконки
         encryptWholeIconView.setFitHeight(25);
 
-        Image resetPartIcon = loadImageResource("/elements/icon_resetPart.png");
+        Image resetPartIcon = tempFileManager.loadImageResource("/elements/icon_resetPart.png");
         ImageView resetPartIconView = new ImageView(resetPartIcon);
         resetPartIconView.setFitWidth(25);
         resetPartIconView.setFitHeight(25);
 
-        Image encryptPartIcon = loadImageResource("/elements/icon_encryptPart.png");
+        Image encryptPartIcon = tempFileManager.loadImageResource("/elements/icon_encryptPart.png");
         ImageView encryptPartIconView = new ImageView(encryptPartIcon);
         encryptPartIconView.setFitWidth(25);
         encryptPartIconView.setFitHeight(25);
@@ -2792,44 +2799,18 @@ public class JavaFXImpl extends Application {
         return fileChooser.showOpenDialog(primaryStage);
     }
 
-    // Метод для установки консоли
     public static void setConsole(TextArea console) {
         JavaFXImpl.console = console;
     }
 
-    // Метод для добавления текста в консоль
     public static void logToConsole(String message) {
         if (console != null) {
             console.appendText(message + "\n");
         }
     }
 
-    private Image loadImageResource(String resourcePath) {
-        try {
-            InputStream inputStream = getClass().getResourceAsStream(resourcePath);
-            if (inputStream == null) {
-                showErrorAlert("Ошибка ресурса", "Ресурс не найден: " + resourcePath);
-                return null;
-            }
-            return new Image(inputStream);
-        } catch (Exception e) {
-            showErrorAlert("Ошибка загрузки", "Ошибка загрузки изображения: " + e.getMessage());
-            return null;
-        }
-    }
-
-    private void showErrorAlert(String title, String message) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle(title);
-            alert.setHeaderText(null);
-            alert.setContentText(message);
-            alert.showAndWait();
-        });
-    }
-
     private Button createIconButton(String iconPath, Runnable onClickAction) {
-        Image icon = loadImageResource(iconPath);
+        Image icon = tempFileManager.loadImageResource(iconPath);
         ImageView iconView = new ImageView(icon);
         iconView.setFitWidth(50);
         iconView.setFitHeight(50);

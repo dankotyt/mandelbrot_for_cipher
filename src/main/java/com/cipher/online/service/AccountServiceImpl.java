@@ -3,7 +3,7 @@ package com.cipher.online.service;
 import com.cipher.common.api.AccountApi;
 import com.cipher.common.dto.AuthRequest;
 import com.cipher.common.entity.User;
-import com.cipher.online.exception.AccountAlreadyExistsException;
+import com.cipher.common.exception.AccountAlreadyExistsException;
 import com.cipher.online.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

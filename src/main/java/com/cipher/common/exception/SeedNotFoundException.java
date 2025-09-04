@@ -1,4 +1,4 @@
-package com.cipher.online.exception;
+package com.cipher.common.exception;
 
 public class SeedNotFoundException extends RuntimeException {
     public SeedNotFoundException(String message) {

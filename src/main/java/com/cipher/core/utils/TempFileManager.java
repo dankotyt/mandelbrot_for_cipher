@@ -177,4 +177,18 @@ public class TempFileManager {
             displayer.showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
         }
     }
+
+    public Image loadImageResource(String resourcePath) {
+        try {
+            InputStream inputStream = getClass().getResourceAsStream(resourcePath);
+            if (inputStream == null) {
+                displayer.showErrorAlert("Ошибка ресурса", "Ресурс не найден: " + resourcePath);
+                return null;
+            }
+            return new Image(inputStream);
+        } catch (Exception e) {
+            displayer.showErrorAlert("Ошибка загрузки", "Ошибка загрузки изображения: " + e.getMessage());
+            return null;
+        }
+    }
 }

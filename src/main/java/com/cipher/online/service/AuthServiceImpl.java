@@ -5,7 +5,7 @@ import com.cipher.common.dto.LoginRequest;
 import com.cipher.common.dto.NonceRequest;
 import com.cipher.common.dto.NonceResponse;
 import com.cipher.common.entity.User;
-import com.cipher.online.exception.SeedNotFoundException;
+import com.cipher.common.exception.SeedNotFoundException;
 import com.cipher.online.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBucket;
@@ -44,7 +44,7 @@ public class AuthServiceImpl {
         String nonce = Base64.getEncoder().encodeToString(nonceBytes);
 
         String redisKey = NONCE_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(redisKey, nonce, 30, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(redisKey, nonce, 15, TimeUnit.SECONDS);
 
         return new NonceResponse(nonce);
     }
