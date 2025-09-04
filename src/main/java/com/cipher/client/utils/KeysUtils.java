@@ -9,11 +9,31 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
+/**
+ * Утилитарный класс для работы с криптографическими ключами.
+ * Предоставляет методы для генерации ключевых пар из seed-фразы
+ * и создания идентификаторов пользователей.
+ */
 public class KeysUtils {
     private static final Logger logger = LoggerFactory.getLogger(KeysUtils.class);
 
+    /**
+     * Record, содержащий криптографические ключи и идентификатор пользователя.
+     *
+     * @param privateKey приватный ключ
+     * @param publicKey публичный ключ
+     * @param userId идентификатор пользователя
+     */
     public record CryptoKeys(PrivateKey privateKey, PublicKey publicKey, String userId) {}
 
+    /**
+     * Создает криптографические ключи из seed-фразы.
+     *
+     * @param words список слов seed-фразы
+     * @return объект CryptoKeys с ключами и идентификатором пользователя
+     * @throws NoSuchAlgorithmException если алгоритм генерации ключей не найден
+     * @throws GeneralSecurityException если произошла ошибка безопасности
+     */
     public static CryptoKeys createKeysFromWords(List<String> words) throws NoSuchAlgorithmException, GeneralSecurityException {
         byte[] masterSeed = MnemonicCode.toSeed(words, ""); // 64 bytes
         Arrays.fill(masterSeed, 31, 63, (byte) 0);
@@ -24,9 +44,9 @@ public class KeysUtils {
             PublicKey publicKey = keyPair.getPublic();
             String userId = createUserId(publicKey);
 
-            logger.info("Generated PublicKey: " + Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-            logger.info("Generated UserId: " + userId);
-            logger.info("Seed words: " + String.join(" ", words));
+            logger.info("Generated PublicKey: {}", Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+            logger.info("Generated UserId: {}", userId);
+            logger.info("Seed words: {}", String.join(" ", words));
 
             return new CryptoKeys(keyPair.getPrivate(), publicKey, userId);
         } finally {
@@ -34,6 +54,13 @@ public class KeysUtils {
         }
     }
 
+    /**
+     * Генерирует пару ключей из seed материала.
+     *
+     * @param seed байтовый массив seed материала
+     * @return пара криптографических ключей
+     * @throws NoSuchAlgorithmException если алгоритм не найден
+     */
     private static KeyPair generateKeyPairFromSeed(byte[] seed) throws NoSuchAlgorithmException {
         SecureRandom deterministicRandom = SecureRandom.getInstance("SHA1PRNG");
         deterministicRandom.setSeed(seed);
@@ -43,6 +70,13 @@ public class KeysUtils {
         return keyPairGenerator.generateKeyPair();
     }
 
+    /**
+     * Создает идентификатор пользователя на основе публичного ключа.
+     *
+     * @param publicKey публичный ключ пользователя
+     * @return идентификатор пользователя в виде base64 строки
+     * @throws NoSuchAlgorithmException если алгоритм SHA-256 не найден
+     */
     private static String createUserId(PublicKey publicKey) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hash = digest.digest(publicKey.getEncoded());
@@ -50,6 +84,12 @@ public class KeysUtils {
                 .encodeToString(Arrays.copyOfRange(hash, 0, 16));
     }
 
+    /**
+     * Конвертирует публичный ключ в base64 строку.
+     *
+     * @param publicKey публичный ключ для конвертации
+     * @return base64 представление публичного ключа
+     */
     public static String getPublicKeyBase64(PublicKey publicKey) {
         return Base64.getEncoder().encodeToString(publicKey.getEncoded());
     }

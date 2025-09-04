@@ -1,4 +1,4 @@
-package com.cipher.online.exceptions;
+package com.cipher.server.exceptions;
 
 public class KeyParsingException extends RuntimeException {
   public KeyParsingException(String message) {

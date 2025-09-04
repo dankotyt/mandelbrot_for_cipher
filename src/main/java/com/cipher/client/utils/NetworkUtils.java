@@ -6,9 +6,19 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 
+/**
+ * Утилитарный класс для проверки сетевого подключения.
+ * Предоставляет методы для проверки доступности сети и интернет-соединения.
+ */
 public class NetworkUtils {
     private static final Logger logger = LoggerFactory.getLogger(NetworkUtils.class);
 
+    /**
+     * Проверяет доступность сетевого подключения.
+     * Выполняет ping к нескольким DNS серверам для надежности.
+     *
+     * @return true если сетевое подключение доступно, false в противном случае
+     */
     public static boolean isNetworkAvailable() {
         try {
             // Проверяем несколько DNS серверов для надежности
@@ -31,6 +41,11 @@ public class NetworkUtils {
         }
     }
 
+    /**
+     * Проверяет сетевое подключение и выбрасывает исключение если оно недоступно.
+     *
+     * @throws NetworkException если сетевое подключение недоступно
+     */
     public static void checkNetworkConnection() {
         if (!isNetworkAvailable()) {
             throw new NetworkException(

@@ -1,6 +1,6 @@
 package com.cipher.view.javafx;
 
-import com.cipher.client.service.ClientAuthService;
+import com.cipher.client.service.impl.ClientAuthServiceImpl;
 import com.cipher.client.utils.NetworkUtils;
 import com.cipher.common.exception.AuthException;
 import com.cipher.common.exception.CryptoException;
@@ -8,7 +8,7 @@ import com.cipher.common.exception.NetworkException;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.EncryptionService;
 import com.cipher.core.utils.*;
-import com.cipher.client.service.SeedServiceImpl;
+import com.cipher.client.service.impl.SeedServiceImpl;
 import javafx.application.Application;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -76,7 +76,7 @@ public class JavaFXImpl extends Application {
     private boolean rectangleSelected = false;
     private TextField[] wordFields = new TextField[12];
     private SeedServiceImpl seedService;
-    private ClientAuthService clientAuthService;
+    private ClientAuthServiceImpl clientAuthService;
 
     private final List<Rectangle2D> rectangles = new ArrayList<>();
     private final DialogDisplayer dialogDisplayer = new DialogDisplayer();
@@ -101,7 +101,7 @@ public class JavaFXImpl extends Application {
 
         if (springContext != null && springContext.isActive()) {
             this.seedService = springContext.getBean(SeedServiceImpl.class);
-            this.clientAuthService = springContext.getBean(ClientAuthService.class);
+            this.clientAuthService = springContext.getBean(ClientAuthServiceImpl.class);
             logger.info("Spring services initialized successfully");
         } else {
             logger.error("Spring context is not available!");

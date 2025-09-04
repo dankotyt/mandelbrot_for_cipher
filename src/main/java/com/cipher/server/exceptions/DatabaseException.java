@@ -1,4 +1,4 @@
-package com.cipher.online.exceptions;
+package com.cipher.server.exceptions;
 
 public class DatabaseException extends RuntimeException {
     public DatabaseException(String message) {

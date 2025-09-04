@@ -1,12 +1,13 @@
-package com.cipher.online.service;
+package com.cipher.server.service;
 
+import com.cipher.common.api.AuthApi;
 import com.cipher.common.dto.AuthResponse;
 import com.cipher.common.dto.LoginRequest;
 import com.cipher.common.dto.NonceRequest;
 import com.cipher.common.dto.NonceResponse;
 import com.cipher.common.entity.User;
 import com.cipher.common.exception.SeedNotFoundException;
-import com.cipher.online.repository.UserRepository;
+import com.cipher.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
@@ -22,9 +23,13 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Сервис аутентификации и авторизации пользователей.
+ * Обеспечивает генерацию nonce, верификацию подписей и выдачу access token.
+ */
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl {
+public class AuthServiceImpl implements AuthApi {
     private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final UserRepository userRepository;
@@ -34,6 +39,15 @@ public class AuthServiceImpl {
 
     private static final String NONCE_KEY_PREFIX = "auth_nonce:";
 
+    /**
+     * Генерирует и возвращает одноразовое число (nonce) для аутентификации.
+     * Сохраняет nonce в Redis с временем жизни 15 секунд.
+     *
+     * @param request запрос nonce с идентификатором пользователя
+     * @return ответ со сгенерированным nonce
+     * @throws SeedNotFoundException если пользователь не найден
+     */
+    @Override
     public NonceResponse requestNonce(NonceRequest request) {
         String userId = request.userId();
         if (!userRepository.existsByUserId(userId)) {
@@ -49,6 +63,15 @@ public class AuthServiceImpl {
         return new NonceResponse(nonce);
     }
 
+    /**
+     * Выполняет аутентификацию пользователя на основе подписи nonce.
+     * Проверяет валидность подписи с использованием публичного ключа пользователя.
+     *
+     * @param request запрос на вход с идентификатором пользователя и подписью
+     * @return ответ аутентификации с access token и данными пользователя
+     * @throws SecurityException если nonce истек, подпись невалидна или пользователь не найден
+     */
+    @Override
     public AuthResponse login(LoginRequest request) {
         String userId = request.userId();
         String signatureBase64 = request.signature();
@@ -72,7 +95,6 @@ public class AuthServiceImpl {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new SecurityException("User not found!"));
 
-        // ДЕБАГ: Проверяем что хранится в БД
         byte[] publicKeyBytesFromDB = user.getPublicKeyBytes();
         logger.debug("PublicKey from DB - Length: {}, Hex: {}, Base64: {}",
                 publicKeyBytesFromDB.length,
@@ -110,6 +132,13 @@ public class AuthServiceImpl {
         }
     }
 
+    /**
+     * Конвертирует байтовый массив в шестнадцатеричную строку.
+     * Используется для отладки и логирования.
+     *
+     * @param bytes байтовый массив для конвертации
+     * @return шестнадцатеричное представление байтового массива
+     */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {

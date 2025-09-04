@@ -1,4 +1,4 @@
-package com.cipher.online.dto;
+package com.cipher.server.dto;
 
 import lombok.Getter;
 import lombok.Setter;
