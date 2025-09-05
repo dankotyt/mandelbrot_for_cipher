@@ -2,7 +2,6 @@ package com.cipher.client.service.impl;
 
 import com.cipher.client.feign.AuthApiClient;
 import com.cipher.client.service.ClientAuthService;
-import com.cipher.client.service.SeedService;
 import com.cipher.client.utils.KeysUtils;
 import com.cipher.client.utils.NetworkUtils;
 import com.cipher.common.dto.AuthResponse;

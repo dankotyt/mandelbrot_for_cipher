@@ -46,7 +46,6 @@ public class KeysUtils {
 
             logger.info("Generated PublicKey: {}", Base64.getEncoder().encodeToString(publicKey.getEncoded()));
             logger.info("Generated UserId: {}", userId);
-            logger.info("Seed words: {}", String.join(" ", words));
 
             return new CryptoKeys(keyPair.getPrivate(), publicKey, userId);
         } finally {

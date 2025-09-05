@@ -79,14 +79,12 @@ public class AuthServiceImpl implements AuthApi {
 
         String redisKey = NONCE_KEY_PREFIX + userId;
 
-        logger.info("login by userId: {}, signature: {}", userId, signatureBase64);
         RBucket<String> nonceBucket = redissonClient.getBucket(
                 redisKey,
                 StringCodec.INSTANCE
         );
 
         String nonce = nonceBucket.getAndDelete();
-        logger.info("Nonce retrieved and deleted for key: {}", redisKey);
 
         if (nonce == null) {
             logger.warn("Nonce not found for user: {}", userId);
@@ -96,19 +94,10 @@ public class AuthServiceImpl implements AuthApi {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new SecurityException("User not found!"));
 
-        byte[] publicKeyBytesFromDB = user.getPublicKeyBytes();
-        logger.debug("PublicKey from DB - Length: {}, Hex: {}, Base64: {}",
-                publicKeyBytesFromDB.length,
-                bytesToHex(publicKeyBytesFromDB),
-                Base64.getEncoder().encodeToString(publicKeyBytesFromDB));
         try {
             Signature verifier = Signature.getInstance("EdDSA");
 
             byte[] x509Bytes = user.getPublicKeyBytes();
-
-            logger.debug("X.509 key from DB - Length: {}, Base64: {}",
-                    x509Bytes.length,
-                    Base64.getEncoder().encodeToString(x509Bytes));
 
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(x509Bytes);
             KeyFactory keyFactory = KeyFactory.getInstance("EdDSA");
@@ -127,24 +116,7 @@ public class AuthServiceImpl implements AuthApi {
                 throw new SecurityException("Invalid signature");
             }
         } catch (GeneralSecurityException e) {
-            logger.error("Signature verification failed. X.509 key length: {}",
-                    user.getPublicKeyBytes().length, e);
             throw new SecurityException("Signature verification failed", e);
         }
-    }
-
-    /**
-     * Конвертирует байтовый массив в шестнадцатеричную строку.
-     * Используется для отладки и логирования.
-     *
-     * @param bytes байтовый массив для конвертации
-     * @return шестнадцатеричное представление байтового массива
-     */
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-        }
-        return sb.toString();
     }
 }

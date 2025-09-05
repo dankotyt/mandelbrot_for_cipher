@@ -4,8 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Getter
-@Setter
 public class UserChangeNicknameDTO {
     private String userId;
+
+    @Setter
     private String nickname;
 }
