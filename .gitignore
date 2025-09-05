@@ -12,6 +12,8 @@ config.xml
 ###Gradle###
 .gradle
 build/
+build
+build/**
 *.lock
 *.jar
 
