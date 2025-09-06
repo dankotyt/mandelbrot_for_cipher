@@ -609,7 +609,7 @@ public class JavaFXImpl extends Application {
                             return;
                         }
 
-                        String authToken = clientAuthService.login(words);
+                        clientAuthService.login(words);
                         dialogDisplayer.showAlert("Успех", "Авторизация прошла успешно!");
 
                         // Здесь можно перейти к главному интерфейсу приложения

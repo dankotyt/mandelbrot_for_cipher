@@ -1,8 +1,7 @@
 package com.cipher.client.utils;
 
 import org.bitcoinj.crypto.MnemonicCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.security.*;
 import java.util.Arrays;
@@ -15,8 +14,10 @@ import java.util.List;
  * и создания идентификаторов пользователей.
  */
 public class KeysUtils {
-    private static final Logger logger = LoggerFactory.getLogger(KeysUtils.class);
 
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
     /**
      * Record, содержащий криптографические ключи и идентификатор пользователя.
      *
@@ -34,47 +35,67 @@ public class KeysUtils {
      * @throws NoSuchAlgorithmException если алгоритм генерации ключей не найден
      * @throws GeneralSecurityException если произошла ошибка безопасности
      */
-    public static CryptoKeys createKeysFromWords(List<String> words) throws NoSuchAlgorithmException, GeneralSecurityException {
-        byte[] masterSeed = MnemonicCode.toSeed(words, ""); // 64 bytes
-        Arrays.fill(masterSeed, 31, 63, (byte) 0);
+    public static CryptoKeys createKeysFromWords(List<String> words) throws GeneralSecurityException {
+        byte[] masterSeed = MnemonicCode.toSeed(words, "");
+
         try {
-            // Для EdDSA используем первые 32 байта из seed
-            byte[] keyMaterial = Arrays.copyOfRange(masterSeed, 0, 32);
-            KeyPair keyPair = generateKeyPairFromSeed(keyMaterial);
+            byte[] privateKeySeed = Arrays.copyOfRange(masterSeed, 0, 32);
+
+            KeyPair keyPair = generateEd25519KeyPairFromSeed(privateKeySeed);
             PublicKey publicKey = keyPair.getPublic();
             String userId = createUserId(publicKey);
 
-            logger.info("Generated PublicKey: {}", Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-            logger.info("Generated UserId: {}", userId);
-
             return new CryptoKeys(keyPair.getPrivate(), publicKey, userId);
         } finally {
-            Arrays.fill(masterSeed, (byte) 0); // Стираем мастер-сид из памяти
+            Arrays.fill(masterSeed, (byte) 0);
         }
     }
 
     /**
-     * Генерирует пару ключей из seed материала.
+     * Генерирует пару Ed25519/EdDSA ключей из детерминистичного сида.
+     * Использует алгоритм EdDSA с кривой Ed25519 через провайдер BouncyCastle.
+     * Генерация является детерминистичной - одинаковый сид всегда produces одинаковую пару ключей.
      *
-     * @param seed байтовый массив seed материала
-     * @return пара криптографических ключей
-     * @throws NoSuchAlgorithmException если алгоритм не найден
+     * @param seed байтовый массив сида длиной 32 байта (256 бит), используемый для детерминистичной генерации ключей
+     * @return KeyPair содержащий сгенерированные приватный и публичный ключи Ed25519
+     * @throws GeneralSecurityException если произошла ошибка при генерации ключей:
+     *         - NoSuchAlgorithmException если алгоритм EdDSA или SHA1PRNG не доступен
+     *         - InvalidParameterException если параметры инициализации неверны
+     *         - ProviderException если провайдер BouncyCastle не доступен или возникла внутренняя ошибка
+     *
+     * @implNote Для обеспечения детерминизма используется SHA1PRNG с установленным сидом.
+     *           Длина ключа устанавливается в 255 бит (стандарт для Ed25519).
+     *           Используется провайдер BouncyCastle ("BC") для поддержки EdDSA.
+     *
+     * @implSpec Важно: передаваемый сид должен быть криптографически безопасным и храниться в секрете.
+     *           После использования сид должен быть очищен из памяти для предотвращения утечки.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc8032">RFC 8032 - EdDSA</a>
+     * @see org.bouncycastle.jce.provider.BouncyCastleProvider
      */
-    private static KeyPair generateKeyPairFromSeed(byte[] seed) throws NoSuchAlgorithmException {
-        SecureRandom deterministicRandom = SecureRandom.getInstance("SHA1PRNG");
-        deterministicRandom.setSeed(seed);
+    private static KeyPair generateEd25519KeyPairFromSeed(byte[] seed) throws GeneralSecurityException {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EdDSA", "BC");
 
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EdDSA");
-        keyPairGenerator.initialize(255, deterministicRandom);
-        return keyPairGenerator.generateKeyPair();
+            SecureRandom deterministicRandom = SecureRandom.getInstance("SHA1PRNG");
+            deterministicRandom.setSeed(seed);
+
+            keyPairGenerator.initialize(255, deterministicRandom);
+            return keyPairGenerator.generateKeyPair();
+
+        } catch (Exception e) {
+            throw new GeneralSecurityException("Failed to generate Ed25519/EdDSA key pair from seed", e);
+        }
     }
 
     /**
-     * Создает идентификатор пользователя на основе публичного ключа.
+     * Создает уникальный идентификатор пользователя на основе публичного ключа Ed25519.
+     * Идентификатор генерируется как первые 16 байт SHA-256 хеша от DER-кодированного публичного ключа,
+     * представленные в виде Base64 URL-safe строки без padding.
      *
-     * @param publicKey публичный ключ пользователя
-     * @return идентификатор пользователя в виде base64 строки
-     * @throws NoSuchAlgorithmException если алгоритм SHA-256 не найден
+     * @param publicKey публичный ключ Ed25519 для которого генерируется идентификатор
+     * @return String уникальный идентификатор пользователя в формате Base64 URL-safe без padding (16 байт → 22 символа)
+     * @throws NoSuchAlgorithmException если алгоритм SHA-256 не доступен в текущем окружении
      */
     private static String createUserId(PublicKey publicKey) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

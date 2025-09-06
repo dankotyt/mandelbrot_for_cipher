@@ -6,12 +6,14 @@ import com.cipher.common.entity.User;
 import com.cipher.common.exception.AccountAlreadyExistsException;
 import com.cipher.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
@@ -24,6 +26,10 @@ import java.util.Base64;
 public class AccountServiceImpl implements AccountApi {
 
     private final UserRepository userRepository;
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     /**
      * Создает новый аккаунт пользователя на основе предоставленных учетных данных.
@@ -74,7 +80,7 @@ public class AccountServiceImpl implements AccountApi {
     private PublicKey parsePublicKey(byte[] publicKeyBytes) throws GeneralSecurityException {
         try {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
-            KeyFactory keyFactory = KeyFactory.getInstance("EdDSA");
+            KeyFactory keyFactory = KeyFactory.getInstance("EdDSA", "BC");
             return keyFactory.generatePublic(keySpec);
         } catch (Exception e) {
             throw new GeneralSecurityException("Invalid public key format", e);

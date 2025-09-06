@@ -2,6 +2,7 @@ package com.cipher;
 
 import com.cipher.client.handler.GlobalExceptionHandler;
 import com.cipher.view.javafx.JavaFXImpl;
+import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Application;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,6 +26,8 @@ public class Launcher {
      * @param args аргументы командной строки
      */
     public static void main(String[] args) {
+        Dotenv dotenv = Dotenv.configure().load();
+        dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
         GlobalExceptionHandler.registerGlobalExceptionHandler();
 
         new Thread(() -> {

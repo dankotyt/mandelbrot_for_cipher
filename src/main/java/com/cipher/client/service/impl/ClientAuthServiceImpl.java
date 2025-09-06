@@ -4,7 +4,6 @@ import com.cipher.client.feign.AuthApiClient;
 import com.cipher.client.service.ClientAuthService;
 import com.cipher.client.utils.KeysUtils;
 import com.cipher.client.utils.NetworkUtils;
-import com.cipher.common.dto.AuthResponse;
 import com.cipher.common.dto.LoginRequest;
 import com.cipher.common.dto.NonceRequest;
 import com.cipher.common.dto.NonceResponse;
@@ -43,13 +42,12 @@ public class ClientAuthServiceImpl implements ClientAuthService {
      * Выполняет процесс аутентификации пользователя на основе seed-фразы.
      *
      * @param words список из 12 слов seed-фразы
-     * @return access token для аутентифицированного пользователя
      * @throws AuthException если аутентификация не удалась или seed-фраза неверна
      * @throws NetworkException если возникли проблемы с сетью
      * @throws CryptoException если произошла ошибка криптографических операций
      * @throws IllegalArgumentException если передан неверный формат seed-фразы
      */
-    public String login(List<String> words) {
+    public void login(List<String> words) {
         try {
             NetworkUtils.checkNetworkConnection();
             validateWords(words);
@@ -61,9 +59,7 @@ public class ClientAuthServiceImpl implements ClientAuthService {
             byte[] signature = signData(nonceResponse.nonce().getBytes(StandardCharsets.UTF_8), keys.privateKey());
             String signatureBase64 = Base64.getEncoder().encodeToString(signature);
 
-            AuthResponse authResponse = authApiClient.login(new LoginRequest(keys.userId(), signatureBase64));
-
-            return authResponse.accessToken();
+            authApiClient.login(new LoginRequest(keys.userId(), signatureBase64));
 
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {

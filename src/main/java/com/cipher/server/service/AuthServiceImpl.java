@@ -9,6 +9,7 @@ import com.cipher.common.entity.User;
 import com.cipher.common.exception.SeedNotFoundException;
 import com.cipher.server.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
@@ -38,6 +39,10 @@ public class AuthServiceImpl implements AuthApi {
     private final RedissonClient redissonClient;
 
     private static final String NONCE_KEY_PREFIX = "auth_nonce:";
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     /**
      * Генерирует и возвращает одноразовое число (nonce) для аутентификации.
@@ -95,12 +100,13 @@ public class AuthServiceImpl implements AuthApi {
                 .orElseThrow(() -> new SecurityException("User not found!"));
 
         try {
-            Signature verifier = Signature.getInstance("EdDSA");
+            Signature verifier = Signature.getInstance("EdDSA", "BC");
 
-            byte[] x509Bytes = user.getPublicKeyBytes();
+            byte[] publicKeyBytes = user.getPublicKeyBytes();
 
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(x509Bytes);
-            KeyFactory keyFactory = KeyFactory.getInstance("EdDSA");
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+
+            KeyFactory keyFactory = KeyFactory.getInstance("EdDSA", "BC");
             PublicKey publicKey = keyFactory.generatePublic(keySpec);
 
             verifier.initVerify(publicKey);
@@ -110,8 +116,7 @@ public class AuthServiceImpl implements AuthApi {
             boolean isValid = verifier.verify(signatureBytes);
 
             if (isValid) {
-                String authToken = "generated_jwt_token_here";
-                return new AuthResponse(authToken, user.getUserId(), user.getNickname());
+                return new AuthResponse(user.getUserId(), user.getNickname());
             } else {
                 throw new SecurityException("Invalid signature");
             }
