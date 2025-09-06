@@ -2,6 +2,7 @@ package com.cipher.core.utils;
 
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
+import org.springframework.stereotype.Component;
 
 public class CoordinateUtils {
     private final Canvas canvas;

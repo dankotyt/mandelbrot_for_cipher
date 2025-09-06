@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RasterFormatException;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.Map;
@@ -18,7 +17,9 @@ import com.cipher.core.utils.Pair;
 import javafx.geometry.Rectangle2D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ImageEncrypt {
     private static final Logger logger = LoggerFactory.getLogger(ImageEncrypt.class);
     private static BufferedImage encryptedWholeImage;
@@ -94,8 +95,8 @@ public class ImageEncrypt {
                 mandelbrotParams.maxIter());
 
         // 4. Выполняем XOR между сегментированным изображением и Мандельбротом
-        shuffledImage = ImageUtils.convertToType(shuffledImage, BufferedImage.TYPE_INT_RGB);
-        mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
+        shuffledImage = ImageUtils.convertToARGB(shuffledImage);
+        mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
         BufferedImage encryptedXORImage = XOR.performXOR(shuffledImage, mandelbrotImage);
 
         // 5. Вставляем зашифрованную область обратно в исходное изображение
@@ -165,8 +166,8 @@ public class ImageEncrypt {
         ImageIO.write(mandelbrotImage, "png", new File(getTempPath() + "mandelbrot_final.png"));
 
         // 4. Продолжаем шифрование как раньше
-        shuffledImage = ImageUtils.convertToType(shuffledImage, BufferedImage.TYPE_INT_RGB);
-        mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
+        shuffledImage = ImageUtils.convertToARGB(shuffledImage);
+        mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
 
         encryptedWholeImage = XOR.performXOR(shuffledImage, mandelbrotImage);
 
@@ -183,32 +184,10 @@ public class ImageEncrypt {
     }
 
     public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
-        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = resizedImage.createGraphics();
         g2d.drawImage(image, 0, 0, width, height, null);
         g2d.dispose();
         return resizedImage;
-    }
-
-    public static BufferedImage loadImage(String filePath) {
-        try {
-            File imageFile = new File(filePath);
-            if (!imageFile.exists()) {
-                throw new FileNotFoundException("Не удалось найти изображение по пути: " + filePath);
-            }
-            return ImageIO.read(imageFile);
-        } catch (Exception e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    private static BufferedImage loadMandelbrotImage() {
-        try {
-            return ImageIO.read(new File(getTempPath() + "mandelbrot.png"));
-        } catch (IOException e) {
-            logger.error("Ошибка при загрузке изображения-ключа: {}", e.getMessage());
-            return null;
-        }
     }
 }

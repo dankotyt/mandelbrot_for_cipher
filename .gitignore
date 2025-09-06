@@ -7,10 +7,14 @@ out/
 ### Project ###
 temp
 config.xml
+.env
 
 ###Gradle###
 .gradle
 build/
+*/build/
+**/build/
+**/build/**
 *.lock
 *.jar
 

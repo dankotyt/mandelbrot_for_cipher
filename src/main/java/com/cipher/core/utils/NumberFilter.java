@@ -1,9 +1,11 @@
 package com.cipher.core.utils;
 
 import javafx.scene.control.TextFormatter;
+import org.springframework.stereotype.Component;
 
 import java.util.function.UnaryOperator;
 
+@Component
 public class NumberFilter {
     public UnaryOperator<TextFormatter.Change> createIntegerFilter(int maxLength) {
         return change -> {

@@ -1,19 +1,40 @@
 package com.cipher;
 
+import com.cipher.client.handler.GlobalExceptionHandler;
 import com.cipher.view.javafx.JavaFXImpl;
+import io.github.cdimascio.dotenv.Dotenv;
 import javafx.application.Application;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.ConfigurableApplicationContext;
 
-import javax.swing.*;
-
+/**
+ * Главный класс приложения, отвечающий за запуск Spring Boot и JavaFX.
+ * Инициализирует глобальный обработчик исключений, запускает JavaFX приложение
+ * и контекст Spring в отдельных потоках.
+ */
+@SpringBootApplication
+@EnableFeignClients
 public class Launcher {
+
+    /**
+     * Точка входа в приложение.
+     * Инициализирует глобальный обработчик исключений, запускает JavaFX приложение
+     * и контекст Spring Boot.
+     *
+     * @param args аргументы командной строки
+     */
     public static void main(String[] args) {
-        try {
+        Dotenv dotenv = Dotenv.configure().load();
+        dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+        GlobalExceptionHandler.registerGlobalExceptionHandler();
+
+        new Thread(() -> {
             Application.launch(JavaFXImpl.class, args);
-        } catch (Throwable t) {
-            JOptionPane.showMessageDialog(null,
-                    "Launch failed:\n" + t.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
+        }).start();
+
+        ConfigurableApplicationContext context = SpringApplication.run(Launcher.class, args);
+        JavaFXImpl.setSpringContext(context);
     }
 }

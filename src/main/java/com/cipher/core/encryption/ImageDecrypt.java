@@ -13,7 +13,9 @@ import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ImageDecrypt {
     private static final Logger logger = LoggerFactory.getLogger(ImageDecrypt.class);
 
@@ -55,9 +57,8 @@ public class ImageDecrypt {
                     width, height, zoom, offsetX, offsetY, maxIter);
 
             // 3. Применяем XOR между зашифрованным изображением и Мандельбротом
-            // Преобразование типов изображений в BufferedImage.TYPE_INT_RGB
-            mandelbrotImage = ImageUtils.convertToType(mandelbrotImage, BufferedImage.TYPE_INT_RGB);
-            encryptedArea = ImageUtils.convertToType(encryptedArea, BufferedImage.TYPE_INT_RGB);
+            mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
+            encryptedArea = ImageUtils.convertToARGB(encryptedArea);
 
             BufferedImage xorResult = XOR.performXOR(encryptedArea, mandelbrotImage);
 

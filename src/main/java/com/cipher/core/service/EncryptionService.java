@@ -2,9 +2,11 @@ package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.utils.BinaryFile;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 
+@Service
 public class EncryptionService {
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
