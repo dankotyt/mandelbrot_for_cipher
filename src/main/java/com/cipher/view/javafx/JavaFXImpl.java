@@ -74,7 +74,7 @@ public class JavaFXImpl extends Application {
     private Point2D endPoint;
     private boolean drawingRectangle = false;
     private boolean rectangleSelected = false;
-    private TextField[] wordFields = new TextField[12];
+    private final TextField[] wordFields = new TextField[12];
     private SeedServiceImpl seedService;
     private ClientAuthServiceImpl clientAuthService;
 
@@ -293,8 +293,10 @@ public class JavaFXImpl extends Application {
                 createStartConnectionPanel();
             } catch (NetworkException ex) {
                 dialogDisplayer.showErrorAlert("Нет подключения",
-                        "Необходимо интернет-соединение для выхода в сеть\n\n" +
-                                "Пожалуйста, проверьте подключение и попробуйте снова"
+                        """
+                                Необходимо интернет-соединение для выхода в сеть
+                                
+                                Пожалуйста, проверьте подключение и попробуйте снова"""
                 );
             } catch (Exception ex) {
                 logger.error("Ошибка при входе", ex);
@@ -585,7 +587,6 @@ public class JavaFXImpl extends Application {
                 // Сохраняем ссылку на поле в массив
                 wordFields[i] = wordField;
 
-                // Создаем контейнер для метки и поля ввода
                 HBox wordContainer = new HBox(5, numberLabel, wordField);
                 wordContainer.setAlignment(Pos.CENTER_LEFT);
 
@@ -595,7 +596,6 @@ public class JavaFXImpl extends Application {
                 gridPane.add(wordContainer, col, row);
             }
 
-            // Кнопка подтверждения
             Button confirmButton = new Button("Подтвердить");
             confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-font-family: 'Intro Regular';" +
                     " -fx-text-fill: white; -fx-font-size: 20px; -fx-background-radius: 10px; -fx-padding: 10px 20px;");
@@ -611,9 +611,6 @@ public class JavaFXImpl extends Application {
 
                         clientAuthService.login(words);
                         dialogDisplayer.showAlert("Успех", "Авторизация прошла успешно!");
-
-                        // Здесь можно перейти к главному интерфейсу приложения
-                        // openMainInterface(authToken);
 
                     } else {
                         dialogDisplayer.showAlert("Ошибка", "Сервис авторизации не доступен");

@@ -1,5 +1,6 @@
 package com.cipher.client.utils;
 
+import com.cipher.common.utils.DeterministicRandomUtils;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -14,6 +15,16 @@ import java.util.List;
  * и создания идентификаторов пользователей.
  */
 public class KeysUtils {
+
+    private static final ThreadLocal<KeyPairGenerator> KEY_PAIR_GENERATOR_THREAD_LOCAL = ThreadLocal.withInitial(() -> {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EdDSA", "BC");
+            kpg.initialize(255);
+            return kpg;
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException("Failed to initialize KeyPairGenerator", e);
+        }
+    });
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -41,7 +52,7 @@ public class KeysUtils {
         try {
             byte[] privateKeySeed = Arrays.copyOfRange(masterSeed, 0, 32);
 
-            KeyPair keyPair = generateEd25519KeyPairFromSeed(privateKeySeed);
+            KeyPair keyPair = generateKeyPairFromSeed(privateKeySeed);
             PublicKey publicKey = keyPair.getPublic();
             String userId = createUserId(publicKey);
 
@@ -54,7 +65,7 @@ public class KeysUtils {
     /**
      * Генерирует пару Ed25519/EdDSA ключей из детерминистичного сида.
      * Использует алгоритм EdDSA с кривой Ed25519 через провайдер BouncyCastle.
-     * Генерация является детерминистичной - одинаковый сид всегда produces одинаковую пару ключей.
+     * Генерация является детерминистичной - одинаковый сид всегда создает одинаковую пару ключей.
      *
      * @param seed байтовый массив сида длиной 32 байта (256 бит), используемый для детерминистичной генерации ключей
      * @return KeyPair содержащий сгенерированные приватный и публичный ключи Ed25519
@@ -73,18 +84,18 @@ public class KeysUtils {
      * @see <a href="https://tools.ietf.org/html/rfc8032">RFC 8032 - EdDSA</a>
      * @see org.bouncycastle.jce.provider.BouncyCastleProvider
      */
-    private static KeyPair generateEd25519KeyPairFromSeed(byte[] seed) throws GeneralSecurityException {
+    private static KeyPair generateKeyPairFromSeed(byte[] seed) throws GeneralSecurityException {
         try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EdDSA", "BC");
+            KeyPairGenerator keyPairGenerator = KEY_PAIR_GENERATOR_THREAD_LOCAL;
 
-            SecureRandom deterministicRandom = SecureRandom.getInstance("SHA1PRNG");
-            deterministicRandom.setSeed(seed);
+            // Используем ДЕТЕРМИНИСТИЧНЫЙ random для ключевой пары
+            SecureRandom deterministicRandom = DeterministicRandomUtils.createDeterministicRandom(seed);
 
             keyPairGenerator.initialize(255, deterministicRandom);
             return keyPairGenerator.generateKeyPair();
 
         } catch (Exception e) {
-            throw new GeneralSecurityException("Failed to generate Ed25519/EdDSA key pair from seed", e);
+            throw new GeneralSecurityException("Failed to generate key pair from seed", e);
         }
     }
 

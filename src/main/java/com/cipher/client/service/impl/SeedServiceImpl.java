@@ -9,6 +9,7 @@ import com.cipher.common.dto.AuthRequest;
 import com.cipher.common.exception.AuthException;
 import com.cipher.common.exception.CryptoException;
 import com.cipher.common.exception.NetworkException;
+import com.cipher.common.utils.SecureRandomUtils;
 import lombok.RequiredArgsConstructor;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.springframework.http.HttpStatus;
@@ -80,20 +81,16 @@ public class SeedServiceImpl implements SeedService {
      * @throws SeedGenerationException если генерация не удалась
      */
     private List<String> generatedWordsForSeed() {
-        byte[] entropy = null;
-        try {
-            SecureRandom random = new SecureRandom();
-            entropy = new byte[16];
-            random.nextBytes(entropy);
+        byte[] entropy = SecureRandomUtils.generateRandomBytes(16);
 
+        try {
             MnemonicCode mnemonicCode = MnemonicCode.INSTANCE;
             return mnemonicCode.toMnemonic(entropy);
         } catch (Exception e) {
             throw new SeedGenerationException("Ошибка генерации мнемонической фразы", e);
         } finally {
-            if (entropy != null) {
-                Arrays.fill(entropy, (byte) 0);
-            }
+            Arrays.fill(entropy, (byte) 0);
+            SecureRandomUtils.cleanUp();
         }
     }
 }

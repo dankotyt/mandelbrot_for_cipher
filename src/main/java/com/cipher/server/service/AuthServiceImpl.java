@@ -7,7 +7,9 @@ import com.cipher.common.dto.NonceRequest;
 import com.cipher.common.dto.NonceResponse;
 import com.cipher.common.entity.User;
 import com.cipher.common.exception.SeedNotFoundException;
+import com.cipher.common.utils.SecureRandomUtils;
 import com.cipher.server.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.redisson.api.RBucket;
@@ -35,13 +37,31 @@ public class AuthServiceImpl implements AuthApi {
 
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
-    private final SecureRandom secureRandom = new SecureRandom();
     private final RedissonClient redissonClient;
+    private final KeyFactory keyFactory;
 
     private static final String NONCE_KEY_PREFIX = "auth_nonce:";
+    private static final int NONCE_BYTE_LENGTH = 16;
+    private static final int NONCE_TTL_SECONDS = 15;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
+    }
+
+    /**
+     * Инициализирует криптографические провайдеры при запуске приложения.
+     * Выполняет предварительную загрузку KeyFactory для проверки доступности
+     * криптографических алгоритмов.
+     *
+     * @throws NoSuchAlgorithmException если алгоритм EdDSA недоступен
+     * @throws NoSuchProviderException если провайдер BC недоступен
+     *
+     * @implNote Метод выполняется после создания бинов, но до начала обработки запросов
+     * @see PostConstruct
+     */
+    @PostConstruct
+    public void init() throws NoSuchAlgorithmException, NoSuchProviderException {
+        KeyFactory.getInstance("EdDSA", "BC");
     }
 
     /**
@@ -54,18 +74,23 @@ public class AuthServiceImpl implements AuthApi {
      */
     @Override
     public NonceResponse requestNonce(NonceRequest request) {
-        String userId = request.userId();
+        final String userId = request.userId();
+
         if (!userRepository.existsByUserId(userId)) {
             throw new SeedNotFoundException("Account not found!");
         }
-        byte[] nonceBytes = new byte[16];
-        secureRandom.nextBytes(nonceBytes);
-        String nonce = Base64.getEncoder().encodeToString(nonceBytes);
 
-        String redisKey = NONCE_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(redisKey, nonce, 15, TimeUnit.SECONDS);
+        try {
+            byte[] nonceBytes = SecureRandomUtils.generateRandomBytes(NONCE_BYTE_LENGTH);
+            String nonce = Base64.getEncoder().encodeToString(nonceBytes);
+            String redisKey = NONCE_KEY_PREFIX + userId;
 
-        return new NonceResponse(nonce);
+            redisTemplate.opsForValue().set(redisKey, nonce, NONCE_TTL_SECONDS, TimeUnit.SECONDS);
+
+            return new NonceResponse(nonce);
+        } finally {
+            SecureRandomUtils.cleanUp();
+        }
     }
 
     /**
@@ -78,50 +103,96 @@ public class AuthServiceImpl implements AuthApi {
      */
     @Override
     public AuthResponse login(LoginRequest request) {
-        //todo добавить механизм сессий с разным временем жизни + таймаут неактивности
-        String userId = request.userId();
-        String signatureBase64 = request.signature();
-
-        String redisKey = NONCE_KEY_PREFIX + userId;
-
-        RBucket<String> nonceBucket = redissonClient.getBucket(
-                redisKey,
-                StringCodec.INSTANCE
-        );
-
-        String nonce = nonceBucket.getAndDelete();
-
-        if (nonce == null) {
-            logger.warn("Nonce not found for user: {}", userId);
-            throw new SecurityException("Nonce expired or not found!");
-        }
-
-        User user = userRepository.findByUserId(userId)
-                .orElseThrow(() -> new SecurityException("User not found!"));
+        final String userId = request.userId();
+        final String signatureBase64 = request.signature();
+        final String redisKey = NONCE_KEY_PREFIX + userId;
 
         try {
-            Signature verifier = Signature.getInstance("EdDSA", "BC");
+            String nonce = getAndDeleteNonce(redisKey);
 
-            byte[] publicKeyBytes = user.getPublicKeyBytes();
+            if (nonce == null) {
+                logger.warn("Nonce not found for user: {}", userId);
+                throw new SecurityException("Nonce expired or not found!");
+            }
 
+            User user = userRepository.findByUserId(userId)
+                    .orElseThrow(() -> new SecurityException("User not found!"));
+
+            boolean isValid = verifySignature(user.getPublicKeyBytes(), nonce, signatureBase64);
+
+            if (!isValid) {
+                logger.warn("Invalid signature for user: {}", userId);
+                throw new SecurityException("Invalid signature");
+            }
+
+            return new AuthResponse(user.getUserId(), user.getNickname());
+
+        } finally {
+            SecureRandomUtils.cleanUp();
+        }
+    }
+
+    /**
+     * Атомарно извлекает и удаляет nonce значение из Redis.
+     * Операция выполняется атомарно для предотвращения race condition.
+     *
+     * @param key ключ для доступа к nonce в Redis
+     * @return значение nonce или null если ключ не существует или истек срок действия
+     *
+     * @implSpec Использует Redisson client для атомарных операций с Redis
+     * @see RBucket#getAndDelete()
+     */
+    private String getAndDeleteNonce(String key) {
+        RBucket<String> nonceBucket = redissonClient.getBucket(key, StringCodec.INSTANCE);
+        return nonceBucket.getAndDelete();
+    }
+
+    /**
+     * Проверяет цифровую подпись с использованием публичного ключа.
+     * Выполняет верификацию подписи для предоставленных данных.
+     *
+     * @param publicKeyBytes байтовое представление публичного ключа в X509 формате
+     * @param nonce одноразовое число (nonce) которое было подписано
+     * @param signatureBase64 подпись в Base64 кодировке для верификации
+     * @return true если подпись валидна, false в противном случае
+     * @throws SecurityException если произошла ошибка во время верификации
+     *
+     * @implNote Метод создает новый экземпляр Signature для каждого вызова
+     *           так как Signature не является потокобезопасным.
+     * @implSpec После выполнения операции сбрасывает состояние Signature
+     *           для возможного повторного использования экземпляра.
+     */
+    private boolean verifySignature(byte[] publicKeyBytes, String nonce, String signatureBase64) {
+        Signature verifier = createSignature();
+
+        try {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
-
-            KeyFactory keyFactory = KeyFactory.getInstance("EdDSA", "BC");
             PublicKey publicKey = keyFactory.generatePublic(keySpec);
 
             verifier.initVerify(publicKey);
             verifier.update(nonce.getBytes(StandardCharsets.UTF_8));
 
             byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
-            boolean isValid = verifier.verify(signatureBytes);
+            return verifier.verify(signatureBytes);
 
-            if (isValid) {
-                return new AuthResponse(user.getUserId(), user.getNickname());
-            } else {
-                throw new SecurityException("Invalid signature");
-            }
         } catch (GeneralSecurityException e) {
+            logger.error("Signature verification failed", e);
             throw new SecurityException("Signature verification failed", e);
+        } finally {
+            try { verifier.initVerify((PublicKey) null); } catch (Exception ignored) {}
+        }
+    }
+
+    /**
+     * Создает новый экземпляр Signature для каждого запроса
+     * Signature НЕ потокобезопасен, поэтому нельзя использовать один экземпляр!
+     */
+    private Signature createSignature() {
+        try {
+            return Signature.getInstance("EdDSA");
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("Failed to create Signature instance", e);
+            throw new IllegalStateException("EdDSA signature not available", e);
         }
     }
 }
