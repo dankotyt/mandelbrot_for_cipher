@@ -1,5 +1,6 @@
 package com.cipher.core.utils;
 
+import com.cipher.core.controller.encrypt.EncryptGenerateParamsController;
 import com.cipher.core.controller.encrypt.EncryptLoadController;
 import com.cipher.core.controller.online.SeedGenerationController;
 import com.cipher.core.factory.ControllerFactory;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import java.awt.image.BufferedImage;
 
 @Component
 @RequiredArgsConstructor
@@ -95,5 +98,46 @@ public class SceneManager {
 
     public void showManualEncryptionPanel() {
         showScreen("/fxml/encrypt-manual.fxml");
+    }
+
+    public void showEncryptChooseAreaPanel() {
+        showScreen("/fxml/encrypt-choose-area.fxml");
+    }
+
+    public void showChoosenMandelbrotPanel() {
+        showScreen("/fxml/encrypt-choose-mandelbrot.fxml");
+    }
+
+    public void showEncryptGenerateParamsPanel(String paramsFilePath) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt-generate-params.fxml"));
+            loader.setControllerFactory(controllerFactory::createController);
+            Parent root = loader.load();
+
+            EncryptGenerateParamsController controller = loader.getController();
+            controller.setParamsFilePath(paramsFilePath);
+
+            primaryStage.getScene().setRoot(root);
+        } catch (Exception e) {
+            logger.error("Error loading encrypt generate params screen", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
+            showEncryptModePanel();
+        }
+    }
+
+    public void showEncryptFinalPanel(BufferedImage image) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt-final.fxml"));
+            loader.setControllerFactory(controllerFactory::createController);
+            Parent root = loader.load();
+
+            EncryptFinalController controller = loader.getController();
+            controller.setEncryptedImage(image);
+
+            primaryStage.getScene().setRoot(root);
+        } catch (Exception e) {
+            logger.error("Error loading encrypt final screen", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
+        }
     }
 }

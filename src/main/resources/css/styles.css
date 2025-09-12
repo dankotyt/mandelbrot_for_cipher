@@ -629,6 +629,9 @@
 .icon-write-params-button,
 .icon-next-button,
 .icon-swap-button,
+.icon-encrypt-whole-button,
+.icon-encrypt-part-button,
+.icon-reset-part-button,
 .icon-button-small {
     -fx-background-color: transparent;
     -fx-background-size: cover;
@@ -769,10 +772,26 @@
     -fx-image: url('../elements/icon_swap.png');
 }
 
+/* Стили для кнопок */
+.icon-encrypt-whole {
+    -fx-image: url('../elements/icon_encryptWhole.png');
+}
+
+.icon-encrypt-part {
+    -fx-image: url('../elements/icon_encryptPart.png');
+}
+
+.icon-reset-part {
+    -fx-image: url('../elements/icon_resetPart.png');
+}
+
 .repeat-icon,
 .manual-icon,
 .next-icon,
 .swap-icon,
+.icon-encrypt-whole,
+.icon-encrypt-part,
+.icon-reset-part,
 .hint-icon {
     -fx-fit-width: 30px;
     -fx-fit-height: 30px;
@@ -798,4 +817,117 @@
     -fx-fill: white;
     -fx-font-size: 14px;
     -fx-wrapping-width: 270px;
+}
+
+/* ===== ENCRYPT CHOOSE AREA PANEL STYLES ===== */
+
+.encrypt-choose-area-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-choose-area-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-choose-area-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.encrypt-choose-area-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.encrypt-choose-area-image-container {
+    -fx-alignment: center;
+}
+
+.mandelbrot-image {
+    -fx-translate-x: 150px;
+}
+
+.main-image-container {
+    -fx-alignment: center;
+}
+
+.selection-canvas {
+    -fx-cursor: crosshair;
+}
+
+.encrypt-choose-area-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+/* Стили для кнопок */
+.icon-encrypt-whole-button {
+    -fx-background-image: url('../elements/icon_encryptWhole.png');
+}
+
+.icon-encrypt-part-button {
+    -fx-background-image: url('../elements/icon_encryptPart.png');
+}
+
+.icon-reset-part-button {
+    -fx-background-image: url('../elements/icon_resetPart.png');
+}
+
+/* Эффекты при наведении */
+.icon-encrypt-whole-button:hover,
+.icon-encrypt-part-button:hover,
+.icon-reset-part-button:hover,
+.icon-swap-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-opacity: 0.8;
+}
+
+/* Space elements */
+.space-below-title {
+    -fx-background-color: transparent;
+    -fx-pref-height: 35px;
+}
+
+/* ===== ENCRYPT GENERATE PARAMS PANEL STYLES ===== */
+
+.encrypt-generate-params-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-generate-params-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.encrypt-generate-params-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.encrypt-generate-params-image-container {
+    -fx-alignment: center;
+}
+
+.loading-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-padding: 20px;
+}
+
+.encrypt-generate-params-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+/* Space elements */
+.space-below-title {
+    -fx-background-color: transparent;
+    -fx-pref-height: 50px;
 }

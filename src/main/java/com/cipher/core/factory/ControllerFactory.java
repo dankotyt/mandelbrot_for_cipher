@@ -3,17 +3,16 @@ package com.cipher.core.factory;
 import com.cipher.client.service.impl.ClientAuthServiceImpl;
 import com.cipher.client.service.impl.SeedServiceImpl;
 import com.cipher.client.utils.NetworkUtils;
-import com.cipher.core.controller.encrypt.EncryptBeginController;
-import com.cipher.core.controller.encrypt.EncryptGenerateController;
-import com.cipher.core.controller.encrypt.EncryptLoadController;
-import com.cipher.core.controller.encrypt.EncryptModeController;
+import com.cipher.core.controller.encrypt.*;
 import com.cipher.core.controller.online.AccountController;
 import com.cipher.core.controller.online.ConnectionController;
 import com.cipher.core.controller.online.LoginController;
 import com.cipher.core.controller.online.SeedGenerationController;
 import com.cipher.core.controller.start.LoadingController;
 import com.cipher.core.controller.start.StartController;
+import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -34,6 +33,8 @@ public class ControllerFactory {
     private final NetworkUtils networkUtils;
     private final TempFileManager tempFileManager;
     private final MandelbrotService mandelbrotService;
+    private final ImageEncrypt imageEncrypt;
+    private final BinaryFile binaryFile;
     // Добавьте другие необходимые сервисы
 
     public Object createController(Class<?> type) {
@@ -58,6 +59,11 @@ public class ControllerFactory {
             return new EncryptModeController(sceneManager, tempFileManager);
         } else if (type == EncryptGenerateController.class) {
             return new EncryptGenerateController(sceneManager, tempFileManager, dialogDisplayer, mandelbrotService);
+        } else if (type == EncryptChooseAreaController.class) {
+            return new EncryptChooseAreaController(sceneManager, tempFileManager, dialogDisplayer, imageEncrypt);
+        } else if (type == EncryptGenerateParamsController.class) {
+            return new EncryptGenerateParamsController(sceneManager, tempFileManager, dialogDisplayer,
+                    mandelbrotService, binaryFile);
         }
         return null;
     }

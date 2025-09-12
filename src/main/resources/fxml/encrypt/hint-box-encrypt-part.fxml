@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.Region?>
+
+<StackPane xmlns="http://javafx.com/javafx/11.0.1"
+           stylesheets="@../../css/styles.css"
+           styleClass="hint-container">
+
+    <Region styleClass="hint-background"/>
+
+    <VBox styleClass="hint-content">
+        <Text text="Подсказка" styleClass="hint-title"/>
+
+        <HBox styleClass="hint-row">
+            <ImageView styleClass="icon-encrypt-whole"/>
+            <TextFlow styleClass="hint-text-flow">
+                <Text text="зашифровать изображение полностью;" styleClass="hint-text"/>
+            </TextFlow>
+        </HBox>
+
+        <HBox styleClass="hint-row">
+            <ImageView styleClass="icon-encrypt-part"/>
+            <TextFlow styleClass="hint-text-flow">
+                <Text text="зашифровать выделенную часть;" styleClass="hint-text"/>
+            </TextFlow>
+        </HBox>
+
+        <HBox styleClass="hint-row">
+            <ImageView styleClass="icon-reset-part"/>
+            <TextFlow styleClass="hint-text-flow">
+                <Text text="сбросить выделение (ПКМ);" styleClass="hint-text"/>
+            </TextFlow>
+        </HBox>
+
+        <TextFlow styleClass="hint-description-flow">
+            <Text text="Для шифрования части изображения выделите нужную область"
+                  styleClass="hint-description"/>
+        </TextFlow>
+    </VBox>
+</StackPane>

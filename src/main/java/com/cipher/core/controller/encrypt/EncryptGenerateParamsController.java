@@ -1,6 +1,8 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -10,49 +12,56 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 @RequiredArgsConstructor
-public class EncryptGenerateController {
-    private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
+public class EncryptGenerateParamsController {
+    private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateParamsController.class);
 
     @FXML
     private ImageView imageView;
     @FXML private StackPane loadingContainer;
     @FXML private StackPane hintBoxContainer;
-    @FXML private StackPane imageContainer;
-    @FXML private TextArea console;
+    @FXML private Button backButton;
     @FXML private Button regenerateButton;
     @FXML private Button manualButton;
     @FXML private Button okayButton;
     @FXML private Button swapButton;
-    @FXML private Button backButton;
 
     private final SceneManager sceneManager;
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
+    private final BinaryFile binaryFile;
     private Task<Image> currentTask;
+    @Setter
+    private String paramsFilePath;
 
     @FXML
     public void initialize() {
-        setupConsole();
         loadHintBox();
         setupEventHandlers();
         loadInputImage();
         startImageGeneration();
     }
 
-    private void setupConsole() {
-        console.getStyleClass().add("generate-console");
+    private void loadHintBox() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/components/hint-box-encrypt.fxml"));
+            Parent hintBox = loader.load();
+            hintBoxContainer.getChildren().add(hintBox);
+        } catch (Exception e) {
+            logger.error("Ошибка загрузки hint-box", e);
+        }
     }
 
     private void setupEventHandlers() {
@@ -63,24 +72,20 @@ public class EncryptGenerateController {
         swapButton.setOnAction(e -> sceneManager.showEncryptChooseAreaPanel());
     }
 
-    private void loadHintBox() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/components/hint-box.fxml"));
-            Parent hintBox = loader.load();
-            hintBoxContainer.getChildren().add(hintBox);
-        } catch (Exception e) {
-            logger.error("Ошибка загрузки hint-box", e);
-        }
-    }
-
     private void loadInputImage() {
         ImageView inputImageView = tempFileManager.loadInputImageFromTemp();
-        if (inputImageView != null) {
+        if (inputImageView != null && inputImageView.getImage() != null) {
             imageView.setImage(inputImageView.getImage());
         }
     }
 
     private void startImageGeneration() {
+        if (paramsFilePath == null) {
+            logger.error("Params file path is null");
+            dialogDisplayer.showErrorDialog("Ошибка: путь к параметрам не указан");
+            return;
+        }
+
         setButtonsDisabled(true);
         showLoading(true);
 
@@ -88,10 +93,32 @@ public class EncryptGenerateController {
             @Override
             protected Image call() {
                 try {
-                    BufferedImage mandelbrotImage = mandelbrotService.generateImage();
+                    // Загрузка параметров из бинарного файла
+                    MandelbrotParams params = binaryFile.loadMandelbrotParamsFromBinaryFile(paramsFilePath);
+                    if (params == null) {
+                        throw new IOException("Не удалось загрузить параметры из файла: " + paramsFilePath);
+                    }
+
+                    // Загрузка входного изображения для получения размеров
+                    BufferedImage inputImage = tempFileManager.loadBufferedImageFromTemp("input.png");
+                    if (inputImage == null) {
+                        throw new IOException("Не удалось загрузить входное изображение");
+                    }
+
+                    // Генерация изображения с использованием параметров
+                    BufferedImage mandelbrotImage = mandelbrotService.generateImage(
+                            inputImage.getWidth(),
+                            inputImage.getHeight(),
+                            params.zoom(),
+                            params.offsetX(),
+                            params.offsetY(),
+                            params.maxIter()
+                    );
+
                     return mandelbrotImage != null ? SwingFXUtils.toFXImage(mandelbrotImage, null) : null;
+
                 } catch (Exception e) {
-                    logger.error("Ошибка генерации изображения", e);
+                    logger.error("Ошибка генерации изображения с параметрами", e);
                     return null;
                 }
             }
@@ -101,15 +128,18 @@ public class EncryptGenerateController {
             Image resultImage = currentTask.getValue();
             if (resultImage != null) {
                 ImageView resultImageView = new ImageView(resultImage);
+                resultImageView.setPreserveRatio(true);
                 resultImageView.setFitWidth(720);
                 resultImageView.setFitHeight(540);
-                resultImageView.setPreserveRatio(true);
 
-                if (imageContainer.getChildren().size() > 1) {
-                    imageContainer.getChildren().set(1, resultImageView);
-                } else {
-                    imageContainer.getChildren().add(1, resultImageView);
+                // Заменяем изображение в контейнере
+                if (loadingContainer.getParent() instanceof StackPane parent) {
+                    parent.getChildren().remove(loadingContainer);
+                    parent.getChildren().add(resultImageView);
                 }
+
+                // Сохраняем сгенерированное изображение
+                saveGeneratedImage(resultImage);
             }
             setButtonsDisabled(false);
             showLoading(false);
@@ -117,17 +147,23 @@ public class EncryptGenerateController {
 
         currentTask.setOnFailed(e -> {
             logger.error("Генерация failed", currentTask.getException());
-            dialogDisplayer.showErrorDialog("Ошибка генерации");
-            setButtonsDisabled(false);
-            showLoading(false);
-        });
-
-        currentTask.setOnCancelled(e -> {
+            dialogDisplayer.showErrorDialog("Ошибка генерации: " + currentTask.getException().getMessage());
             setButtonsDisabled(false);
             showLoading(false);
         });
 
         new Thread(currentTask).start();
+    }
+
+    private void saveGeneratedImage(Image resultImage) {
+        try {
+            BufferedImage bufferedImage = SwingFXUtils.fromFXImage(resultImage, null);
+            if (bufferedImage != null) {
+                tempFileManager.saveMandelbrotToTemp(bufferedImage);
+            }
+        } catch (Exception e) {
+            logger.error("Ошибка сохранения сгенерированного изображения", e);
+        }
     }
 
     private void showLoading(boolean show) {

@@ -24,7 +24,7 @@ public class TempFileManager {
         return new File("").getAbsolutePath() + File.separator;
     }
 
-    private String getTempPath() {
+    public String getTempPath() {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
