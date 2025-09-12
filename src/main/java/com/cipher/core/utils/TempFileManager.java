@@ -7,6 +7,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -14,7 +16,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class TempFileManager {
     private static final Logger logger = LoggerFactory.getLogger(TempFileManager.class);
-    private final DialogDisplayer displayer = new DialogDisplayer();
+
+    private final DialogDisplayer displayer;
+    private final Stage primaryStage;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -24,8 +28,34 @@ public class TempFileManager {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public TempFileManager() {
-        createTempFolder();
+    public TempFileManager(DialogDisplayer dialogDisplayer, Stage primaryStage) {
+        this.displayer = dialogDisplayer;
+        this.primaryStage = primaryStage;
+    }
+
+    public String selectImageFileForEncrypt() {
+        if (primaryStage == null) {
+            logger.error("Primary stage is not set!");
+            return null;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Выберите изображение для шифрования");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png",
+                "*.jpg", "*.jpeg"));
+
+        File selectedFile = fileChooser.showOpenDialog(primaryStage);
+
+        if (selectedFile != null) {
+            String tempPath = getTempPath();
+            File tempDir = new File(tempPath);
+            deleteFolder(tempDir);
+            saveInputImageToTemp(selectedFile);
+            return getTempPath() + "input.png";
+        } else {
+            logger.info("Файл не выбран.");
+            return null;
+        }
     }
 
     public void createTempFolder() {
@@ -101,23 +131,22 @@ public class TempFileManager {
     }
 
     public ImageView loadInputImageFromTemp() {
-        String tempPath = getTempPath();
-        String tempFilePath = tempPath + "input.png";
-        File tempFile = new File(tempFilePath);
+        try {
+            String tempPath = getTempPath();
+            String tempFilePath = tempPath + "input.png";
+            File tempFile = new File(tempFilePath);
 
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", tempFilePath);
-            displayer.showErrorDialog("Файл изображения не найден: " + tempFilePath);
+            if (!tempFile.exists() || !tempFile.canRead()) {
+                logger.error("Файл изображения не найден: {}", tempFilePath);
+                displayer.showErrorDialog("Файл изображения не найден: " + tempFilePath);
+                return null;
+            }
+
+            return new ImageView(new Image(tempFile.toURI().toString()));
+        } catch (Exception e) {
+            logger.error("Error loading input image", e);
             return null;
         }
-
-        Image image = new Image(tempFile.toURI().toString());
-        ImageView imageView = new ImageView(image);
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 50px
-
-        return imageView;
     }
 
     public BufferedImage loadBufferedImageFromTemp(String filePath) {

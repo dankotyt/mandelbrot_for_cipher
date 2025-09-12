@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.geometry.Insets?>
+<?import java.net.URL?>
+<VBox alignment="CENTER" spacing="20"
+      xmlns="http://javafx.com/javafx/11.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cipher.core.controller.start.LoadingController">
+    <stylesheets>
+        <URL value="@../../css/styles.css"/>
+    </stylesheets>
+    <styleClass>
+        <String fx:value="main-container"/>
+    </styleClass>
+
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+
+    <Label text="Mandelbrot Cipher" style="-fx-text-fill: white; -fx-font-family: 'Intro Regular'; -fx-font-size: 96"/>
+
+    <ProgressBar fx:id="progressBar" prefWidth="900" style="-fx-accent: #0065CA;" />
+</VBox>

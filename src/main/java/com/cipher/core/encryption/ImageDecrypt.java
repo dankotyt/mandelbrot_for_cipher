@@ -9,28 +9,41 @@ import java.awt.Graphics2D;
 
 import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.utils.BinaryFile;
+import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.utils.Pair;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ImageDecrypt {
     private static final Logger logger = LoggerFactory.getLogger(ImageDecrypt.class);
+
+    private final MandelbrotService mandelbrotService;
+    private final DeterministicRandomGenerator drbg;
+    private final BinaryFile binaryFile;
 
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
     }
-
     private static String getTempPath() {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public static void decryptImage(String keyFilePath) {
+    public void decryptImage(String keyFilePath) {
         try {
             // 1. Загружаем параметры дешифровки и зашифрованное изображение
-            KeyDecoderParams keyDecoderParams = BinaryFile.loadKeyDecoderFromBinaryFile(keyFilePath);
+            Pair<KeyDecoderParams, byte[]> result = binaryFile.loadKeyDecoderFromBinaryFile(keyFilePath);
+            KeyDecoderParams keyDecoderParams = result.getKey();
+            byte[] masterSeed = result.getValue();
+
+            // Создаем DRBG для дешифрования
+            drbg.initialize(masterSeed);
+
             BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
 
             double zoom = keyDecoderParams.zoom();
@@ -52,7 +65,7 @@ public class ImageDecrypt {
             }
 
             // 2. Генерируем изображение Мандельброта с нужными параметрами и размерами
-            MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(width, height);
+            MandelbrotService mandelbrotServiceGenerator = mandelbrotService.createWithSize(width, height);
             BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                     width, height, zoom, offsetX, offsetY, maxIter);
 

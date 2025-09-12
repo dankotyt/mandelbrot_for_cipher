@@ -3,6 +3,7 @@ package com.cipher.core.service;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
+import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.view.javafx.JavaFXImpl;
 
 import javax.imageio.ImageIO;
@@ -11,15 +12,19 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * @author @dankotyt Danil Kotlyarov
@@ -27,8 +32,13 @@ import org.slf4j.LoggerFactory;
  * Он позволяет пользователю сохранять сгенерированные изображения на рабочий стол и использует многопоточность для ускорения
  * генерации изображения и проверки его разнообразия.
  */
+@Component
+@RequiredArgsConstructor
 public class MandelbrotService extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
+
+    private final DeterministicRandomGenerator drbg;
+    private final BinaryFile binaryFile;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -46,24 +56,19 @@ public class MandelbrotService extends JPanel {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    /**
-     * Конструктор класса Mandelbrot.
-     * Инициализирует компонент и добавляет обработчик событий мыши для повторной генерации изображения.
-     *
-     * @param width Ширина шифруемого изображения, которое также применится и на изображение-ключ.
-     * @param height Высота шифруемого изображения, которое также применится и на изображение-ключ.
-     */
-    public MandelbrotService(int width, int height) {
-        this.startMandelbrotWidth = width;
-        this.startMandelbrotHeight = height;
-        addMouseListener(new MouseAdapter() {
+    public MandelbrotService createWithSize(int width, int height) {
+        MandelbrotService service = new MandelbrotService(this.drbg, this.binaryFile);
+        service.startMandelbrotWidth = width;
+        service.startMandelbrotHeight = height;
+        service.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
-                    generateImage();
+                    service.generateImage();
                 }
             }
         });
+        return service;
     }
 
     /**
@@ -83,11 +88,10 @@ public class MandelbrotService extends JPanel {
      * Генерирует случайные значения для параметров MAX_ITER, offsetX, offsetY и ZOOM.
      */
     public void randomPositionOnPlenty() {
-        Random random = new Random();
-        MAX_ITER = 500 + (random.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
-        offsetX = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
-        offsetY = -0.9998 + (random.nextDouble() * (0.9998 - -0.9998));
-        ZOOM = 100000 + (random.nextInt(44) * 1000);
+        MAX_ITER = 500 + (drbg.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
+        offsetX = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
+        offsetY = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
+        ZOOM = 100000 + (drbg.nextInt(44) * 1000);
         repaint();
     }
 
@@ -151,7 +155,7 @@ public class MandelbrotService extends JPanel {
                     JavaFXImpl.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
                 } else {
                     JavaFXImpl.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
-                    BinaryFile.saveMandelbrotParamsToBinaryFile(
+                    binaryFile.saveMandelbrotParamsToBinaryFile(
                             getTempPath() + "mandelbrot_params.bin",
                             currentParams
                     );
@@ -240,26 +244,49 @@ public class MandelbrotService extends JPanel {
      * @param image изображение для проверки
      * @return true если изображение удовлетворяет критериям, иначе false
      */
-    public boolean checkImageDiversity(BufferedImage image) {
-        Map<Integer, Integer> colorCount = new HashMap<>();
-        int totalPixels = image.getWidth() * image.getHeight();
-
-        for (int x = 0; x < image.getWidth(); x++) {
-            for (int y = 0; y < image.getHeight(); y++) {
-                int color = image.getRGB(x, y);
-                colorCount.put(color, colorCount.getOrDefault(color, 0) + 1);
-            }
-        }
-
-        int uniqueColors = colorCount.size();
-        int maxCount = colorCount.values().stream().max(Integer::compare).orElse(0);
-        double percentage = (double) maxCount / totalPixels;
-
-        if (isImageBlackPercentageAboveThreshold(image, 0.05)) {
+//    public boolean checkImageDiversity(BufferedImage image) {
+//        Map<Integer, Integer> colorCount = new HashMap<>();
+//        int totalPixels = image.getWidth() * image.getHeight();
+//
+//        for (int x = 0; x < image.getWidth(); x++) {
+//            for (int y = 0; y < image.getHeight(); y++) {
+//                int color = image.getRGB(x, y);
+//                colorCount.put(color, colorCount.getOrDefault(color, 0) + 1);
+//            }
+//        }
+//
+//        int uniqueColors = colorCount.size();
+//        int maxCount = colorCount.values().stream().max(Integer::compare).orElse(0);
+//        double percentage = (double) maxCount / totalPixels;
+//
+//        if (isImageBlackPercentageAboveThreshold(image, 0.05)) {
+//            return false;
+//        }
+//
+//        return (uniqueColors > 250 && percentage < 0.25);
+//    }
+    private boolean checkImageDiversity(BufferedImage image) {
+        // Быстрая проверка на черноту
+        if (isImageBlackPercentageAboveThreshold(image, 0.05)) { //todo попробовать меньше значение
             return false;
         }
 
-        return (uniqueColors > 250 && percentage < 0.25);
+        // Оптимизированная проверка уникальности цветов
+        Set<Integer> uniqueColors = new HashSet<>();
+        int[] pixelBuffer = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+
+        for (int j : pixelBuffer) {
+            int color = j & 0x00FFFFFF;
+            uniqueColors.add(color);
+
+            // Быстрый выход если уже много уникальных цветов
+            if (uniqueColors.size() > 1000) {
+                break;
+            }
+        }
+
+        // Проверка доминирующего цвета
+        return uniqueColors.size() >= 250;
     }
 
     /**
@@ -269,23 +296,43 @@ public class MandelbrotService extends JPanel {
      * @param threshold пороговое значение (от 0.0 до 1.0)
      * @return true, если процент чёрных пикселей превышает порог, иначе false
      */
-    public static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
+//    public static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
+//        int width = image.getWidth();
+//        int height = image.getHeight();
+//        int blackPixelCount = 0;
+//
+//        for (int y = 0; y < height; y++) {
+//            for (int x = 0; x < width; x++) {
+//                int pixel = image.getRGB(x, y);
+//                if (isBlackPixel(pixel)) {
+//                    blackPixelCount++;
+//                }
+//            }
+//        }
+//
+//        double percentageBlack = (double) blackPixelCount / (width * height);
+//
+//        return percentageBlack > threshold;
+//    }
+    private static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
         int width = image.getWidth();
         int height = image.getHeight();
+        int totalPixels = width * height;
         int blackPixelCount = 0;
+        int maxBlackPixels = (int) (totalPixels * threshold) + 1;
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int pixel = image.getRGB(x, y);
-                if (isBlackPixel(pixel)) {
-                    blackPixelCount++;
+        int[] pixelBuffer = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+
+        for (int pixel : pixelBuffer) {
+            if (isBlackPixel(pixel)) {
+                blackPixelCount++;
+                if (blackPixelCount >= maxBlackPixels) {
+                    return true;
                 }
             }
         }
 
-        double percentageBlack = (double) blackPixelCount / (width * height);
-
-        return percentageBlack > threshold;
+        return false;
     }
 
     /**
@@ -294,7 +341,7 @@ public class MandelbrotService extends JPanel {
      * @param pixel значение пикселя в формате RGB
      * @return true если пиксель полностью чёрный, иначе false
      */
-    public static boolean isBlackPixel(int pixel) {
+    private static boolean isBlackPixel(int pixel) {
         int red = (pixel >> 16) & 0xFF;
         int green = (pixel >> 8) & 0xFF;
         int blue = pixel & 0xFF;
@@ -314,7 +361,6 @@ public class MandelbrotService extends JPanel {
         try {
             ImageIO.write(image, "png", file);
         } catch (IOException e) {
-            // Заменяем JOptionPane на JavaFX Alert
             Platform.runLater(() -> {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Ошибка сохранения");
@@ -334,7 +380,7 @@ public class MandelbrotService extends JPanel {
     public BufferedImage generateAfterGetParams(String imagePath) {
         try {
             // Загрузка параметров
-            MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(imagePath);
+            MandelbrotParams params = binaryFile.loadMandelbrotParamsFromBinaryFile(imagePath);
 
             // Проверка параметров
             if (params.startMandelbrotWidth() <= 0 || params.startMandelbrotHeight() <= 0) {
@@ -345,7 +391,9 @@ public class MandelbrotService extends JPanel {
             }
 
             // Генерация изображения
-            MandelbrotService mandelbrotService = new MandelbrotService(params.startMandelbrotWidth(), params.startMandelbrotHeight());
+            MandelbrotService mandelbrotService = createWithSize(
+                    params.startMandelbrotWidth(), params.startMandelbrotHeight());
+
             BufferedImage generatedImage = mandelbrotService.generateImage(
                     params.startMandelbrotWidth(),
                     params.startMandelbrotHeight(),

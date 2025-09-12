@@ -2,12 +2,15 @@ package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.utils.BinaryFile;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 
 @Service
+@RequiredArgsConstructor
 public class EncryptionService {
+    private final BinaryFile binaryFile;
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
     }
@@ -23,19 +26,7 @@ public class EncryptionService {
 
         MandelbrotParams params = new MandelbrotParams(width, height, zoom, x, y, iterations);
 
-        BinaryFile.saveMandelbrotParamsToBinaryFile(
-                getTempPath() + "mandelbrot_params.bin",
-                params
-        );
-    }
-
-    public void saveMandelbrotParameters(MandelbrotParams params) {
-        if (params.zoom() <= 0 || params.maxIter() <= 0 ||
-                params.startMandelbrotWidth() <= 0 || params.startMandelbrotHeight() <= 0) {
-            throw new IllegalArgumentException("Некорректные данные");
-        }
-
-        BinaryFile.saveMandelbrotParamsToBinaryFile(
+        binaryFile.saveMandelbrotParamsToBinaryFile(
                 getTempPath() + "mandelbrot_params.bin",
                 params
         );

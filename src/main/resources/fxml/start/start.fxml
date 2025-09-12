@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+
+<?import java.lang.String?>
+<?import java.net.URL?>
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.start.StartController">
+
+    <stylesheets>
+        <URL value="@../../css/styles.css"/>
+    </stylesheets>
+    <styleClass>
+        <String fx:value="main-container"/>
+    </styleClass>
+
+    <top>
+        <VBox alignment="CENTER" styleClass="top-center-container">
+            <Label text="Начало работы" styleClass="main-title"/>
+        </VBox>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" styleClass="center-vbox">
+            <Region styleClass="space-below-title"/>
+            <!-- Левая кнопка шифрования с правым отступом -->
+            <Button fx:id="encryptButton" styleClass="icon-button">
+                <graphic>
+                    <ImageView preserveRatio="true" fitWidth="615">
+                        <Image url="@../../elements/icon_lock.png"/>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <!-- Невидимый прямоугольник для отступа -->
+            <Region prefHeight="30" styleClass="spacer"/>
+
+            <!-- Правая кнопка дешифрования с левым отступом -->
+            <Button fx:id="decryptButton" styleClass="icon-button">
+                <graphic>
+                    <ImageView preserveRatio="true" fitWidth="615">
+                        <Image url="@../../elements/icon_unlock.png"/>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <!-- Невидимый прямоугольник для отступа -->
+            <Region prefHeight="30" styleClass="spacer"/>
+
+            <!-- Кнопка подключения -->
+            <Button fx:id="connectButton" text="Подключение к серверу"
+                    styleClass="action-button" prefWidth="380" prefHeight="68"/>
+
+            <!-- Невидимый прямоугольник для отступа -->
+            <Region prefHeight="30" styleClass="spacer"/>
+
+            <!-- Кнопка выхода -->
+            <Button fx:id="exitButton" text="Завершить программу"
+                    styleClass="action-button" prefWidth="350" prefHeight="68"/>
+
+        </VBox>
+    </center>
+</BorderPane>

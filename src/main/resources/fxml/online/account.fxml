@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.online.AccountController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container"
+            fx:id="accountContainer">
+
+    <top>
+        <BorderPane styleClass="account-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"
+                            onAction="#handleBack"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 40 0 30 0;">
+                    <Label fx:id="titleLabel" text="Личный аккаунт"
+                           styleClass="account-title"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" spacing="30" styleClass="account-center-container">
+            <Region styleClass="space-below-title"/>
+            <Label text="Добро пожаловать в ваш аккаунт!"
+                   styleClass="account-welcome"/>
+
+            <Button text="Настройки" styleClass="account-button"/>
+            <Button text="Выйти" styleClass="account-button" onAction="#handleLogout"/>
+        </VBox>
+    </center>
+</BorderPane>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.image.ImageView?>
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.encrypt.EncryptGenerateController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane styleClass="encrypt-generate-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label text="Ваше изображение-ключ:" styleClass="encrypt-generate-title"/>
+                    <Region prefHeight="100"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <GridPane styleClass="encrypt-generate-grid">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="300" hgrow="NEVER"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <!-- Левая колонка - подсказка и консоль -->
+            <VBox styleClass="hint-console-container"
+                  GridPane.columnIndex="0" GridPane.rowIndex="0">
+                <StackPane fx:id="hintBoxContainer"/> <!-- Контейнер для hint-box -->
+                <TextArea fx:id="console" styleClass="generate-console"
+                          prefWidth="400" prefHeight="200"/>
+            </VBox>
+
+            <HBox GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <Region prefWidth="200"/>
+            </HBox>
+
+            <!-- Правая колонка - контент -->
+            <VBox styleClass="encrypt-generate-content"
+                  GridPane.columnIndex="2" GridPane.rowIndex="0">
+                <StackPane fx:id="imageContainer" styleClass="image-container">
+                    <ImageView fx:id="imageView" preserveRatio="true"
+                               fitWidth="640" fitHeight="480" translateX="150"/>
+                    <Region styleClass="dark-gray-rect-without-translate"/>
+                    <StackPane fx:id="loadingContainer" styleClass="loading-container">
+                        <Label text="Картинка генерируется..." styleClass="loading-label"/>
+                    </StackPane>
+                </StackPane>
+                <Region prefHeight="15"/>
+                <HBox styleClass="encrypt-generate-buttons">
+                    <Button fx:id="regenerateButton" styleClass="icon-repeat-button"/>
+                    <Button fx:id="manualButton" styleClass="icon-write-params-button"/>
+                    <Button fx:id="okayButton" styleClass="icon-next-button"/>
+                    <Button fx:id="swapButton" styleClass="icon-swap-button"/>
+                </HBox>
+            </VBox>
+        </GridPane>
+    </center>
+
+<!--    <bottom>-->
+<!--        <HBox styleClass="encrypt-generate-buttons">-->
+<!--            <Button fx:id="regenerateButton" styleClass="icon-repeat-button"/>-->
+<!--            <Button fx:id="manualButton" styleClass="icon-write-params-button"/>-->
+<!--            <Button fx:id="okayButton" styleClass="icon-next-button"/>-->
+<!--            <Button fx:id="swapButton" styleClass="icon-swap-button"/>-->
+<!--        </HBox>-->
+<!--    </bottom>-->
+</BorderPane>

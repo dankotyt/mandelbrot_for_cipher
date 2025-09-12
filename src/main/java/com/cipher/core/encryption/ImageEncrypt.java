@@ -6,22 +6,29 @@ import java.awt.image.RasterFormatException;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import java.security.SecureRandom;
 import java.util.Map;
 
 import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.utils.BinaryFile;
+import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.Pair;
 import javafx.geometry.Rectangle2D;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ImageEncrypt {
-    private static final Logger logger = LoggerFactory.getLogger(ImageEncrypt.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private final MandelbrotService mandelbrotService;
+    private final BinaryFile binaryFile;
+    private final DeterministicRandomGenerator drbg;
+
     private static BufferedImage encryptedWholeImage;
 
     private static String getProjectRootPath() {
@@ -32,7 +39,7 @@ public class ImageEncrypt {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public static BufferedImage encryptSelectedArea(BufferedImage originalImage, Rectangle2D selectedArea)
+    public BufferedImage encryptSelectedArea(BufferedImage originalImage, Rectangle2D selectedArea)
             throws IllegalArgumentException, RasterFormatException, IOException {
 
         // Проверка входных параметров
@@ -58,9 +65,13 @@ public class ImageEncrypt {
         // Выделяем выбранную область
         BufferedImage selectedImage = originalImage.getSubimage(startX, startY, width, height);
 
-        // Определяем размеры сегментов
-        int segmentWidthSize = 4;
-        int segmentHeightSize = 4;
+        byte[] masterSeed = new byte[32];
+        SECURE_RANDOM.nextBytes(masterSeed);
+        drbg.initialize(masterSeed);
+
+        int segmentSize = drbg.generateAdaptiveSegmentSize(selectedImage.getWidth(), selectedImage.getHeight());
+        int segmentWidthSize = segmentSize;
+        int segmentHeightSize = segmentSize;
 
         // Корректируем размеры сегментов, если необходимо
         while (width % segmentWidthSize != 0) {
@@ -70,10 +81,8 @@ public class ImageEncrypt {
             segmentHeightSize--;
         }
 
-        // 1. Сначала сегментируем и перемешиваем исходное изображение
-        ImageSegmentShuffler shuffler = new ImageSegmentShuffler(selectedImage);
         Pair<BufferedImage, Map<Integer, Integer>> shuffledResult =
-                shuffler.shuffleSegments(selectedImage, segmentWidthSize, segmentHeightSize);
+                ImageSegmentShuffler.shuffleSegments(selectedImage, segmentWidthSize, segmentHeightSize, drbg);
         BufferedImage shuffledImage = shuffledResult.getKey();
         Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
 
@@ -82,11 +91,11 @@ public class ImageEncrypt {
         int newHeight = shuffledImage.getHeight();
 
         // 2. Загружаем параметры из предварительно сгенерированного Мандельброта
-        MandelbrotParams mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(
+        MandelbrotParams mandelbrotParams = binaryFile.loadMandelbrotParamsFromBinaryFile(
                 getTempPath() + "mandelbrot_params.bin");
 
         // 3. Генерируем Мандельброт с теми же параметрами, но под новые размеры
-        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
+        MandelbrotService mandelbrotServiceGenerator = mandelbrotService.createWithSize(newWidth, newHeight);
         BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                 newWidth, newHeight,
                 mandelbrotParams.zoom(),
@@ -118,27 +127,29 @@ public class ImageEncrypt {
                 newWidth,
                 newHeight);
 
-        BinaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin", keyDecoderParams);
+        binaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin", keyDecoderParams, masterSeed);
 
         return originalImage;
     }
 
     public void encryptWholeImage(BufferedImage image) throws IOException {
-        MandelbrotParams previewParams = BinaryFile
-                .loadMandelbrotParamsFromBinaryFile(getTempPath() + "mandelbrot_params.bin");
-
-        // 2. Подготовка изображения и сегментация (как было)
         int width = image.getWidth();
         int height = image.getHeight();
 
-        int segmentWidthSize = 4;
-        int segmentHeightSize = 4;
+        byte[] masterSeed = new byte[32];
+        SECURE_RANDOM.nextBytes(masterSeed);
+        drbg.initialize(masterSeed);
 
-        if (width % segmentWidthSize != 0) {
-            width = (width / segmentWidthSize + 1) * segmentWidthSize;
+        MandelbrotParams previewParams = binaryFile
+                .loadMandelbrotParamsFromBinaryFile(getTempPath() + "mandelbrot_params.bin");
+
+        int segmentSize = drbg.generateAdaptiveSegmentSize(width, height);
+
+        if (width % segmentSize != 0) {
+            width = (width / segmentSize + 1) * segmentSize;
         }
-        if (height % segmentHeightSize != 0) {
-            height = (height / segmentHeightSize + 1) * segmentHeightSize;
+        if (height % segmentSize != 0) {
+            height = (height / segmentSize + 1) * segmentSize;
         }
 
         if (image.getWidth() != width || image.getHeight() != height) {
@@ -146,7 +157,7 @@ public class ImageEncrypt {
         }
 
         Pair<BufferedImage, Map<Integer, Integer>> shuffledResult =
-                ImageSegmentShuffler.shuffleSegments(image, segmentWidthSize, segmentHeightSize);
+                ImageSegmentShuffler.shuffleSegments(image, segmentSize, segmentSize, drbg);
         BufferedImage shuffledImage = shuffledResult.getKey();
         Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
 
@@ -154,7 +165,7 @@ public class ImageEncrypt {
         int newHeight = shuffledImage.getHeight();
 
         // 3. Генерируем финальный Мандельброт с теми же параметрами, но новыми размерами
-        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
+        MandelbrotService mandelbrotServiceGenerator = mandelbrotService.createWithSize(newWidth, newHeight);
         BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                 newWidth, newHeight,
                 previewParams.zoom(),
@@ -173,10 +184,11 @@ public class ImageEncrypt {
 
         KeyDecoderParams keyDecoderParams = new KeyDecoderParams(
                 previewParams.zoom(), previewParams.offsetX(), previewParams.offsetY(),
-                previewParams.maxIter(), segmentWidthSize, segmentHeightSize, segmentMapping,
+                previewParams.maxIter(), segmentSize, segmentSize, segmentMapping,
                 0, 0, newWidth, newHeight);
 
-        BinaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin", keyDecoderParams);
+        binaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin",
+                keyDecoderParams, masterSeed);
     }
 
     public BufferedImage getEncryptedImage() {

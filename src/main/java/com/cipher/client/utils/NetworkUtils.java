@@ -49,11 +49,13 @@ public class NetworkUtils {
     public static void checkNetworkConnection() {
         if (!isNetworkAvailable()) {
             throw new NetworkException(
-                    "Нет подключения к интернету\n\n" +
-                            "Пожалуйста, проверьте:\n" +
-                            "• Подключение к сети Wi-Fi или Ethernet\n" +
-                            "• Настройки firewall\n" +
-                            "• Доступность сервера авторизации"
+                    """
+                            Нет подключения к интернету
+                            
+                            Пожалуйста, проверьте:
+                            • Подключение к сети Wi-Fi или Ethernet
+                            • Настройки firewall
+                            • Доступность сервера авторизации"""
             );
         }
     }

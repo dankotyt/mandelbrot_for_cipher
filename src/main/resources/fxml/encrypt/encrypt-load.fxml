@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.image.ImageView?>
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.encrypt.EncryptLoadController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane styleClass="encrypt-load-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label text="Загруженное для шифрования изображение:"
+                           styleClass="encrypt-load-title"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="10" styleClass="encrypt-load-center-container">
+            <Region styleClass="space-below-title"/>
+            <StackPane styleClass="encrypt-load-rect-container">
+                <Region styleClass="dark-gray-rect"/>
+                <ImageView fx:id="imageView" fitWidth="720" fitHeight="540"/>
+            </StackPane>
+        </VBox>
+    </center>
+
+    <bottom>
+        <VBox alignment="CENTER" style="-fx-padding: 0 0 20 0;">
+            <Region prefHeight="50"/>
+            <Button fx:id="continueButton" text="Продолжить шифрование"
+                    styleClass="encrypt-load-continue-button"/>
+        </VBox>
+    </bottom>
+</BorderPane>

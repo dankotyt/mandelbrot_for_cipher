@@ -86,7 +86,7 @@ public class KeysUtils {
      */
     private static KeyPair generateKeyPairFromSeed(byte[] seed) throws GeneralSecurityException {
         try {
-            KeyPairGenerator keyPairGenerator = KEY_PAIR_GENERATOR_THREAD_LOCAL;
+            KeyPairGenerator keyPairGenerator = KEY_PAIR_GENERATOR_THREAD_LOCAL.get();
 
             // Используем ДЕТЕРМИНИСТИЧНЫЙ random для ключевой пары
             SecureRandom deterministicRandom = DeterministicRandomUtils.createDeterministicRandom(seed);

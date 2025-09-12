@@ -1,0 +1,801 @@
+/* Основной градиентный фон */
+.main-container {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #011324FF 0%, #011A30FF 100%);
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+    -fx-min-width: 100%;
+    -fx-min-height: 100%;
+}
+
+/* Заголовок */
+.top-center-container {
+    -fx-alignment: center;
+    -fx-padding: 80 0 0 0;
+}
+
+.main-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 72px;
+}
+
+/* Центральный вертикальный контейнер */
+.center-vbox {
+    -fx-alignment: center;
+    -fx-spacing: 0;
+}
+
+/* Контейнер для кнопок шифрования/дешифрования */
+.encrypt-decrypt-hbox {
+    -fx-alignment: center;
+    -fx-spacing: 50;
+    -fx-padding: 0;
+}
+
+/* Контейнеры для отдельных кнопок с отступами */
+.encrypt-button-box {
+    -fx-alignment: center;
+    -fx-padding: 0 0 0 250;
+}
+
+.decrypt-button-box {
+    -fx-alignment: center;
+    -fx-padding: 0 250 0 0;
+}
+
+.connect-button-box {
+    -fx-alignment: center;
+    -fx-padding: 30 0 0 0;
+}
+
+.exit-button-box {
+    -fx-alignment: center;
+    -fx-padding: 30 0 50 0;
+}
+
+/* Стили кнопок */
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-content-display: graphic-only;
+    -fx-min-width: 310px;
+}
+
+/* Кнопка назад */
+.icon-back-button {
+    -fx-background-color: transparent;
+    -fx-background-image: url('../elements/icon_back.png');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-border-width: 0;
+}
+
+.icon-button:hover {
+    -fx-opacity: 0.8;
+}
+
+.icon-button:pressed {
+    -fx-opacity: 0.6;
+}
+
+.action-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: #3A5975;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-alignment: center;
+}
+
+.action-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: #4A6985;
+    -fx-cursor: hand;
+}
+
+.action-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-border-color: #5A7985;
+}
+
+/* Невидимые прямоугольники для выравнивания */
+.spacer {
+    -fx-min-width: 250px;
+    -fx-max-width: 250px;
+    -fx-pref-width: 250px;
+    -fx-background-color: transparent;
+}
+
+/* ===== CONNECTION PANEL STYLES ===== */
+
+/* Заголовок подключения */
+.connection-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+}
+
+/* Кнопки подключения */
+.connection-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-alignment: center;
+    -fx-min-width: 200px;
+    -fx-min-height: 60px;
+}
+
+.connection-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.connection-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== SEED GENERATION PANEL STYLES ===== */
+
+/* Title */
+.seed-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+}
+
+/* Center container */
+.seed-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: center;
+}
+
+/* Grid for words */
+.seed-grid {
+    -fx-alignment: center;
+    -fx-padding: 30px;
+}
+
+.seed-number {
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-font-family: 'Intro Regular';
+    -fx-min-width: 50px;
+    -fx-alignment: center-right;
+}
+
+.seed-word {
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+    -fx-font-family: 'Intro Regular';
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-padding: 10px 15px;
+    -fx-background-radius: 8px;
+}
+
+/* Warning label */
+.seed-warning {
+    -fx-text-fill: #FF6B6B;
+    -fx-font-size: 20px;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+}
+
+/* Confirm button */
+.seed-confirm-button {
+    -fx-background-color: #4CAF50;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-background-radius: 10px;
+    -fx-padding: 15px 30px;
+    -fx-min-width: 250px;
+}
+
+.seed-confirm-button:hover {
+    -fx-background-color: #45a049;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.seed-confirm-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Word container */
+.word-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 15px;
+}
+
+/* ===== LOGIN PANEL STYLES ===== */
+
+/* Top container */
+.login-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.login-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+}
+
+/* Center container */
+.login-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: center;
+}
+
+/* Grid for word fields */
+.login-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+/* Number label for login fields */
+.login-number {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-family: 'Intro Regular';
+    -fx-min-width: 30px;
+}
+
+/* Text field for login */
+.login-field {
+    -fx-font-size: 16px;
+    -fx-font-family: 'Intro Regular';
+    -fx-background-radius: 5px;
+    -fx-pref-width: 150px;
+    -fx-prompt-text-fill: #cccccc;
+}
+
+.login-field:focused {
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+}
+
+/* Word container */
+.login-word-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 5px;
+}
+
+/* Confirm button */
+.login-confirm-button {
+    -fx-background-color: #4CAF50;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 200px;
+}
+
+.login-confirm-button:hover {
+    -fx-background-color: #45a049;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.login-confirm-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ACCOUNT PANEL STYLES ===== */
+
+/* Top container */
+.account-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.account-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+}
+
+/* Center container */
+.account-center-container {
+    -fx-padding: 40px;
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+}
+
+/* Welcome text */
+.account-welcome {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-padding: 20px;
+}
+
+/* Account buttons */
+.account-button {
+    -fx-background-color: #2196F3;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 150px;
+}
+
+.account-button:hover {
+    -fx-background-color: #1976D2;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.account-button:pressed {
+    -fx-background-color: #0D47A1;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Logout button special style */
+.logout-button {
+    -fx-background-color: #F44336;
+}
+
+.logout-button:hover {
+    -fx-background-color: #D32F2F;
+}
+
+/* ===== ENCRYPT BEGIN PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.encrypt-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 72px;
+    -fx-alignment: top-center;
+}
+
+/* Center container */
+.encrypt-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Space elements */
+.space-below-title {
+    -fx-background-color: transparent;
+    -fx-pref-height: 100px; /*мб нужно 50*/
+}
+
+.space-in-bottom {
+    -fx-background-color: transparent;
+    -fx-pref-height: 120px;
+}
+
+/* Rectangle styles */
+.light-gray-rect {
+    -fx-background-color: #494949;
+    -fx-pref-width: 720px;
+    -fx-pref-height: 540px;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-max-width: 720px;
+    -fx-max-height: 540px;
+}
+
+.dark-gray-rect {
+    -fx-background-color: #373737;
+    -fx-pref-width: 640px;
+    -fx-pref-height: 480px;
+    -fx-min-width: 640px;
+    -fx-min-height: 480px;
+    -fx-max-width: 640px;
+    -fx-max-height: 480px;
+    -fx-translate-x: 150px;
+}
+
+.dark-gray-rect-without-translate {
+    -fx-background-color: #373737;
+    -fx-pref-width: 720px;
+    -fx-pref-height: 540px;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-max-width: 720px;
+    -fx-max-height: 540px;
+}
+
+/* Container for rectangles */
+.rect-container {
+    -fx-alignment: center;
+}
+
+/* Upload button */
+.encrypt-upload-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-pref-width: 257px;
+    -fx-pref-height: 68px;
+}
+
+.encrypt-upload-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-upload-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Button container */
+.button-container {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+/* ===== ENCRYPT LOAD PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-load-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.encrypt-load-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: top-center;
+    -fx-text-alignment: center;
+}
+
+/* Center container */
+.encrypt-load-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Container for rectangles */
+.encrypt-load-rect-container {
+    -fx-alignment: center;
+}
+
+/* Image container */
+.image-container {
+    -fx-alignment: center;
+}
+
+/* Continue button */
+.encrypt-load-continue-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 290px;
+    -fx-pref-height: 50px;
+}
+
+.encrypt-load-continue-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-load-continue-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT MODE PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-mode-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.encrypt-mode-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: top-center;
+    -fx-text-alignment: center;
+}
+
+/* Center container */
+.encrypt-mode-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Content container */
+.encrypt-mode-content-container {
+    -fx-alignment: center;
+}
+
+/* Mode buttons */
+.encrypt-mode-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 400px;
+    -fx-pref-height: 65px;
+    -fx-min-width: 400px;
+    -fx-min-height: 65px;
+}
+
+.encrypt-mode-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-mode-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT GENERATE PANEL STYLES ===== */
+
+.encrypt-generate-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-generate-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-generate-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.hint-console-container {
+    -fx-spacing: 30px;
+    -fx-alignment: center;
+}
+
+.hint-box {
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-background-color: transparent;
+    -fx-pref-width: 300px;
+    -fx-pref-height: 230px;
+}
+
+.encrypt-generate-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.loading-container {
+    -fx-alignment: center;
+}
+
+.loading-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+}
+
+.encrypt-generate-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+.icon-repeat-button,
+.icon-write-params-button,
+.icon-next-button,
+.icon-swap-button,
+.icon-button-small {
+    -fx-background-color: transparent;
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-pref-width: 50px;
+    -fx-pref-height: 50px;
+    -fx-max-width: 70px;
+    -fx-max-height: 70px;
+    -fx-border-width: 0;
+}
+
+.generate-console {
+    -fx-font-family: monospace;
+    -fx-font-size: 14px;
+    -fx-text-fill: white;
+    -fx-control-inner-background: #001F3D;
+    -fx-background-color: #001F3D;
+    -fx-pref-width: 400px;
+    -fx-pref-height: 200px;
+}
+
+.generate-console .scroll-bar:vertical {
+    -fx-background-color: #001F3D;
+    -fx-pref-width: 10px;
+}
+
+.generate-console .scroll-bar:vertical .track {
+    -fx-background-color: #001F3D;
+}
+
+.generate-console .scroll-bar:vertical .thumb {
+    -fx-background-color: #004488;
+    -fx-background-radius: 5px;
+}
+
+.generate-console .scroll-bar:vertical .increment-button,
+.generate-console .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.generate-console .scroll-bar:vertical .increment-arrow,
+.generate-console .scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: transparent;
+}
+
+/* Горизонтальный скроллбар */
+.generate-console .scroll-bar:horizontal {
+    -fx-background-color: #001F3D;
+    -fx-pref-height: 10px;
+}
+
+.generate-console .scroll-bar:horizontal .track {
+    -fx-background-color: #001F3D;
+    -fx-border-color: transparent;
+}
+
+.generate-console .scroll-bar:horizontal .thumb {
+    -fx-background-color: #004488;
+    -fx-background-radius: 5px;
+}
+
+/* Конкретные иконки */
+.icon-repeat-button {
+    -fx-background-image: url('../elements/icon_repeat.png');
+}
+
+.icon-write-params-button {
+    -fx-background-image: url('../elements/icon_writeParams.png');
+}
+
+.icon-next-button {
+    -fx-background-image: url('../elements/icon_next.png');
+}
+
+.icon-swap-button {
+    -fx-background-image: url('../elements/icon_swap.png');
+}
+
+/* ===== HINT BOX STYLES ===== */
+
+.hint-container {
+    -fx-pref-width: 300px;
+    -fx-pref-height: 230px;
+    -fx-max-width: 600px;
+    -fx-max-height: 460px;
+    -fx-min-width: 300px;
+    -fx-min-height: 230px;
+}
+
+.hint-background {
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-background-color: transparent;
+    -fx-pref-width: 300px;
+    -fx-pref-height: 230px;
+    -fx-max-width: 600px;
+    -fx-max-height: 460px;
+    -fx-min-width: 300px;
+    -fx-min-height: 230px;
+}
+
+.hint-content {
+    -fx-alignment: top-left;
+    -fx-spacing: 8px;
+    -fx-padding: 10 15 10 15;
+}
+
+.hint-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-font-weight: bold;
+    -fx-fill: white;
+    -fx-font-size: 18px;
+}
+
+.hint-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 5px;
+}
+
+.repeat-icon {
+    -fx-image: url('../elements/icon_repeat.png');
+}
+
+.manual-icon {
+    -fx-image: url('../elements/icon_writeParams.png');
+}
+
+.next-icon {
+    -fx-image: url('../elements/icon_next.png');
+}
+
+.swap-icon {
+    -fx-image: url('../elements/icon_swap.png');
+}
+
+.repeat-icon,
+.manual-icon,
+.next-icon,
+.swap-icon,
+.hint-icon {
+    -fx-fit-width: 30px;
+    -fx-fit-height: 30px;
+}
+
+/* TextFlow для автоматического переноса */
+.hint-text-flow {
+    -fx-max-width: infinity;/*240px;  300px - 30px(иконка) - 10px(отступы) */
+}
+
+.hint-text {
+    -fx-font-family: 'Intro Regular';
+    -fx-fill: white;
+    -fx-font-size: 14px;
+}
+
+.hint-description-flow {
+    -fx-max-width: infinity; /*270px;*/
+}
+
+.hint-description {
+    -fx-font-family: 'Intro Regular';
+    -fx-fill: white;
+    -fx-font-size: 14px;
+    -fx-wrapping-width: 270px;
+}

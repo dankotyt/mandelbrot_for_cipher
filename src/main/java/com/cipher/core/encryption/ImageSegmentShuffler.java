@@ -1,7 +1,7 @@
 package com.cipher.core.encryption;
 
+import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.Pair;
-import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
@@ -21,7 +21,7 @@ public class ImageSegmentShuffler {
      * @param segmentHeight высота сегмента (может быть 1, 2 или любое другое значение)
      * @return список прямоугольников, представляющих сегменты
      */
-    public static List<Rectangle> createSegments(BufferedImage image, int segmentWidth, int segmentHeight) {
+    private static List<Rectangle> createSegments(BufferedImage image, int segmentWidth, int segmentHeight) {
         List<Rectangle> segments = new ArrayList<>();
         int width = image.getWidth();
         int height = image.getHeight();
@@ -60,7 +60,7 @@ public class ImageSegmentShuffler {
      * @return перемешанное изображение и карта соответствия сегментов
      */
     public static Pair<BufferedImage, Map<Integer, Integer>> shuffleSegments(
-            BufferedImage image, int segmentWidth, int segmentHeight) {
+            BufferedImage image, int segmentWidth, int segmentHeight, DeterministicRandomGenerator drbg) {
 
         List<Rectangle> segments = createSegments(image, segmentWidth, segmentHeight);
         BufferedImage result = new BufferedImage(
@@ -71,7 +71,7 @@ public class ImageSegmentShuffler {
         for (int i = 0; i < segments.size(); i++) {
             indices.add(i);
         }
-        Collections.shuffle(indices);
+        drbg.shuffleList(indices);
 
         // Создаем карту соответствия оригинальных и новых позиций
         Map<Integer, Integer> segmentMapping = new HashMap<>();

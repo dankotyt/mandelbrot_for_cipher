@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.GridPane?>
+
+<?import javafx.scene.layout.Region?>
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane>
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 40 0 30 0;">
+                    <Label text="Ваша seed-фраза:" styleClass="seed-title"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" spacing="30" styleClass="seed-center-container">
+            <Region styleClass="space-below-title"/>
+            <GridPane styleClass="seed-grid" hgap="30" vgap="20">
+                <!-- Тестовые данные для preview -->
+                <HBox styleClass="word-container">
+                    <Label text="1." styleClass="seed-number"/>
+                    <Label text="apple" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.columnIndex="1">
+                    <Label text="2." styleClass="seed-number"/>
+                    <Label text="banana" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.columnIndex="2">
+                    <Label text="3." styleClass="seed-number"/>
+                    <Label text="cherry" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="1">
+                    <Label text="4." styleClass="seed-number"/>
+                    <Label text="date" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                    <Label text="5." styleClass="seed-number"/>
+                    <Label text="elderberry" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="1" GridPane.columnIndex="2">
+                    <Label text="6." styleClass="seed-number"/>
+                    <Label text="fig" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="2">
+                    <Label text="7." styleClass="seed-number"/>
+                    <Label text="grape" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="2" GridPane.columnIndex="1">
+                    <Label text="8." styleClass="seed-number"/>
+                    <Label text="honeydew" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="2" GridPane.columnIndex="2">
+                    <Label text="9." styleClass="seed-number"/>
+                    <Label text="kiwi" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="3">
+                    <Label text="10." styleClass="seed-number"/>
+                    <Label text="lemon" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="3" GridPane.columnIndex="1">
+                    <Label text="11." styleClass="seed-number"/>
+                    <Label text="mango" styleClass="seed-word"/>
+                </HBox>
+                <HBox styleClass="word-container" GridPane.rowIndex="3" GridPane.columnIndex="2">
+                    <Label text="12." styleClass="seed-number"/>
+                    <Label text="nectarine" styleClass="seed-word"/>
+                </HBox>
+            </GridPane>
+
+            <Label fx:id="warningLabel"
+                   styleClass="seed-warning"
+                   text="ЗАПИШИТЕ эти слова в безопасном месте!"/>
+
+            <Label styleClass="seed-warning"
+                   text="Это единственный способ восстановить доступ к аккаунту."/>
+
+            <Button text="Я записал слова" styleClass="seed-confirm-button"/>
+        </VBox>
+    </center>
+</BorderPane>

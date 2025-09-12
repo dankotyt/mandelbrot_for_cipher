@@ -23,6 +23,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -53,10 +54,13 @@ import java.util.concurrent.TimeUnit;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageDecrypt;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 
+@RequiredArgsConstructor
 public class JavaFXImpl extends Application {
     private static final Logger logger = LoggerFactory.getLogger(JavaFXImpl.class);
 
@@ -75,13 +79,20 @@ public class JavaFXImpl extends Application {
     private boolean drawingRectangle = false;
     private boolean rectangleSelected = false;
     private final TextField[] wordFields = new TextField[12];
-    private SeedServiceImpl seedService;
-    private ClientAuthServiceImpl clientAuthService;
 
+    private final SeedServiceImpl seedService;
+    private final ClientAuthServiceImpl clientAuthService;
     private final List<Rectangle2D> rectangles = new ArrayList<>();
     private final DialogDisplayer dialogDisplayer = new DialogDisplayer();
-    private final TempFileManager tempFileManager = new TempFileManager();
+    private final TempFileManager tempFileManager;
     private final NumberFilter numberFilter = new NumberFilter();
+    private final DeterministicRandomGenerator drbg;
+    private final BinaryFile binaryFile;
+    private final ImageDecrypt imageDecrypt;
+    private final ImageEncrypt imageEncrypt;
+    private final EncryptionService encryptionService;
+    private MandelbrotService mandelbrotService;
+    private final SceneManager sceneManager;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -100,8 +111,6 @@ public class JavaFXImpl extends Application {
         waitForSpringContext();
 
         if (springContext != null && springContext.isActive()) {
-            this.seedService = springContext.getBean(SeedServiceImpl.class);
-            this.clientAuthService = springContext.getBean(ClientAuthServiceImpl.class);
             logger.info("Spring services initialized successfully");
         } else {
             logger.error("Spring context is not available!");
@@ -133,24 +142,70 @@ public class JavaFXImpl extends Application {
         logger.info("Spring context set successfully");
     }
 
+    public MandelbrotService getMandelbrotService() {
+        if (mandelbrotService == null) {
+            mandelbrotService = springContext.getBean(MandelbrotService.class);
+        }
+        return mandelbrotService;
+    }
+
     @Override
     public void start(Stage primaryStage) {
         this.executorService = Executors.newCachedThreadPool();
-        this.primaryStage = primaryStage;
-        mainPane = new StackPane();
-        Scene scene = new Scene(mainPane, 1920, 980);
+
+        // Устанавливаем stage в Spring контекст
+        if (springContext != null) {
+            ConfigurableListableBeanFactory beanFactory = springContext.getBeanFactory();
+            beanFactory.registerSingleton("primaryStage", primaryStage);
+        }
+
+        // Настройка полноэкранного режима
+        setupFullScreenMode(primaryStage);
+
+        Scene scene = new Scene(new StackPane(), 1920, 980);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Шифр Мандельброта");
 
         Image icon = tempFileManager.loadImageResource("/elements/icon.png");
         primaryStage.getIcons().add(icon);
+
+        // Показываем окно
         primaryStage.show();
-        showLoadingScreen();
+
+        // Показываем стартовый экран через SceneManager
+        if (sceneManager != null) {
+            sceneManager.showStartPanel();
+        }
 
         primaryStage.setOnCloseRequest(event -> {
             event.consume();
             shutdownApplication();
         });
+    }
+
+    private void setupFullScreenMode(Stage primaryStage) {
+        // Основные настройки
+        primaryStage.setFullScreen(true);
+        primaryStage.setFullScreenExitHint(""); // Убираем подсказку
+        primaryStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH); // Отключаем ESC
+
+        // Минимальные размеры на случай выхода из полноэкранного режима
+        primaryStage.setMinWidth(1200);
+        primaryStage.setMinHeight(800);
+
+        // Обработчик изменения размера для адаптивности
+        primaryStage.widthProperty().addListener((obs, oldVal, newVal) -> {
+            updateLayoutForScreenSize(newVal.doubleValue(), primaryStage.heightProperty().getValue());
+        });
+
+        primaryStage.heightProperty().addListener((obs, oldVal, newVal) -> {
+            updateLayoutForScreenSize(primaryStage.widthProperty().getValue(), newVal.doubleValue());
+        });
+    }
+
+    private void updateLayoutForScreenSize(double width, double height) {
+        // Здесь можно динамически调整布局 based on screen size
+        logger.info("Screen size changed: {} x {}", width, height);
     }
 
     private void shutdownExecutors() {
@@ -309,11 +364,11 @@ public class JavaFXImpl extends Application {
         decryptButton.setStyle(buttonStyle);
 
         HBox encryptButtonBox = new HBox(encryptButton);
-        encryptButtonBox.setPadding(new Insets(0, 0, 0, 250)); // Отступы справа и слева
+        encryptButtonBox.setPadding(new Insets(0, 0, 0, 250)); // Отступ слева
         encryptButtonBox.setAlignment(Pos.CENTER);
 
         HBox decryptButtonBox = new HBox(decryptButton);
-        decryptButtonBox.setPadding(new Insets(0, 250, 0, 0)); // Отступы справа и слева
+        decryptButtonBox.setPadding(new Insets(0, 250, 0, 0)); // Отступ справа
         decryptButtonBox.setAlignment(Pos.CENTER);
 
         HBox connectButtonBox = new HBox(connectButton);
@@ -611,6 +666,7 @@ public class JavaFXImpl extends Application {
 
                         clientAuthService.login(words);
                         dialogDisplayer.showAlert("Успех", "Авторизация прошла успешно!");
+                        afterLoginPanel();
 
                     } else {
                         dialogDisplayer.showAlert("Ошибка", "Сервис авторизации не доступен");
@@ -659,6 +715,50 @@ public class JavaFXImpl extends Application {
         }
 
         return words;
+    }
+
+    public void afterLoginPanel() {
+        try {
+            BorderPane mainContainer = new BorderPane();
+            mainContainer.setBackground(new Background(new BackgroundFill(
+                    createGradient(),
+                    CornerRadii.EMPTY,
+                    Insets.EMPTY
+            )));
+
+            // Кнопка назад
+            Button backButton = createIconButton(
+                    "/elements/icon_back.png",
+                    () -> {
+                        mainPane.getChildren().clear();
+                        createStartConnectionPanel();
+                    }
+            );
+
+            HBox topLeftContainer = new HBox(backButton);
+            topLeftContainer.setAlignment(Pos.TOP_LEFT);
+            topLeftContainer.setPadding(new Insets(20, 0, 0, 20));
+
+            Label titleLabel = new Label("Личный аккаунт");
+            titleLabel.setStyle("-fx-font-family: 'Intro Regular'; -fx-text-fill: white; -fx-font-size: 36px;");
+
+            HBox topCenterContainer = new HBox(titleLabel);
+            topCenterContainer.setAlignment(Pos.CENTER);
+            topCenterContainer.setPadding(new Insets(40, 0, 30, 0));
+
+            BorderPane topContainer = new BorderPane();
+            topContainer.setLeft(topLeftContainer);
+            topContainer.setCenter(topCenterContainer);
+
+            mainContainer.setTop(topContainer);
+
+            mainPane.getChildren().clear();
+            mainPane.getChildren().add(mainContainer);
+        } catch (Exception e) {
+            logger.error("Ошибка создания панели входа", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось создать интерфейс входа: " + e.getMessage());
+            createStartConnectionPanel();
+        }
     }
 
     //=========================================
@@ -1213,8 +1313,8 @@ public class JavaFXImpl extends Application {
             @Override
             protected Image call() {
                 Image image = new Image("file:" + imagePath);
-                MandelbrotService mandelbrotService =
-                        new MandelbrotService((int) image.getWidth(), (int) image.getHeight());
+                MandelbrotService mandelbrotService = getMandelbrotService().createWithSize(
+                        (int) image.getWidth(), (int) image.getHeight());
                 BufferedImage mandelbrotImage = mandelbrotService.generateImage();
 
                 if (isCancelled()) {
@@ -1423,7 +1523,7 @@ public class JavaFXImpl extends Application {
                         BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp(inputFilePath);
                         Rectangle2D selectedRectangle = getSelectedRectangle();
 
-                        BufferedImage encryptedImage = ImageEncrypt.encryptSelectedArea(
+                        BufferedImage encryptedImage = imageEncrypt.encryptSelectedArea(
                                 imageToEncrypt, selectedRectangle);
 
                         createEncryptFinalPanelForSelectedImage(encryptedImage);
@@ -1730,7 +1830,7 @@ public class JavaFXImpl extends Application {
             @Override
             protected Image call() throws IOException {
                 Image image = new Image("file:" + getTempPath() + "input.png");
-                MandelbrotParams params = BinaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
+                MandelbrotParams params = binaryFile.loadMandelbrotParamsFromBinaryFile(filePath);
 
                 double zoom = params.zoom();
                 double offsetX = params.offsetX();
@@ -1740,7 +1840,7 @@ public class JavaFXImpl extends Application {
                 int width = (int) image.getWidth();
                 int height = (int) image.getHeight();
 
-                MandelbrotService mandelbrotService = new MandelbrotService(width, height);
+                MandelbrotService mandelbrotService = getMandelbrotService().createWithSize(width, height);
                 BufferedImage mandelbrotImage = mandelbrotService.generateImage(width, height,
                         zoom, offsetX, offsetY, maxIter);
                 return SwingFXUtils.toFXImage(mandelbrotImage, null);
@@ -1819,7 +1919,7 @@ public class JavaFXImpl extends Application {
         spaceBelowTitle.setStyle("-fx-background-color: transparent;");
         spaceBelowTitle.setPrefHeight(50); // Расстояние под текстом
 
-        ImageEncrypt imageEncrypt = new ImageEncrypt();
+        ImageEncrypt imageEncrypt = new ImageEncrypt(mandelbrotService, binaryFile, drbg);
         imageEncrypt.encryptWholeImage(image);
 
         BufferedImage encryptedImage = imageEncrypt.getEncryptedImage();
@@ -2019,11 +2119,10 @@ public class JavaFXImpl extends Application {
                 double x = Double.parseDouble(xField.getText());
                 double y = Double.parseDouble(yField.getText());
 
-                EncryptionService service = new EncryptionService();
                 Image image = new Image("file:" + getTempPath() + "input.png");
                 int width = (int) image.getWidth();
                 int height = (int) image.getHeight();
-                service.saveMandelbrotParameters(width, height, zoom, iterations, x, y);
+                encryptionService.saveMandelbrotParameters(width, height, zoom, iterations, x, y);
 
                 createEncryptGeneratePanelWithParams(getTempPath() + "mandelbrot_params.bin");
             } catch (NumberFormatException ex) {
@@ -2121,7 +2220,7 @@ public class JavaFXImpl extends Application {
         BufferedImage mandelbrotImage;
 
         if (!mandelbrotFile.exists()) {
-            MandelbrotService mandelbrotService = new MandelbrotService((int) imageInput.getWidth(), (int) imageInput.getHeight());
+            MandelbrotService mandelbrotService = getMandelbrotService().createWithSize((int) imageInput.getWidth(), (int) imageInput.getHeight());
             mandelbrotImage = mandelbrotService.generateAfterGetParams(imagePath);
             if (mandelbrotImage == null) {
                 logger.error("Ошибка: не удалось сгенерировать изображение!");
@@ -2617,7 +2716,7 @@ public class JavaFXImpl extends Application {
         Task<Void> decryptImageTask = new Task<>() {
             @Override
             protected Void call() {
-                ImageDecrypt.decryptImage(keyFilePath);
+                imageDecrypt.decryptImage(keyFilePath);
                 return null;
             }
         };

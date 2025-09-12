@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.Region?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.encrypt.EncryptBeginController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane styleClass="encrypt-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label text="Шифратор" styleClass="encrypt-title"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="10" styleClass="encrypt-center-container">
+            <Region styleClass="space-below-title"/>
+            <StackPane styleClass="rect-container">
+                <Region styleClass="dark-gray-rect"/>
+                <Region styleClass="light-gray-rect"/>
+                <Button fx:id="uploadButton" text="Выбрать файл"
+                        styleClass="encrypt-upload-button"/>
+            </StackPane>
+        </VBox>
+    </center>
+
+    <bottom>
+        <Region styleClass="space-in-bottom"/>
+    </bottom>
+</BorderPane>

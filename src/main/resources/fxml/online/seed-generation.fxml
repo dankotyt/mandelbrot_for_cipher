@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.online.SeedGenerationController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane>
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"
+                            onAction="#handleBack"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 40 0 30 0;">
+                    <Label fx:id="titleLabel" text="Ваша seed-фраза:"
+                           styleClass="seed-title"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" spacing="30" styleClass="seed-center-container">
+            <Region styleClass="space-below-title"/>
+            <GridPane fx:id="wordsGrid"
+                      styleClass="seed-grid"
+                      hgap="30"
+                      vgap="20">
+            </GridPane>
+
+<!--            <Label styleClass="seed-warning">-->
+<!--                <![CDATA[ЗАПИШИТЕ эти слова в безопасном месте!&#10;Это единственный способ восстановить доступ к аккаунту.]]>-->
+<!--            </Label>-->
+            <Label fx:id="warningLabel"
+                   styleClass="seed-warning"
+                   text="ЗАПИШИТЕ эти слова в безопасном месте!"/>
+
+            <Label styleClass="seed-warning"
+                   text="Это единственный способ восстановить доступ к аккаунту."/>
+
+            <Button fx:id="confirmButton"
+                    text="Я записал слова"
+                    onAction="#handleConfirm"
+                    styleClass="seed-confirm-button"/>
+        </VBox>
+    </center>
+</BorderPane>
