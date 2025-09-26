@@ -9,28 +9,22 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 
-@Getter
+@Controller
+@Scope("prototype")
 @RequiredArgsConstructor
-public class SeedGenerationController {
-    private static final Logger logger = LoggerFactory.getLogger(SeedGenerationController.class);
+public class SeedGenerationPanelController {
+    private static final Logger logger = LoggerFactory.getLogger(SeedGenerationPanelController.class);
 
-    @FXML
-    private BorderPane mainContainer;
-    @FXML
-    private GridPane wordsGrid;
-    @FXML
-    private Label warningLabel;
-    @FXML
-    private Button confirmButton;
-    @FXML
-    private Label titleLabel;
-    @FXML
-    private Button backButton;
+    @FXML private GridPane wordsGrid;
+    @FXML private Label warningLabel;
+    @FXML private Button confirmButton;
+    @FXML private Button backButton;
 
     private final SceneManager sceneManager;
     private final SeedServiceImpl seedService;
@@ -47,22 +41,15 @@ public class SeedGenerationController {
     @FXML
     public void initialize() {
         setupUI();
-        //generateSeedPhrase();
-        setupUI();
-        // Очищаем тестовые данные из FXML (если есть)
-        if (wordsGrid != null) {
-            wordsGrid.getChildren().clear();
-        }
-
-        // Если seedPhrase уже установлен (передан из SceneManager)
-        if (seedPhrase != null) {
-            displaySeedPhrase();
-        }
+        generateSeedPhrase();
     }
 
     private void setupUI() {
         warningLabel.setText("ЗАПИШИТЕ эти слова в безопасном месте!\nЭто единственный способ восстановить доступ к аккаунту.");
         warningLabel.setTextAlignment(TextAlignment.CENTER);
+
+        backButton.setOnAction(e -> sceneManager.showConnectionPanel());
+        confirmButton.setOnAction(e -> handleConfirm());
     }
 
     private void generateSeedPhrase() {
@@ -100,15 +87,10 @@ public class SeedGenerationController {
     }
 
     @FXML
-    private void handleBack() {
-        sceneManager.showConnectionPanel();
-    }
-
-    @FXML
     private void handleConfirm() {
         try {
             dialogDisplayer.showAlert("Успех", "Аккаунт успешно создан!");
-            sceneManager.showConnectionPanel();
+            sceneManager.showLoginPanel();
         } catch (Exception e) {
             logger.error("Ошибка при подтверждении seed-фразы", e);
             dialogDisplayer.showErrorAlert("Ошибка", "Не удалось завершить регистрацию: " + e.getMessage());

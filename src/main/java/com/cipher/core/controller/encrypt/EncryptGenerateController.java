@@ -1,9 +1,9 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.service.ImageEncryptionService;
 import com.cipher.core.service.MandelbrotService;
-import com.cipher.core.utils.DialogDisplayer;
-import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
@@ -17,15 +17,18 @@ import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
 
+@Controller
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
 
-    @FXML
-    private ImageView imageView;
+    @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
     @FXML private StackPane hintBoxContainer;
     @FXML private StackPane imageContainer;
@@ -37,22 +40,26 @@ public class EncryptGenerateController {
     @FXML private Button backButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
+    private final ImageEncryptionService imageEncryptionService;
+
     private Task<Image> currentTask;
 
     @FXML
     public void initialize() {
         setupConsole();
         loadHintBox();
-        setupEventHandlers();
         loadInputImage();
-        startImageGeneration();
+        setupEventHandlers();
     }
 
     private void setupConsole() {
         console.getStyleClass().add("generate-console");
+        ConsoleManager.setConsole(console);
+        ConsoleManager.clear();
+        ConsoleManager.log("Генерация изображения...");
     }
 
     private void setupEventHandlers() {
@@ -61,11 +68,13 @@ public class EncryptGenerateController {
         manualButton.setOnAction(e -> sceneManager.showManualEncryptionPanel());
         okayButton.setOnAction(e -> handleEncrypt());
         swapButton.setOnAction(e -> sceneManager.showEncryptChooseAreaPanel());
+
+        startImageGeneration();
     }
 
     private void loadHintBox() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/components/hint-box.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/hint-box.fxml"));
             Parent hintBox = loader.load();
             hintBoxContainer.getChildren().add(hintBox);
         } catch (Exception e) {
@@ -74,24 +83,34 @@ public class EncryptGenerateController {
     }
 
     private void loadInputImage() {
-        ImageView inputImageView = tempFileManager.loadInputImageFromTemp();
-        if (inputImageView != null) {
-            imageView.setImage(inputImageView.getImage());
+        try {
+            if (imageUtils.hasOriginalImage()) {
+                BufferedImage originalBuffered = imageUtils.getOriginalImage();
+                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
+                imageView.setImage(originalFx);
+            }
+
+        } catch (Exception e) {
+            dialogDisplayer.showErrorDialog("Ошибка загрузки изображений");
         }
     }
 
     private void startImageGeneration() {
+
         setButtonsDisabled(true);
         showLoading(true);
+        ConsoleManager.clear();
 
         currentTask = new Task<>() {
             @Override
             protected Image call() {
                 try {
                     BufferedImage mandelbrotImage = mandelbrotService.generateImage();
+
                     return mandelbrotImage != null ? SwingFXUtils.toFXImage(mandelbrotImage, null) : null;
                 } catch (Exception e) {
-                    logger.error("Ошибка генерации изображения", e);
+                    logger.error("Ошибка генерации фрактала", e);
+                    ConsoleManager.log("Ошибка генерации: " + e.getMessage());
                     return null;
                 }
             }
@@ -103,7 +122,6 @@ public class EncryptGenerateController {
                 ImageView resultImageView = new ImageView(resultImage);
                 resultImageView.setFitWidth(720);
                 resultImageView.setFitHeight(540);
-                resultImageView.setPreserveRatio(true);
 
                 if (imageContainer.getChildren().size() > 1) {
                     imageContainer.getChildren().set(1, resultImageView);
@@ -113,16 +131,19 @@ public class EncryptGenerateController {
             }
             setButtonsDisabled(false);
             showLoading(false);
+
         });
 
         currentTask.setOnFailed(e -> {
             logger.error("Генерация failed", currentTask.getException());
+            ConsoleManager.log("Ошибка генерации: " + currentTask.getException().getMessage());
             dialogDisplayer.showErrorDialog("Ошибка генерации");
             setButtonsDisabled(false);
             showLoading(false);
         });
 
         currentTask.setOnCancelled(e -> {
+            ConsoleManager.log("Генерация отменена");
             setButtonsDisabled(false);
             showLoading(false);
         });
@@ -152,15 +173,19 @@ public class EncryptGenerateController {
         startImageGeneration();
     }
 
+    //todo нужно шифровать параметры через CryptograficService и передавать туда masterSeed
     private void handleEncrypt() {
         try {
-            BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp("input.png");
-            if (imageToEncrypt != null) {
-                sceneManager.showEncryptFinalPanel(imageToEncrypt);
-            }
+            MandelbrotParams mandelbrotParams = mandelbrotService.getCurrentParams();
+            BufferedImage encryptedImage = imageEncryptionService.performEncryption(
+                    previewResult.params(),
+                    previewResult.originalImage()
+            );
+
+            sceneManager.showEncryptFinalPanel(encryptedImage);
         } catch (Exception e) {
-            logger.error("Ошибка загрузки изображения", e);
-            dialogDisplayer.showErrorDialog("Ошибка загрузки изображения");
+            logger.error("Ошибка шифрования", e);
+            dialogDisplayer.showErrorDialog("Ошибка шифрования: " + e.getMessage());
         }
     }
 

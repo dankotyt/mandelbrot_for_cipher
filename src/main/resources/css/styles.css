@@ -369,7 +369,7 @@
 }
 
 /* Title */
-.encrypt-title {
+.title {
     -fx-font-family: 'Intro Regular';
     -fx-text-fill: white;
     -fx-font-size: 72px;
@@ -652,8 +652,8 @@
     -fx-text-fill: white;
     -fx-control-inner-background: #001F3D;
     -fx-background-color: #001F3D;
-    -fx-pref-width: 400px;
-    -fx-pref-height: 200px;
+    -fx-pref-width: 600px;
+    -fx-pref-height: 400px;
 }
 
 .generate-console .scroll-bar:vertical {
@@ -732,10 +732,10 @@
     -fx-background-color: transparent;
     -fx-pref-width: 300px;
     -fx-pref-height: 230px;
-    -fx-max-width: 600px;
-    -fx-max-height: 460px;
-    -fx-min-width: 300px;
-    -fx-min-height: 230px;
+    /*-fx-max-width: 600px;*/
+    /*-fx-max-height: 460px;*/
+    /*-fx-min-width: 300px;*/
+    /*-fx-min-height: 230px;*/
 }
 
 .hint-content {
@@ -756,6 +756,7 @@
     -fx-spacing: 5px;
 }
 
+/* Стили для иконок */
 .repeat-icon {
     -fx-image: url('../elements/icon_repeat.png');
 }
@@ -772,7 +773,6 @@
     -fx-image: url('../elements/icon_swap.png');
 }
 
-/* Стили для кнопок */
 .icon-encrypt-whole {
     -fx-image: url('../elements/icon_encryptWhole.png');
 }
@@ -808,10 +808,6 @@
     -fx-font-size: 14px;
 }
 
-.hint-description-flow {
-    -fx-max-width: infinity; /*270px;*/
-}
-
 .hint-description {
     -fx-font-family: 'Intro Regular';
     -fx-fill: white;
@@ -844,10 +840,6 @@
 
 .encrypt-choose-area-image-container {
     -fx-alignment: center;
-}
-
-.mandelbrot-image {
-    -fx-translate-x: 150px;
 }
 
 .main-image-container {
@@ -887,12 +879,6 @@
     -fx-opacity: 0.8;
 }
 
-/* Space elements */
-.space-below-title {
-    -fx-background-color: transparent;
-    -fx-pref-height: 35px;
-}
-
 /* ===== ENCRYPT GENERATE PARAMS PANEL STYLES ===== */
 
 .encrypt-generate-params-top-container {
@@ -913,21 +899,305 @@
     -fx-alignment: center;
 }
 
-.loading-label {
-    -fx-font-family: 'Intro Regular';
-    -fx-text-fill: white;
-    -fx-font-size: 24px;
-    -fx-padding: 20px;
-}
-
 .encrypt-generate-params-buttons {
     -fx-alignment: center;
     -fx-spacing: 20px;
     -fx-padding: 0 0 30 0;
 }
 
-/* Space elements */
-.space-below-title {
+/* ===== ENCRYPT MANUAL PANEL STYLES ===== */
+
+.encrypt-manual-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-manual-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-manual-grid {
+    -fx-alignment: center;
+    -fx-padding: 40px;
+    -fx-hgap: 15px;
+    -fx-vgap: 15px;
+}
+
+.encrypt-manual-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-alignment: center-right;
+}
+
+.encrypt-manual-field {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: black;
+    -fx-font-size: 22px;
+    -fx-background-color: white;
+    -fx-background-radius: 5px;
+    -fx-padding: 5px 10px;
+    -fx-pref-width: 300px;
+}
+
+.encrypt-manual-field:focused {
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+}
+
+.encrypt-manual-save-button {
     -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-border-radius: 10px;
+    -fx-border-width: 5px;
+    -fx-border-color: white;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 400px;
+}
+
+.encrypt-manual-save-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-manual-save-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT FINAL PANEL STYLES ===== */
+
+.encrypt-final-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-final-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+.encrypt-final-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.encrypt-final-image-container {
+    -fx-alignment: center;
+    -fx-background-color: #373737;
+    -fx-padding: 20px;
+}
+
+/* Кнопка сохранения */
+.icon-save-button {
+    -fx-background-color: transparent;
+    -fx-background-image: url('../elements/icon_save.png');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 50px;
+    -fx-min-height: 50px;
+    -fx-border-width: 0;
+}
+
+.icon-save-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-opacity: 0.8;
+}
+
+.icon-save-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-opacity: 0.6;
+}
+
+/* ===== DECRYPT BEGIN PANEL STYLES ===== */
+
+.decrypt-top-container {
+    -fx-padding: 0;
+}
+
+.decrypt-begin-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 64px;
+    -fx-alignment: center;
+}
+
+.decrypt-begin-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-begin-rect-container {
+    -fx-alignment: center;
+}
+
+.decrypt-begin-button-container {
+    -fx-alignment: center;
+}
+
+.decrypt-begin-upload-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-pref-width: 257px;
+    -fx-pref-height: 68px;
+}
+
+.decrypt-begin-upload-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-begin-upload-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+.space-in-bottom {
+    -fx-background-color: transparent;
+    -fx-pref-height: 120px;
+}
+
+/* ===== DECRYPT LOAD PANEL STYLES ===== */
+
+.decrypt-top-container {
+    -fx-padding: 0;
+}
+
+.decrypt-load-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+.decrypt-load-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-load-image-container {
+    -fx-alignment: center;
+}
+
+.decrypt-load-continue-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 320px;
     -fx-pref-height: 50px;
+}
+
+.decrypt-load-continue-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-load-continue-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== DECRYPT MODE PANEL STYLES ===== */
+
+.decrypt-mode-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 64px;
+    -fx-alignment: center;
+}
+
+.decrypt-mode-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-mode-image-container {
+    -fx-alignment: center;
+}
+
+.decrypt-mode-button-container {
+    -fx-alignment: center;
+}
+
+.decrypt-mode-manual-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+    -fx-pref-width: 287px;
+    -fx-pref-height: 68px;
+}
+
+.decrypt-mode-manual-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-mode-manual-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== DECRYPT FINAL PANEL STYLES ===== */
+
+.decrypt-final-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.decrypt-final-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-final-image-container {
+    -fx-alignment: center;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-background-color: #373737;
+}
+
+.decrypt-final-loading-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-padding: 20px;
+}
+
+.decrypt-final-save-container {
+    -fx-alignment: bottom-center;
+    -fx-padding: 0 0 30 0;
 }

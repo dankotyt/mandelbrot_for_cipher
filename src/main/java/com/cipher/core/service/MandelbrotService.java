@@ -1,10 +1,11 @@
 package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
+import com.cipher.core.utils.ConsoleManager;
 import com.cipher.core.utils.DeterministicRandomGenerator;
-import com.cipher.view.javafx.JavaFXImpl;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -19,9 +20,12 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 
+import com.cipher.core.utils.ImageUtils;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -39,6 +43,9 @@ public class MandelbrotService extends JPanel {
 
     private final DeterministicRandomGenerator drbg;
     private final BinaryFile binaryFile;
+    private final ImageSegmentShuffler imageSegmentShuffler;
+    private final ImageEncryptionService imageEncryptionService;
+    private final ImageUtils imageUtils;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -47,6 +54,9 @@ public class MandelbrotService extends JPanel {
     private double offsetX;
     private double offsetY;
     private BufferedImage image;
+    private byte[] masterSeed;
+    @Getter
+    private MandelbrotParams currentParams;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -88,6 +98,8 @@ public class MandelbrotService extends JPanel {
      * Генерирует случайные значения для параметров MAX_ITER, offsetX, offsetY и ZOOM.
      */
     public void randomPositionOnPlenty() {
+        startMandelbrotWidth = 720;
+        startMandelbrotHeight = 540;
         MAX_ITER = 500 + (drbg.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
         offsetX = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
         offsetY = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
@@ -110,14 +122,17 @@ public class MandelbrotService extends JPanel {
      * @see #checkImageDiversity(BufferedImage)
      */
     public BufferedImage generateImage() {
+        masterSeed = generateMasterSeed();
+        drbg.initialize(masterSeed);
+        imageSegmentShuffler.initializeWithSeed(masterSeed);
+
         boolean validImage = false;
         int attempt = 0;
-        MandelbrotParams currentParams;
         BufferedImage resultImage = null;
 
         while (!validImage && !Thread.currentThread().isInterrupted()) {
             attempt++;
-            randomPositionOnPlenty(); // Обновляем параметры
+            randomPositionOnPlenty();
 
             try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
                 resultImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
@@ -152,14 +167,12 @@ public class MandelbrotService extends JPanel {
                 validImage = checkImageDiversity(resultImage);
 
                 if (!validImage) {
-                    JavaFXImpl.logToConsole("Попытка №" + attempt + ". Подождите, пожалуйста...");
+                    ConsoleManager.log("Попытка №" + attempt + ". Подождите, пожалуйста...");
                 } else {
-                    JavaFXImpl.logToConsole("Изображение успешно сгенерировано после " + attempt + " попыток.");
-                    binaryFile.saveMandelbrotParamsToBinaryFile(
-                            getTempPath() + "mandelbrot_params.bin",
-                            currentParams
-                    );
-                    saveImageToTemp(resultImage);
+                    ConsoleManager.log("Изображение успешно сгенерировано после " + attempt + " попыток.");
+
+                    imageEncryptionService.initMandelbrotParams(currentParams);
+                    imageUtils.setMandelbrotImage(resultImage, currentParams);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -172,6 +185,44 @@ public class MandelbrotService extends JPanel {
 
         repaint();
         return resultImage;
+    }
+
+    /*todo Тут уже не используем рандомизацию, а просто подставляем значения из
+       MandelbrotParams. Устанавливаем только новые значения ширины и высоты
+    */
+
+    public BufferedImage generateImage(BufferedImage image) {
+        BufferedImage finalFractal = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+            int processors = Runtime.getRuntime().availableProcessors();
+            int chunkWidth = image.getWidth() / processors;
+
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < processors; i++) {
+                int startX = i * chunkWidth;
+                int width = (i == processors - 1) ? image.getWidth() - startX : chunkWidth;
+
+                futures.add(executor.submit(new MandelbrotThread(
+                        startX, 0, width, image.getHeight(),
+                        ZOOM, MAX_ITER, offsetX, offsetY, finalFractal
+                )));
+            }
+
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Генерация прервана", e);
+            return null;
+        } catch (ExecutionException e) {
+            logger.error("Ошибка в потоке вычислений", e);
+            throw new RuntimeException("Ошибка генерации фрактала", e);
+        }
+
+        repaint();
+        return finalFractal;
     }
 
     /**
@@ -266,7 +317,6 @@ public class MandelbrotService extends JPanel {
 //        return (uniqueColors > 250 && percentage < 0.25);
 //    }
     private boolean checkImageDiversity(BufferedImage image) {
-        // Быстрая проверка на черноту
         if (isImageBlackPercentageAboveThreshold(image, 0.05)) { //todo попробовать меньше значение
             return false;
         }
@@ -349,6 +399,13 @@ public class MandelbrotService extends JPanel {
         return red == 0 && green == 0 && blue == 0;
     }
 
+    //todo при онлайн-соединении masterSeed = K, который образуется по алгоритму Д.-Х.
+    private byte[] generateMasterSeed() {
+        masterSeed = new byte[32];
+        new SecureRandom().nextBytes(masterSeed);
+        return masterSeed;
+    }
+
     /**
      * Сохраняет изображение в папку resources в корне проекта.
      *
@@ -368,47 +425,6 @@ public class MandelbrotService extends JPanel {
                 alert.setContentText("Ошибка при сохранении изображения: " + e.getMessage());
                 alert.showAndWait();
             });
-        }
-    }
-
-    /**
-     * Метод для генерации изображения на основе параметров, загруженных из бинарного файла.
-     *
-     * @param imagePath Путь к бинарному файлу с параметрами.
-     * @return Сгенерированное изображение.
-     */
-    public BufferedImage generateAfterGetParams(String imagePath) {
-        try {
-            // Загрузка параметров
-            MandelbrotParams params = binaryFile.loadMandelbrotParamsFromBinaryFile(imagePath);
-
-            // Проверка параметров
-            if (params.startMandelbrotWidth() <= 0 || params.startMandelbrotHeight() <= 0) {
-                logger.error("Некорректные размеры: width={}, height={}",
-                        params.startMandelbrotWidth(),
-                        params.startMandelbrotHeight());
-                return null;
-            }
-
-            // Генерация изображения
-            MandelbrotService mandelbrotService = createWithSize(
-                    params.startMandelbrotWidth(), params.startMandelbrotHeight());
-
-            BufferedImage generatedImage = mandelbrotService.generateImage(
-                    params.startMandelbrotWidth(),
-                    params.startMandelbrotHeight(),
-                    params.zoom(),
-                    params.offsetX(),
-                    params.offsetY(),
-                    params.maxIter()
-            );
-
-            // Сохранение изображения
-            saveImageToTemp(generatedImage);
-            return generatedImage;
-        } catch (IOException e) {
-            logger.error("Ошибка при загрузке/генерации из файла {}", imagePath, e);
-            return null;
         }
     }
 }

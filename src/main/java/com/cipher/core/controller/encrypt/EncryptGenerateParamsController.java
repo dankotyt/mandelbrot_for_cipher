@@ -2,10 +2,7 @@ package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.MandelbrotService;
-import com.cipher.core.utils.BinaryFile;
-import com.cipher.core.utils.DialogDisplayer;
-import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
@@ -19,16 +16,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
+@Controller
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptGenerateParamsController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateParamsController.class);
+    private final ImageUtils imageUtils;
 
-    @FXML
-    private ImageView imageView;
+    @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
     @FXML private StackPane hintBoxContainer;
     @FXML private Button backButton;
@@ -56,7 +57,7 @@ public class EncryptGenerateParamsController {
 
     private void loadHintBox() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/components/hint-box-encrypt.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/hint-box-encrypt.fxml"));
             Parent hintBox = loader.load();
             hintBoxContainer.getChildren().add(hintBox);
         } catch (Exception e) {
@@ -73,12 +74,19 @@ public class EncryptGenerateParamsController {
     }
 
     private void loadInputImage() {
-        ImageView inputImageView = tempFileManager.loadInputImageFromTemp();
-        if (inputImageView != null && inputImageView.getImage() != null) {
-            imageView.setImage(inputImageView.getImage());
+        try {
+            if (imageUtils.hasOriginalImage()) {
+                BufferedImage originalBuffered = imageUtils.getOriginalImage();
+                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
+                imageView.setImage(originalFx);
+            }
+
+        } catch (Exception e) {
+            dialogDisplayer.showErrorDialog("Ошибка загрузки изображений");
         }
     }
 
+    //todo переделать сохранение под ImageUtils
     private void startImageGeneration() {
         if (paramsFilePath == null) {
             logger.error("Params file path is null");
@@ -100,10 +108,7 @@ public class EncryptGenerateParamsController {
                     }
 
                     // Загрузка входного изображения для получения размеров
-                    BufferedImage inputImage = tempFileManager.loadBufferedImageFromTemp("input.png");
-                    if (inputImage == null) {
-                        throw new IOException("Не удалось загрузить входное изображение");
-                    }
+                    BufferedImage inputImage = imageUtils.getOriginalImage();
 
                     // Генерация изображения с использованием параметров
                     BufferedImage mandelbrotImage = mandelbrotService.generateImage(
@@ -155,6 +160,7 @@ public class EncryptGenerateParamsController {
         new Thread(currentTask).start();
     }
 
+    //todo удалить после подключения ImageUtils
     private void saveGeneratedImage(Image resultImage) {
         try {
             BufferedImage bufferedImage = SwingFXUtils.fromFXImage(resultImage, null);
@@ -196,7 +202,6 @@ public class EncryptGenerateParamsController {
             }
         } catch (Exception e) {
             logger.error("Ошибка загрузки изображения", e);
-            dialogDisplayer.showErrorDialog("Ошибка загрузки изображения");
         }
     }
 

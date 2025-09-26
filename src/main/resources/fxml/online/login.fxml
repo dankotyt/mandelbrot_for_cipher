@@ -5,7 +5,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/11.0.1"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cipher.core.controller.online.LoginController"
+            fx:controller="com.cipher.core.controller.online.LoginPanelController"
             stylesheets="@../../css/styles.css"
             styleClass="main-container">
 
@@ -13,8 +13,7 @@
         <BorderPane styleClass="login-top-container">
             <left>
                 <HBox style="-fx-padding: 20 0 0 20;">
-                    <Button fx:id="backButton" styleClass="icon-back-button"
-                            onAction="#handleBack"/>
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
                 </HBox>
             </left>
             <center>

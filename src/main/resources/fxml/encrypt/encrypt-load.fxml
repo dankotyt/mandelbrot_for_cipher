@@ -33,14 +33,11 @@
                 <Region styleClass="dark-gray-rect"/>
                 <ImageView fx:id="imageView" fitWidth="720" fitHeight="540"/>
             </StackPane>
+            <VBox alignment="CENTER" style="-fx-padding: 0 0 20 0;">
+                <Region prefHeight="25"/>
+                <Button fx:id="continueButton" text="Продолжить шифрование"
+                        styleClass="encrypt-load-continue-button"/>
+            </VBox>
         </VBox>
     </center>
-
-    <bottom>
-        <VBox alignment="CENTER" style="-fx-padding: 0 0 20 0;">
-            <Region prefHeight="50"/>
-            <Button fx:id="continueButton" text="Продолжить шифрование"
-                    styleClass="encrypt-load-continue-button"/>
-        </VBox>
-    </bottom>
 </BorderPane>

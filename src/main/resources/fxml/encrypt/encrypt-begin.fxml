@@ -23,7 +23,7 @@
             </left>
             <center>
                 <VBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
-                    <Label text="Шифратор" styleClass="encrypt-title"/>
+                    <Label text="Шифратор" styleClass="title"/>
                 </VBox>
             </center>
         </BorderPane>

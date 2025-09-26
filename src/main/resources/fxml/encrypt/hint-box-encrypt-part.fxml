@@ -38,7 +38,7 @@
             </TextFlow>
         </HBox>
 
-        <TextFlow styleClass="hint-description-flow">
+        <TextFlow styleClass="hint-text-flow">
             <Text text="Для шифрования части изображения выделите нужную область"
                   styleClass="hint-description"/>
         </TextFlow>

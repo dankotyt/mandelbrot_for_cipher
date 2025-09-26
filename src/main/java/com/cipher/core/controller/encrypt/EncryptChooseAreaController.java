@@ -1,10 +1,8 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.encryption.ImageEncrypt;
-import com.cipher.core.utils.CoordinateUtils;
-import com.cipher.core.utils.DialogDisplayer;
-import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.*;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
@@ -22,20 +20,24 @@ import javafx.scene.paint.Color;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
+@Controller
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptChooseAreaController {
 
     private static final Logger logger = LoggerFactory.getLogger(EncryptChooseAreaController.class);
+    private final ImageUtils imageUtils;
 
     @FXML private ImageView imageView;
     @FXML private ImageView mandelbrotImageView;
     @FXML private Canvas canvas;
-    @FXML private StackPane imageContainer;
     @FXML private StackPane hintBoxContainer;
     @FXML private Button backButton;
     @FXML private Button encryptWholeButton;
@@ -65,7 +67,6 @@ public class EncryptChooseAreaController {
 
     private void setupCanvas() {
         coordUtils = new CoordinateUtils(canvas);
-        GraphicsContext gc = canvas.getGraphicsContext2D();
 
         canvas.setOnMousePressed(this::handleMousePressed);
         canvas.setOnMouseReleased(this::handleMouseReleased);
@@ -85,7 +86,7 @@ public class EncryptChooseAreaController {
 
     private void loadHintBox() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/components/hint-box-encrypt-part.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/hint-box-encrypt-part.fxml"));
             Parent hintBox = loader.load();
             hintBoxContainer.getChildren().add(hintBox);
         } catch (Exception e) {
@@ -95,17 +96,18 @@ public class EncryptChooseAreaController {
 
     private void loadImages() {
         try {
-            // Используем методы из TempFileManager
-            ImageView inputImageView = tempFileManager.loadInputImageFromTemp();
-            if (inputImageView != null && inputImageView.getImage() != null) {
-                imageView.setImage(inputImageView.getImage());
+            if (imageUtils.hasOriginalImage()) {
+                BufferedImage originalBuffered = imageUtils.getOriginalImage();
+                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
+                imageView.setImage(originalFx);
+                logger.info("Оригинальное изображение загружено в панель");
             }
 
-            // Загрузка изображения Мандельброта
-            Image mandelbrotImage = tempFileManager.loadImageFromTemp("mandelbrot.png");
-            if (mandelbrotImage != null) {
-                mandelbrotImageView.setImage(mandelbrotImage);
-                //mandelbrotImageView.setPreserveRatio(true);
+            if (imageUtils.hasMandelbrotImage()) {
+                BufferedImage mandelbrotBuffered = imageUtils.getMandelbrotImage();
+                Image mandelbrotFx = imageUtils.convertToFxImage(mandelbrotBuffered);
+                mandelbrotImageView.setImage(mandelbrotFx);
+                logger.info("Фрактал загружен в панель");
             }
 
         } catch (Exception e) {
@@ -251,7 +253,6 @@ public class EncryptChooseAreaController {
         try {
             BufferedImage imageToEncrypt = tempFileManager.loadBufferedImageFromTemp("input.png");
             if (imageToEncrypt == null) {
-                dialogDisplayer.showErrorMessage("Не удалось загрузить изображение для шифрования");
                 return;
             }
 
@@ -265,7 +266,7 @@ public class EncryptChooseAreaController {
                     imageToEncrypt, selectedRectangle);
 
             if (encryptedImage != null) {
-                sceneManager.showEncryptFinalPanel(encryptedImage);
+                sceneManager.showEncryptFinalSelectedPanel(encryptedImage);
                 clearRectangles();
             } else {
                 dialogDisplayer.showErrorMessage("Ошибка при шифровании области");

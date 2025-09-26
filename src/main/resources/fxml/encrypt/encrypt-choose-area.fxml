@@ -57,7 +57,7 @@
 
                 <StackPane styleClass="encrypt-choose-area-image-container">
                     <ImageView fx:id="mandelbrotImageView" fitWidth="640" fitHeight="480"
-                               translateX="150" styleClass="mandelbrot-image"/>
+                               translateX="150"/>
 
                     <StackPane fx:id="imageContainer" styleClass="main-image-container">
                         <ImageView fx:id="imageView" fitWidth="720" fitHeight="540"/>

@@ -2,6 +2,7 @@ package com.cipher.core.utils;
 
 import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.neww.EncryptionDataResult;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,10 +10,14 @@ import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.cipher.core.service.EncryptionService.getTempPath;
 
 @Component
 @RequiredArgsConstructor
@@ -270,6 +275,48 @@ public class BinaryFile {
             logger.error("Ошибка при загрузке параметров из файла {}", filePath, e);
             throw new UncheckedIOException(new IOException("Failed to load encrypted parameters", e));
         }
+    }
+
+    private void saveEncryptedParams(EncryptionDataResult encryptedParams) {
+        try {
+            // Создаем структуру бинарного файла
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+
+            // Записываем IV (12 bytes)
+            dos.writeInt(encryptedParams.iv().length);
+            dos.write(encryptedParams.iv());
+
+            // Записываем Salt (16 bytes)
+            dos.writeInt(encryptedParams.salt().length);
+            dos.write(encryptedParams.salt());
+
+            // Записываем зашифрованные данные
+            dos.writeInt(encryptedParams.encryptedData().length);
+            dos.write(encryptedParams.encryptedData());
+
+            byte[] binaryData = baos.toByteArray();
+
+            // Сохраняем в файл
+            saveBinaryFile(
+                    "encryption_params.bin",
+                    binaryData
+            );
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save encrypted parameters", e);
+        }
+    }
+
+    private void saveBinaryFile(String filename, byte[] data) throws IOException {
+        Path path = Paths.get(getTempPath(), filename);
+        Files.createDirectories(path.getParent());
+        Files.write(path, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    public byte[] loadBinaryFile(String filename) throws IOException {
+        Path path = Paths.get(getTempPath(), filename);
+        return Files.readAllBytes(path);
     }
 
     private static void logParams(KeyDecoderParams params) {

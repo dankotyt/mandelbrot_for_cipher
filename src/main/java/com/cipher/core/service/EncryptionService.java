@@ -14,7 +14,7 @@ public class EncryptionService {
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
     }
-    private static String getTempPath() {
+    public static String getTempPath() {
         return getProjectRootPath() + "temp" + File.separator;
     }
 

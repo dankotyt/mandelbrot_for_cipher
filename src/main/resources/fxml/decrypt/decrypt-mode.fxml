@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.Region?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.decrypt.DecryptModeController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane styleClass="decrypt-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <HBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label text="Дешифратор" styleClass="decrypt-mode-title"/>
+                </HBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="10" styleClass="decrypt-mode-content">
+            <Region styleClass="space-below-title"/>
+
+            <StackPane styleClass="decrypt-mode-image-container">
+                <ImageView fx:id="inputImageView"
+                           fitWidth="640" fitHeight="480" translateX="150"/>
+                <Region styleClass="dark-gray-rect-without-translate"/>
+                <StackPane styleClass="decrypt-mode-button-container">
+                    <Button fx:id="manualButton" text="Загрузить файл-ключ"
+                            styleClass="decrypt-mode-manual-button"/>
+                </StackPane>
+            </StackPane>
+        </VBox>
+    </center>
+
+    <bottom>
+        <Region styleClass="space-in-bottom"/>
+    </bottom>
+</BorderPane>

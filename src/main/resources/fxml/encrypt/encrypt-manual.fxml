@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
+
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.Region?>
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.encrypt.EncryptManualController"
+            stylesheets="@../../css/styles.css"
+            styleClass="main-container">
+
+    <top>
+        <BorderPane styleClass="encrypt-manual-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button"/>
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label text="Введите значения параметров:" styleClass="encrypt-manual-title"/>
+                    <Region prefHeight="100"/>
+                </VBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <GridPane fx:id="manualEncryptPanel" styleClass="encrypt-manual-grid">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="300" hgrow="NEVER"/>
+                <ColumnConstraints prefWidth="400" hgrow="NEVER"/>
+            </columnConstraints>
+
+            <rowConstraints>
+                <RowConstraints prefHeight="60"/>
+                <RowConstraints prefHeight="60"/>
+                <RowConstraints prefHeight="60"/>
+                <RowConstraints prefHeight="60"/>
+                <RowConstraints prefHeight="40"/>
+                <RowConstraints prefHeight="80"/>
+            </rowConstraints>
+
+            <!-- Масштаб -->
+            <Label text="Масштаб множества:" styleClass="encrypt-manual-label"
+                   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="zoomField" promptText="135000" styleClass="encrypt-manual-field"
+                       GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+            <!-- Число итераций -->
+            <Label text="Число итераций:" styleClass="encrypt-manual-label"
+                   GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <TextField fx:id="iterationsField" promptText="1000" styleClass="encrypt-manual-field"
+                       GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+            <!-- Смещение X -->
+            <Label text="Смещение по оси X:" styleClass="encrypt-manual-label"
+                   GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <TextField fx:id="xField" promptText="-0.9999" styleClass="encrypt-manual-field"
+                       GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+            <!-- Смещение Y -->
+            <Label text="Смещение по оси Y:" styleClass="encrypt-manual-label"
+                   GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <TextField fx:id="yField" promptText="0.9999" styleClass="encrypt-manual-field"
+                       GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+            <!-- Кнопка сохранения -->
+            <HBox alignment="CENTER" GridPane.columnIndex="0" GridPane.rowIndex="5" GridPane.columnSpan="2">
+                <Button fx:id="saveButton" text="Сохранить сгенерированный ключ"
+                        styleClass="encrypt-manual-save-button"/>
+            </HBox>
+        </GridPane>
+    </center>
+</BorderPane>

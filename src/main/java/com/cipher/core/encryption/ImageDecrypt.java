@@ -8,6 +8,8 @@ import java.util.Map;
 import java.awt.Graphics2D;
 
 import com.cipher.core.dto.KeyDecoderParams;
+import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.neww.SegmentationParams;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.ImageUtils;
@@ -26,6 +28,7 @@ public class ImageDecrypt {
     private final MandelbrotService mandelbrotService;
     private final DeterministicRandomGenerator drbg;
     private final BinaryFile binaryFile;
+    private final ImageSegmentShuffler imageSegmentShuffler;
 
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -46,17 +49,24 @@ public class ImageDecrypt {
 
             BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
 
-            double zoom = keyDecoderParams.zoom();
-            double offsetX = keyDecoderParams.offsetX();
-            double offsetY = keyDecoderParams.offsetY();
-            int maxIter = keyDecoderParams.maxIter();
-            int segmentWidthSize = keyDecoderParams.segmentWidthSize();
-            int segmentHeightSize = keyDecoderParams.segmentHeightSize();
-            Map<Integer, Integer> segmentMapping = keyDecoderParams.segmentMapping();
+            MandelbrotParams mandelbrotParams = keyDecoderParams.mandelbrotParams();
+            SegmentationParams segmentationParams = keyDecoderParams.segmentationParams();
+
+            double zoom = mandelbrotParams.zoom();
+            double offsetX = mandelbrotParams.offsetX();
+            double offsetY = mandelbrotParams.offsetY();
+            int maxIter = mandelbrotParams.maxIter();
+            int segmentSize = segmentationParams.segmentSize();
+            Map<Integer, Integer> segmentMapping = segmentationParams.segmentMapping();
             int startX = keyDecoderParams.startX();
             int startY = keyDecoderParams.startY();
-            int width = keyDecoderParams.width();
-            int height = keyDecoderParams.height();
+            byte[] encryptedMasterSeed = keyDecoderParams.encryptedMasterSeed();
+            byte[] iv = keyDecoderParams.iv();
+            byte[] salt = keyDecoderParams.salt();
+            int width = segmentationParams.paddedWidth();
+            int height = segmentationParams.paddedHeight();
+
+
 
             // Выделяем область для дешифровки (если работаем с частью изображения)
             BufferedImage encryptedArea = encryptedImage;
@@ -76,8 +86,8 @@ public class ImageDecrypt {
             BufferedImage xorResult = XOR.performXOR(encryptedArea, mandelbrotImage);
 
             // 4. Выполняем десегментацию (восстановление порядка сегментов)
-            BufferedImage unshuffledImage = ImageSegmentShuffler.unshuffledSegments(
-                    xorResult, segmentMapping, segmentWidthSize, segmentHeightSize);
+            BufferedImage unshuffledImage = imageSegmentShuffler.unshuffledSegments(
+                    xorResult, segmentMapping, segmentSize);
 
             // 5. Сохраняем или возвращаем результат
             if (width != encryptedImage.getWidth() || height != encryptedImage.getHeight()) {

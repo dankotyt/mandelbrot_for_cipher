@@ -1,7 +1,6 @@
 package com.cipher.core.dto;
 
-import java.util.Map;
+import com.cipher.core.dto.neww.SegmentationParams;
 
-public record KeyDecoderParams(double zoom, double offsetX, double offsetY, int maxIter,
-                               int segmentWidthSize, int segmentHeightSize, Map<Integer, Integer> segmentMapping,
-                               int startX, int startY, int width, int height) { }
+public record KeyDecoderParams(MandelbrotParams mandelbrotParams, SegmentationParams segmentationParams,
+                               int startX, int startY, byte[] encryptedMasterSeed, byte[] iv, byte[] salt) { }

@@ -11,31 +11,26 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
-import lombok.Getter;
 
 import com.cipher.core.utils.SceneManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
+@Controller
+@Scope("prototype")
 @RequiredArgsConstructor
-public class LoginController {
-    private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
+public class LoginPanelController {
+    private static final Logger logger = LoggerFactory.getLogger(LoginPanelController.class);
 
-    @FXML
-    private BorderPane mainContainer;
-    @FXML
-    private GridPane wordsGrid;
-    @FXML
-    private Button confirmButton;
-    @FXML
-    private Label titleLabel;
-    @FXML
-    private Button backButton;
+    @FXML private GridPane wordsGrid;
+    @FXML private Button confirmButton;
+    @FXML private Button backButton;
 
     private final SceneManager sceneManager;
     private final ClientAuthServiceImpl clientAuthService;
@@ -44,7 +39,13 @@ public class LoginController {
 
     @FXML
     public void initialize() {
+        setupEventHandlers();
         createWordFields();
+    }
+
+    private void setupEventHandlers() {
+        backButton.setOnAction(e -> sceneManager.showStartPanel());
+        confirmButton.setOnAction(e -> handleConfirm());
     }
 
     private void createWordFields() {
@@ -72,11 +73,6 @@ public class LoginController {
             int col = i % 3;
             wordsGrid.add(wordContainer, col, row);
         }
-    }
-
-    @FXML
-    private void handleBack() {
-        sceneManager.showConnectionPanel();
     }
 
     @FXML

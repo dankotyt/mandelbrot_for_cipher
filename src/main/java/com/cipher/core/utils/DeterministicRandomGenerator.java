@@ -32,18 +32,15 @@ public class DeterministicRandomGenerator extends Random {
         }
     }
 
-    public synchronized void initialize(byte[] masterKey) {
-        this.currentSeed = masterKey.clone(); // Сохраняем копию
-        this.secureRandom.setSeed(masterKey);
-        Arrays.fill(masterKey, (byte) 0); // Затираем оригинал
+    public synchronized void initialize(byte[] seed) {
+        this.currentSeed = Arrays.copyOf(seed, seed.length);
+        this.secureRandom.setSeed(seed);
     }
 
-    public synchronized void destroy() {
+    public synchronized void reinitialize() {
         if (currentSeed != null) {
-            Arrays.fill(currentSeed, (byte) 0); // Затираем seed
-            currentSeed = null;
+            secureRandom.setSeed(currentSeed);
         }
-        secureRandom = null;
     }
 
     // ========== ОСНОВНЫЕ МЕТОДЫ ==========
@@ -86,38 +83,31 @@ public class DeterministicRandomGenerator extends Random {
     // ========== СПЕЦИАЛИЗИРОВАННЫЕ МЕТОДЫ ==========
 
     /**
-     * Генерирует случайное число в заданном диапазоне [min, max]
-     */
-    public int nextIntInRange(int min, int max) {
-        if (min > max) {
-            throw new IllegalArgumentException("min must be less than or equal to max");
-        }
-        return min + nextInt(max - min + 1);
-    }
-
-    /**
      * Генерирует размер сегмента в зависимости от размера изображения
      */
-    public int generateAdaptiveSegmentSize(int imageWidth, int imageHeight) {
+    public int generateSegmentSize(int imageWidth, int imageHeight) {
+        reinitialize();
         int maxDimension = Math.max(imageWidth, imageHeight);
 
-        if (maxDimension <= 768) {
-            // Малые изображения: сегменты 4-8 пикселей
-            return nextIntInRange(4, 8);
-        } else if (maxDimension <= 1920) {
-            // Средние изображения: сегменты 8-16 пикселей
-            return nextIntInRange(8, 16);
-        } else {
-            // Большие изображения: сегменты 16-32 пикселя
-            return nextIntInRange(16, 32);
-        }
+        if (maxDimension <= 768) return 4;
+        else if (maxDimension <= 1920) return 16;
+        else return 32;
     }
 
     /**
      * Перемешивает список детерминированным образом
      */
     public <T> void shuffleList(List<T> list) {
-        Collections.shuffle(list, this);
+        reinitialize();
+        //Collections.shuffle(list, this);
+
+        // Алгоритм Фишера-Йетса с использованием secureRandom
+        for (int i = list.size() - 1; i > 0; i--) {
+            int j = secureRandom.nextInt(i + 1);
+            T temp = list.get(i);
+            list.set(i, list.get(j));
+            list.set(j, temp);
+        }
     }
 
     /**
