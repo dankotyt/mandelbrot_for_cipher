@@ -1,6 +1,7 @@
 package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
@@ -46,6 +47,7 @@ public class MandelbrotService extends JPanel {
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final ImageEncryptionService imageEncryptionService;
     private final ImageUtils imageUtils;
+    private final CryptographicService cryptographicService;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -125,6 +127,7 @@ public class MandelbrotService extends JPanel {
         masterSeed = generateMasterSeed();
         drbg.initialize(masterSeed);
         imageSegmentShuffler.initializeWithSeed(masterSeed);
+        cryptographicService.initMasterSeed(masterSeed);
 
         boolean validImage = false;
         int attempt = 0;
@@ -191,8 +194,8 @@ public class MandelbrotService extends JPanel {
        MandelbrotParams. Устанавливаем только новые значения ширины и высоты
     */
 
-    public BufferedImage generateImage(BufferedImage image) {
-        BufferedImage finalFractal = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+    public BufferedImage generateImage(int originalWidth, int originalHeight) {
+        BufferedImage finalFractal = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
             int processors = Runtime.getRuntime().availableProcessors();

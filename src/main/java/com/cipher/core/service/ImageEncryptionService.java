@@ -61,7 +61,7 @@ public class ImageEncryptionService {
                 segmentationResult.paddedHeight()
         );
 
-        BufferedImage finalFractal = mandelbrotService.generateImage(shuffledImage);
+        //BufferedImage finalFractal = mandelbrotService.generateImage();
 
         // 3. XOR шифрование
         return XOR.performXOR(

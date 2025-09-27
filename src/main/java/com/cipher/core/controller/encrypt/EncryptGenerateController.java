@@ -1,6 +1,13 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.neww.EncryptionArea;
+import com.cipher.core.dto.neww.EncryptionParams;
+import com.cipher.core.dto.neww.SegmentationParams;
+import com.cipher.core.dto.neww.SegmentationResult;
+import com.cipher.core.encryption.CryptographicService;
+import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.service.ImageEncryptionService;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.*;
@@ -27,6 +34,8 @@ import java.awt.image.BufferedImage;
 @RequiredArgsConstructor
 public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
+    private final CryptographicService cryptographicService;
+    private final ImageSegmentShuffler imageSegmentShuffler;
 
     @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
@@ -46,6 +55,7 @@ public class EncryptGenerateController {
     private final ImageEncryptionService imageEncryptionService;
 
     private Task<Image> currentTask;
+    private BufferedImage originalImage;
 
     @FXML
     public void initialize() {
@@ -85,8 +95,8 @@ public class EncryptGenerateController {
     private void loadInputImage() {
         try {
             if (imageUtils.hasOriginalImage()) {
-                BufferedImage originalBuffered = imageUtils.getOriginalImage();
-                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
+                originalImage = imageUtils.getOriginalImage();
+                Image originalFx = imageUtils.convertToFxImage(originalImage);
                 imageView.setImage(originalFx);
             }
 
@@ -176,6 +186,30 @@ public class EncryptGenerateController {
     //todo нужно шифровать параметры через CryptograficService и передавать туда masterSeed
     private void handleEncrypt() {
         try {
+            BufferedImage finalFractal = mandelbrotService
+                    .generateImage(originalImage.getWidth(), originalImage.getHeight());
+            SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
+
+            EncryptionResult result = new EncryptionResult(
+                    segmentationResult.shuffledImage(),
+                    finalFractal,
+                    new EncryptionParams(
+                            new EncryptionArea(
+                               0, 0,
+                                    originalImage.getWidth(),
+                                    originalImage.getHeight(),
+                                    true
+                            ),
+                            new SegmentationParams(
+                                    segmentationResult.segmentSize(),
+                                    segmentationResult.paddedWidth(),
+                                    segmentationResult.paddedHeight(),
+                                    segmentationResult.segmentMapping()
+                            ),
+                            mandelbrotService.getCurrentParams()
+                    )
+            );
+            cryptographicService.encryptData(result);
             MandelbrotParams mandelbrotParams = mandelbrotService.getCurrentParams();
             BufferedImage encryptedImage = imageEncryptionService.performEncryption(
                     previewResult.params(),

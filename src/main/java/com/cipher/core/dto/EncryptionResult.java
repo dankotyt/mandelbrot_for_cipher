@@ -9,6 +9,6 @@ import java.awt.image.BufferedImage;
 
 public record EncryptionResult(
         BufferedImage segmentedImage,
-        BufferedImage fractalPreview,
+        BufferedImage fractalImage,
         EncryptionParams params
 ) {}

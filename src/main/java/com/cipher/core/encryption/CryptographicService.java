@@ -2,7 +2,10 @@ package com.cipher.core.encryption;
 
 import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.utils.EncryptionDataSerializer;
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
@@ -16,6 +19,7 @@ import java.security.spec.KeySpec;
 
 @Component
 public class CryptographicService {
+    private static final Logger logger = LoggerFactory.getLogger(CryptographicService.class);
     @Getter
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     @Getter
@@ -24,7 +28,19 @@ public class CryptographicService {
     private static final int SALT_LENGTH = 16;
     private static final int IV_LENGTH = 12;
 
-    public SecretKey generateKeyFromSeed(byte[] masterSeed, byte[] salt) throws Exception {
+    private final EncryptionDataSerializer serializer;
+
+    private byte[] masterSeed;
+
+    public CryptographicService() {
+        this.serializer = new EncryptionDataSerializer();
+    }
+
+    public void initMasterSeed(byte[] masterSeed) {
+        this.masterSeed = masterSeed.clone();
+    }
+
+    public SecretKey generateKeyFromSeed(byte[] salt) throws Exception {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         KeySpec spec = new PBEKeySpec(
                 toCharArray(masterSeed),
@@ -35,14 +51,20 @@ public class CryptographicService {
         return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
     }
 
+    //todo вместо byte[] использовать передачу параметров через dto
     /**
      * Шифрование данных с использованием AES-GCM
      */
-    public EncryptionDataResult encryptData(byte[] data, byte[] masterSeed) throws Exception {
+    public EncryptionDataResult encryptData(EncryptionResult result) throws Exception {
+        byte[] data = serializer.serialize(result);
+
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
 
-        SecretKey key = generateKeyFromSeed(masterSeed, salt);
+        //todo на время дебага
+        logger.info("masterSeed: {}", masterSeed);
+
+        SecretKey key = generateKeyFromSeed(salt);
 
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
@@ -56,8 +78,14 @@ public class CryptographicService {
     /**
      * Дешифрование данных
      */
-    public byte[] decryptData(EncryptionDataResult encryptedResult, byte[] masterSeed) throws Exception {
-        SecretKey key = generateKeyFromSeed(masterSeed, encryptedResult.salt());
+    /*
+    *todo нужно подумать, как передавать masterSeed для оффлайна - то ли
+    * внутри бинарника, то ли вводить вручную
+    */
+    public byte[] decryptData(EncryptionDataResult encryptedResult) throws Exception {
+        byte[] data = serializer.deserialize(encryptedResult);
+
+        SecretKey key = generateKeyFromSeed(encryptedResult.salt());
 
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, encryptedResult.iv());
