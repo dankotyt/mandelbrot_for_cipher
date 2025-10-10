@@ -7,14 +7,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.awt.Graphics2D;
 
-import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.neww.SegmentationParams;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
-import com.cipher.core.utils.Pair;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +37,6 @@ public class ImageDecrypt {
 
     public void decryptImage(String keyFilePath) {
         try {
-            // 1. Загружаем параметры дешифровки и зашифрованное изображение
-            Pair<KeyDecoderParams, byte[]> result = binaryFile.loadKeyDecoderFromBinaryFile(keyFilePath);
-            KeyDecoderParams keyDecoderParams = result.getKey();
-            byte[] masterSeed = result.getValue();
-
-            // Создаем DRBG для дешифрования
-            drbg.initialize(masterSeed);
 
             BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
 
@@ -75,7 +66,7 @@ public class ImageDecrypt {
             }
 
             // 2. Генерируем изображение Мандельброта с нужными параметрами и размерами
-            MandelbrotService mandelbrotServiceGenerator = mandelbrotService.createWithSize(width, height);
+            MandelbrotService mandelbrotServiceGenerator = new MandelbrotService();
             BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
                     width, height, zoom, offsetX, offsetY, maxIter);
 

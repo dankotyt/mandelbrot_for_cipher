@@ -717,12 +717,10 @@
 /* ===== HINT BOX STYLES ===== */
 
 .hint-container {
-    -fx-pref-width: 300px;
-    -fx-pref-height: 230px;
-    -fx-max-width: 600px;
-    -fx-max-height: 460px;
-    -fx-min-width: 300px;
-    -fx-min-height: 230px;
+    -fx-pref-width: 320px;
+    -fx-max-width: 640px;
+    -fx-min-width: 280px;
+    -fx-padding: 10px;
 }
 
 .hint-background {
@@ -730,12 +728,6 @@
     -fx-border-width: 5px;
     -fx-border-radius: 10px;
     -fx-background-color: transparent;
-    -fx-pref-width: 300px;
-    -fx-pref-height: 230px;
-    /*-fx-max-width: 600px;*/
-    /*-fx-max-height: 460px;*/
-    /*-fx-min-width: 300px;*/
-    /*-fx-min-height: 230px;*/
 }
 
 .hint-content {
@@ -752,11 +744,29 @@
 }
 
 .hint-row {
+    -fx-spacing: 8px;
     -fx-alignment: center-left;
-    -fx-spacing: 5px;
 }
 
 /* Стили для иконок */
+.repeat-icon,
+.manual-icon,
+.next-icon,
+.swap-icon,
+.icon-encrypt-whole,
+.icon-encrypt-part,
+.icon-reset-part,
+.hint-icon {
+    -fx-background-position: center;
+    -fx-border-width: 0;
+    -fx-fit-width: 30px;
+    -fx-fit-height: 30px;
+    -fx-min-width: 24px;
+    -fx-min-height: 24px;
+    -fx-max-width: 50px;
+    -fx-max-height: 50px;
+}
+
 .repeat-icon {
     -fx-image: url('../elements/icon_repeat.png');
 }
@@ -785,18 +795,6 @@
     -fx-image: url('../elements/icon_resetPart.png');
 }
 
-.repeat-icon,
-.manual-icon,
-.next-icon,
-.swap-icon,
-.icon-encrypt-whole,
-.icon-encrypt-part,
-.icon-reset-part,
-.hint-icon {
-    -fx-fit-width: 30px;
-    -fx-fit-height: 30px;
-}
-
 /* TextFlow для автоматического переноса */
 .hint-text-flow {
     -fx-max-width: infinity;/*240px;  300px - 30px(иконка) - 10px(отступы) */
@@ -812,7 +810,36 @@
     -fx-font-family: 'Intro Regular';
     -fx-fill: white;
     -fx-font-size: 14px;
-    -fx-wrapping-width: 270px;
+    -fx-line-spacing: 1px;
+    -fx-padding: 5px 0 0 0;
+}
+
+/* Масштабируемая версия */
+.hint-container.scalable {
+    -fx-scale-x: 1;
+    -fx-scale-y: 1;
+}
+
+/* Медиа-запросы для разных размеров экрана */
+@media (max-width: 800px) {
+    .hint-container {
+        -fx-pref-width: 280px;
+        -fx-scale-x: 0.9;
+        -fx-scale-y: 0.9;
+    }
+
+    .hint-text,
+    .hint-description {
+        -fx-font-size: 12px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .hint-container {
+        -fx-pref-width: 360px;
+        -fx-scale-x: 1.1;
+        -fx-scale-y: 1.1;
+    }
 }
 
 /* ===== ENCRYPT CHOOSE AREA PANEL STYLES ===== */

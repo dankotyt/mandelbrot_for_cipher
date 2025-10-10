@@ -2,12 +2,11 @@ package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.neww.EncryptionArea;
-import com.cipher.core.dto.neww.EncryptionParams;
-import com.cipher.core.dto.neww.SegmentationParams;
-import com.cipher.core.dto.neww.SegmentationResult;
+import com.cipher.core.dto.neww.*;
 import com.cipher.core.encryption.CryptographicService;
+import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
+import com.cipher.core.encryption.XOR;
 import com.cipher.core.service.ImageEncryptionService;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.*;
@@ -36,6 +35,7 @@ public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
     private final CryptographicService cryptographicService;
     private final ImageSegmentShuffler imageSegmentShuffler;
+    private final ImageEncrypt imageEncrypt;
 
     @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
@@ -52,7 +52,6 @@ public class EncryptGenerateController {
     private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
-    private final ImageEncryptionService imageEncryptionService;
 
     private Task<Image> currentTask;
     private BufferedImage originalImage;
@@ -76,7 +75,7 @@ public class EncryptGenerateController {
         backButton.setOnAction(e -> handleBack());
         regenerateButton.setOnAction(e -> handleRegenerate());
         manualButton.setOnAction(e -> sceneManager.showManualEncryptionPanel());
-        okayButton.setOnAction(e -> handleEncrypt());
+        okayButton.setOnAction(e -> handleEncryptWholeImage());
         swapButton.setOnAction(e -> sceneManager.showEncryptChooseAreaPanel());
 
         startImageGeneration();
@@ -183,40 +182,13 @@ public class EncryptGenerateController {
         startImageGeneration();
     }
 
-    //todo нужно шифровать параметры через CryptograficService и передавать туда masterSeed
-    private void handleEncrypt() {
+    private void handleEncryptWholeImage() {
         try {
-            BufferedImage finalFractal = mandelbrotService
-                    .generateImage(originalImage.getWidth(), originalImage.getHeight());
-            SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
-
-            EncryptionResult result = new EncryptionResult(
-                    segmentationResult.shuffledImage(),
-                    finalFractal,
-                    new EncryptionParams(
-                            new EncryptionArea(
-                               0, 0,
-                                    originalImage.getWidth(),
-                                    originalImage.getHeight(),
-                                    true
-                            ),
-                            new SegmentationParams(
-                                    segmentationResult.segmentSize(),
-                                    segmentationResult.paddedWidth(),
-                                    segmentationResult.paddedHeight(),
-                                    segmentationResult.segmentMapping()
-                            ),
-                            mandelbrotService.getCurrentParams()
-                    )
-            );
-            cryptographicService.encryptData(result);
-            MandelbrotParams mandelbrotParams = mandelbrotService.getCurrentParams();
-            BufferedImage encryptedImage = imageEncryptionService.performEncryption(
-                    previewResult.params(),
-                    previewResult.originalImage()
-            );
-
-            sceneManager.showEncryptFinalPanel(encryptedImage);
+            if (!imageUtils.hasOriginalImage()) {
+                logger.error("original image is null");
+            }
+            imageEncrypt.encryptWhole(originalImage, mandelbrotService,
+                    imageSegmentShuffler, cryptographicService, sceneManager);
         } catch (Exception e) {
             logger.error("Ошибка шифрования", e);
             dialogDisplayer.showErrorDialog("Ошибка шифрования: " + e.getMessage());

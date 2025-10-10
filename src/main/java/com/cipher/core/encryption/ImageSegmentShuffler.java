@@ -150,13 +150,11 @@ public class ImageSegmentShuffler {
         BufferedImage result = new BufferedImage(
                 shuffledImage.getWidth(), shuffledImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
-        // Создаем обратную карту соответствия
         Map<Integer, Integer> reverseMapping = new HashMap<>();
         for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
             reverseMapping.put(entry.getValue(), entry.getKey());
         }
 
-        // Восстанавливаем оригинальный порядок
         Graphics2D g = result.createGraphics();
         for (int i = 0; i < segments.size(); i++) {
             Rectangle srcRect = segments.get(reverseMapping.get(i));
@@ -182,12 +180,10 @@ public class ImageSegmentShuffler {
         BufferedImage paddedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = paddedImage.createGraphics();
 
-        // Рисуем оригинальное изображение
         g.drawImage(image, 0, 0, null);
 
-        // Заполняем оставшуюся область черным цветом (прозрачным)
         if (newWidth > image.getWidth()) {
-            g.setColor(new Color(0, 0, 0, 0)); // Прозрачный черный
+            g.setColor(new Color(0, 0, 0, 0));
             g.fillRect(image.getWidth(), 0, newWidth - image.getWidth(), newHeight);
         }
         if (newHeight > image.getHeight()) {

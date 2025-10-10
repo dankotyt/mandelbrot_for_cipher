@@ -61,7 +61,7 @@ public class CryptographicService {
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
 
-        //todo на время дебага
+        //todo на время тестов
         logger.info("masterSeed: {}", masterSeed);
 
         SecretKey key = generateKeyFromSeed(salt);
@@ -82,16 +82,23 @@ public class CryptographicService {
     *todo нужно подумать, как передавать masterSeed для оффлайна - то ли
     * внутри бинарника, то ли вводить вручную
     */
-    public byte[] decryptData(EncryptionDataResult encryptedResult) throws Exception {
-        byte[] data = serializer.deserialize(encryptedResult);
+    public EncryptionResult decryptData(EncryptionDataResult encryptedResult) throws Exception {
+        // 1. Восстанавливаем ключ из salt
+        byte[] salt = encryptedResult.salt();
+        byte[] iv = encryptedResult.iv();
+        byte[] encryptedData = encryptedResult.encryptedData();
 
-        SecretKey key = generateKeyFromSeed(encryptedResult.salt());
+        SecretKey key = generateKeyFromSeed(salt);
 
+        // 2. Дешифруем данные
         Cipher cipher = Cipher.getInstance(ALGORITHM);
-        GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, encryptedResult.iv());
+        GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
         cipher.init(Cipher.DECRYPT_MODE, key, parameterSpec);
 
-        return cipher.doFinal(encryptedResult.encryptedData());
+        byte[] decryptedData = cipher.doFinal(encryptedData);
+
+        // 3. Десериализуем расшифрованные данные в DTO
+        return serializer.deserialize(decryptedData);
     }
 
     public byte[] generateSalt() {

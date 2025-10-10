@@ -1,6 +1,7 @@
 package com.cipher.core.controller.decrypt;
 
 import com.cipher.core.utils.DialogDisplayer;
+import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.SceneManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -12,7 +13,7 @@ import javafx.scene.image.Image;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
-import java.io.File;
+import java.awt.image.BufferedImage;
 
 @Controller
 @Scope("prototype")
@@ -27,16 +28,12 @@ public class DecryptLoadController {
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-
-    private String imagePath;
-
-    public void setImagePath(String imagePath) {
-        this.imagePath = imagePath;
-        loadImage();
-    }
+    private final ImageUtils imageUtils;
 
     @FXML
     public void initialize() {
+        logger.info("DecryptLoadController: ImageUtils instance = {}", imageUtils.hashCode());
+        loadImage();
         setupEventHandlers();
     }
 
@@ -46,24 +43,28 @@ public class DecryptLoadController {
     }
 
     private void loadImage() {
-        if (imagePath == null || imagePath.isEmpty()) {
-            dialogDisplayer.showErrorDialog("Путь к изображению не указан");
-            return;
-        }
-
         try {
-            File imageFile = new File(imagePath);
-            if (!imageFile.exists()) {
-                dialogDisplayer.showErrorDialog("Файл не существует: " + imagePath);
-                return;
+            logger.info("Начало загрузки изображения");
+
+            if (imageUtils.hasOriginalImage()) {
+                logger.info("Изображение найдено в imageUtils");
+                BufferedImage originalBuffered = imageUtils.getOriginalImage();
+                logger.info("BufferedImage получен: {}x{}",
+                        originalBuffered.getWidth(), originalBuffered.getHeight());
+
+                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
+                logger.info("FX Image создан");
+
+                imageView.setImage(originalFx);
+                logger.info("Изображение установлено в ImageView");
+            } else {
+                logger.error("Нет оригинального изображения в imageUtils");
+                dialogDisplayer.showErrorDialog("Изображение не было загружено");
             }
 
-            Image image = new Image("file:" + imagePath);
-            imageView.setImage(image);
-
         } catch (Exception e) {
-            logger.error("Ошибка загрузки изображения: {}", imagePath, e);
-            dialogDisplayer.showErrorDialog("Не удалось загрузить изображение: " + e.getMessage());
+            logger.error("Ошибка загрузки изображения: {}", e.getMessage(), e);
+            dialogDisplayer.showErrorDialog("Ошибка загрузки изображения: " + e.getMessage());
         }
     }
 }

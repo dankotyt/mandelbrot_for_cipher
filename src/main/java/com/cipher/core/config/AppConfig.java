@@ -1,10 +1,9 @@
 package com.cipher.core.config;
 
 import com.cipher.client.handler.ClientGlobalExceptionHandler;
+import com.cipher.core.dto.neww.EncryptionParams;
 import com.cipher.core.factory.ControllerFactory;
-import com.cipher.core.utils.DialogDisplayer;
-import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.*;
 import javafx.application.Platform;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
@@ -46,8 +45,9 @@ public class AppConfig {
     }
 
     @Bean
-    public TempFileManager tempFileManager(DialogDisplayer dialogDisplayer, SceneManager sceneManager) {
-        return new TempFileManager(dialogDisplayer, sceneManager);
+    public TempFileManager tempFileManager(DialogDisplayer dialogDisplayer, SceneManager sceneManager,
+                                            ImageUtils imageUtils) {
+        return new TempFileManager(dialogDisplayer, sceneManager, imageUtils);
     }
 
     @Bean

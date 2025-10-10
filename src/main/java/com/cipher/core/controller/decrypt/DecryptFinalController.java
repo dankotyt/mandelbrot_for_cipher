@@ -1,6 +1,6 @@
 package com.cipher.core.controller.decrypt;
 
-import com.cipher.core.encryption.ImageDecrypt;
+//import com.cipher.core.encryption.ImageDecrypt;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -30,7 +30,7 @@ public class DecryptFinalController {
     private final SceneManager sceneManager;
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ImageDecrypt imageDecrypt;
+    //private final ImageDecrypt imageDecrypt;
     private String keyFilePath;
 
     public void setKeyFilePath(String keyFilePath) {
@@ -44,8 +44,8 @@ public class DecryptFinalController {
     }
 
     private void setupEventHandlers() {
-        backButton.setOnAction(e -> sceneManager.showStartPanel());
-        saveButton.setOnAction(e -> tempFileManager.saveDecryptedImage());
+        backButton.setOnAction(e -> sceneManager.showDecryptModePanel());
+        saveButton.setOnAction(e -> tempFileManager.saveDecryptedImage()); //todo заменить на полное сохранение
     }
 
     private void startDecryption() {

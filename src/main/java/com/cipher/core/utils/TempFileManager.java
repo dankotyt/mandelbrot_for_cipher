@@ -1,8 +1,6 @@
 package com.cipher.core.utils;
 
 import com.cipher.core.dto.neww.EncryptionDataResult;
-import com.cipher.core.dto.neww.EncryptionParams;
-import com.cipher.core.dto.neww.SegmentationParams;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -25,7 +23,6 @@ public class TempFileManager {
 
     private final DialogDisplayer displayer;
     private final SceneManager sceneManager;
-    private final EncryptionParamsSerializer paramsSerializer;
     private final ImageUtils imageUtils;
 
     private String getProjectRootPath() {
@@ -36,7 +33,7 @@ public class TempFileManager {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public void selectImageFileForEncrypt() {
+    public void selectOriginalImageFile() {
         try {
             Stage primaryStage = sceneManager.getPrimaryStage();
             if (primaryStage == null) {
@@ -50,7 +47,7 @@ public class TempFileManager {
             File selectedFile = fileChooser.showOpenDialog(primaryStage);
 
             if (selectedFile != null) {
-                cleanupTemp();
+                //cleanupTemp();
                 saveInputImageToMemory(selectedFile);
                 logger.info("Файл выбран: {}", selectedFile.getAbsolutePath());
             } else {
@@ -62,7 +59,7 @@ public class TempFileManager {
         }
     }
 
-    public void saveInputImageToMemory(File selectedFile) {
+    private void saveInputImageToMemory(File selectedFile) {
         try {
             BufferedImage image = ImageIO.read(selectedFile);
             if (image == null) {
@@ -72,44 +69,6 @@ public class TempFileManager {
         } catch (IOException e) {
             logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
             displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
-        }
-    }
-
-    public String selectImageFileForDecrypt() {
-        try {
-            Stage primaryStage = sceneManager.getPrimaryStage();
-            if (primaryStage == null) {
-                logger.error("Primary stage is not set!");
-                return null;
-            }
-
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Выберите изображение для расшифрования");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.jpg", "*.jpeg", "*.png", "*.bmp"));
-
-            File selectedFile = fileChooser.showOpenDialog(primaryStage);
-            if (selectedFile != null) {
-                cleanupTemp();
-                try {
-                    BufferedImage image = ImageIO.read(selectedFile);
-                    if (image != null) {
-                        saveInputImageToMemory(selectedFile);
-                        logger.info("Изображение сохранено в папку temp: {}", selectedFile.getName());
-                        return selectedFile.getAbsolutePath();
-                    } else {
-                        logger.error("Ошибка при загрузке изображения: {}", selectedFile.getAbsolutePath());
-                        displayer.showErrorMessage("Ошибка при загрузке изображения: " + selectedFile.getAbsolutePath());
-                    }
-                } catch (IOException e) {
-                    logger.error("Ошибка при загрузке изображения: {}", e.getMessage(), e);
-                    displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            logger.error("Ошибка при выборе файла для дешифрования: {}", e.getMessage(), e);
-            displayer.showErrorDialog("Ошибка при выборе файла: " + e.getMessage());
-            return null;
         }
     }
 
@@ -164,33 +123,33 @@ public class TempFileManager {
         return success && deleted;
     }
 
-    public void cleanupTemp() {
-        try {
-            String tempPath = getTempPath();
-            File tempDir = new File(tempPath);
-
-            if (tempDir.exists()) {
-                boolean deleted = deleteFolder(tempDir);
-                if (!deleted) {
-                    logger.warn("Не удалось полностью очистить temp директорию");
-                }
-
-                // Создаем заново
-                boolean created = tempDir.mkdirs();
-                if (!created) {
-                    logger.error("Не удалось создать temp директорию: {}", tempPath);
-                }
-            } else {
-                // Создаем если не существует
-                boolean created = tempDir.mkdirs();
-                if (!created) {
-                    logger.error("Не удалось создать temp директорию: {}", tempPath);
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Ошибка при очистке temp директории: {}", e.getMessage(), e);
-        }
-    }
+//    public void cleanupTemp() {
+//        try {
+//            String tempPath = getTempPath();
+//            File tempDir = new File(tempPath);
+//
+//            if (tempDir.exists()) {
+//                boolean deleted = deleteFolder(tempDir);
+//                if (!deleted) {
+//                    logger.warn("Не удалось полностью очистить temp директорию");
+//                }
+//
+//                // Создаем заново
+//                boolean created = tempDir.mkdirs();
+//                if (!created) {
+//                    logger.error("Не удалось создать temp директорию: {}", tempPath);
+//                }
+//            } else {
+//                // Создаем если не существует
+//                boolean created = tempDir.mkdirs();
+//                if (!created) {
+//                    logger.error("Не удалось создать temp директорию: {}", tempPath);
+//                }
+//            }
+//        } catch (Exception e) {
+//            logger.error("Ошибка при очистке temp директории: {}", e.getMessage(), e);
+//        }
+//    }
 
     public void saveInputImageToTemp(File selectedFile) {
         createTempFolder();
@@ -539,65 +498,5 @@ public class TempFileManager {
             displayer.showErrorAlert("Ошибка сохранения", "Ошибка сохранения ключа: " + e.getMessage());
 
         }
-    }
-
-    public void saveEncryptionParams(EncryptionParams params) {
-        try {
-            byte[] serialized = paramsSerializer.serializeParams(params);
-            Path path = Paths.get(getTempPath(), "encryption_params.bin");
-            Files.createDirectories(path.getParent());
-            Files.write(path, serialized, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save encryption params", e);
-        }
-    }
-
-    public void saveSegmentationParams(SegmentationParams params) {
-        try {
-            byte[] serialized = paramsSerializer.serializeSegmentationParams(params);
-            Path path = Paths.get(getTempPath(), "segmentation_params.bin");
-            Files.createDirectories(path.getParent());
-            Files.write(path, serialized, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save encryption params", e);
-        }
-    }
-
-    /**
-     * Загружает параметры шифрования из временного файла
-     */
-    public EncryptionParams loadEncryptionParams() {
-        try {
-            Path path = Paths.get(getTempPath(), "encryption_params.bin");
-            byte[] data = Files.readAllBytes(path);
-            return paramsSerializer.deserializeParams(data);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load encryption params", e);
-        }
-    }
-
-    /**
-     * Загружает зашифрованные параметры из временного файла
-     */
-    public EncryptionDataResult loadEncryptedParamsFromTemp() throws IOException {
-        Path path = Paths.get(getTempPath(), "encrypted_params.bin");
-        byte[] data = Files.readAllBytes(path);
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-        DataInputStream dis = new DataInputStream(bais);
-
-        // IV (12 bytes)
-        byte[] iv = new byte[12];
-        dis.readFully(iv);
-
-        // Salt (16 bytes)
-        byte[] salt = new byte[16];
-        dis.readFully(salt);
-
-        // Encrypted data (остаток)
-        byte[] encryptedData = new byte[data.length - 28]; // 12 + 16 = 28
-        dis.readFully(encryptedData);
-
-        return new EncryptionDataResult(encryptedData, iv, salt);
     }
 }

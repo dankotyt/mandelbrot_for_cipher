@@ -1,11 +1,13 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.EncryptionService;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
+import javafx.scene.image.Image;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +30,11 @@ public class EncryptManualController {
     @FXML private Button backButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
-    private final EncryptionService encryptionService;
     private final NumberFilter numberFilter;
+
+    private BufferedImage originalImage;
 
     @FXML
     public void initialize() {
@@ -51,6 +54,17 @@ public class EncryptManualController {
         saveButton.setOnAction(e -> handleSave());
     }
 
+    private void loadInputImage() {
+        try {
+            if (imageUtils.hasOriginalImage()) {
+                originalImage = imageUtils.getOriginalImage();
+            }
+
+        } catch (Exception e) {
+            dialogDisplayer.showErrorDialog("Ошибка загрузки изображений");
+        }
+    }
+
     private void handleSave() {
         try {
             // Валидация полей
@@ -64,21 +78,19 @@ public class EncryptManualController {
             double y = Double.parseDouble(yField.getText());
 
             // Загрузка входного изображения для получения размеров
-            BufferedImage inputImage = tempFileManager.loadBufferedImageFromTemp("input.png");
-            if (inputImage == null) {
+            loadInputImage();
+            if (originalImage == null) {
                 return;
             }
-
-            // Сохранение параметров
-            encryptionService.saveMandelbrotParameters(
-                    inputImage.getWidth(),
-                    inputImage.getHeight(),
+            MandelbrotParams mandelbrotParams = new MandelbrotParams(
+                    originalImage.getWidth(),
+                    originalImage.getHeight(),
                     zoom,
-                    iterations,
-                    x,
-                    y
+                    x, y,
+                    iterations
             );
-            sceneManager.showEncryptGenerateParamsPanel(tempFileManager.getTempPath() + "mandelbrot_params.bin");
+
+            sceneManager.showEncryptGenerateParamsPanel(mandelbrotParams);
 
         } catch (NumberFormatException ex) {
             dialogDisplayer.showErrorDialog("Некорректный формат данных");

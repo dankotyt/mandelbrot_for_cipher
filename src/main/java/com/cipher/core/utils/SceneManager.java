@@ -3,6 +3,8 @@ package com.cipher.core.utils;
 import com.cipher.core.controller.decrypt.DecryptFinalController;
 import com.cipher.core.controller.decrypt.DecryptLoadController;
 import com.cipher.core.controller.encrypt.*;
+import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.neww.EncryptionDataResult;
 import com.cipher.core.dto.neww.EncryptionPreviewResult;
 import com.cipher.core.dto.neww.SegmentationParams;
 import com.cipher.core.dto.neww.SegmentationResult;
@@ -109,14 +111,14 @@ public class SceneManager {
         showScreen("/fxml/encrypt/encrypt-choose-area.fxml");
     }
 
-    public void showEncryptGenerateParamsPanel(String paramsFilePath) {
+    public void showEncryptGenerateParamsPanel(MandelbrotParams mandelbrotParams) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-generate-params.fxml"));
             loader.setControllerFactory(controllerFactory);
             Parent root = loader.load();
 
             EncryptGenerateParamsController controller = loader.getController();
-            controller.setParamsFilePath(paramsFilePath);
+            controller.setMandelbrotParams(mandelbrotParams);
 
             primaryStage.getScene().setRoot(root);
         } catch (Exception e) {
@@ -126,7 +128,7 @@ public class SceneManager {
         }
     }
 
-    public void showEncryptFinalPanel(BufferedImage encryptedImage) {
+    public void showEncryptFinalPanel(BufferedImage encryptedImage, EncryptionDataResult result) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final.fxml"));
             loader.setControllerFactory(controllerFactory);
@@ -134,6 +136,7 @@ public class SceneManager {
 
             EncryptFinalController controller = loader.getController();
             controller.setEncryptedImage(encryptedImage);
+            controller.setEncryptionDataResult(result);
 
             primaryStage.getScene().setRoot(root);
         } catch (Exception e) {
@@ -178,22 +181,7 @@ public class SceneManager {
         showScreen("/fxml/decrypt/decrypt-begin.fxml");
     }
 
-    public void showDecryptLoadPanel(String imagePath) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/decrypt/decrypt-load.fxml"));
-            loader.setControllerFactory(controllerFactory);
-            Parent root = loader.load();
-
-            DecryptLoadController controller = loader.getController();
-            controller.setImagePath(imagePath);
-
-            primaryStage.getScene().setRoot(root);
-        } catch (Exception e) {
-            logger.error("Error loading decrypt load screen", e);
-            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
-            showDecryptBeginPanel();
-        }
-    }
+    public void showDecryptLoadPanel() {showScreen("/fxml/decrypt/decrypt-load.fxml");}
 
     public void showDecryptModePanel() {
         showScreen("/fxml/decrypt/decrypt-mode.fxml");

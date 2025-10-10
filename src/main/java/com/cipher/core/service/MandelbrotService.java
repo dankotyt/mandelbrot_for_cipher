@@ -2,6 +2,7 @@ package com.cipher.core.service;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.encryption.CryptographicService;
+import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
@@ -45,7 +46,7 @@ public class MandelbrotService extends JPanel {
     private final DeterministicRandomGenerator drbg;
     private final BinaryFile binaryFile;
     private final ImageSegmentShuffler imageSegmentShuffler;
-    private final ImageEncryptionService imageEncryptionService;
+    private final ImageEncrypt imageEncrypt;
     private final ImageUtils imageUtils;
     private final CryptographicService cryptographicService;
 
@@ -68,20 +69,20 @@ public class MandelbrotService extends JPanel {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public MandelbrotService createWithSize(int width, int height) {
-        MandelbrotService service = new MandelbrotService(this.drbg, this.binaryFile);
-        service.startMandelbrotWidth = width;
-        service.startMandelbrotHeight = height;
-        service.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
-                    service.generateImage();
-                }
-            }
-        });
-        return service;
-    }
+//    public MandelbrotService createWithSize(int width, int height) {
+//        MandelbrotService service = new MandelbrotService(this.drbg, this.binaryFile);
+//        service.startMandelbrotWidth = width;
+//        service.startMandelbrotHeight = height;
+//        service.addMouseListener(new MouseAdapter() {
+//            @Override
+//            public void mousePressed(MouseEvent e) {
+//                if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
+//                    service.generateImage();
+//                }
+//            }
+//        });
+//        return service;
+//    }
 
     /**
      * Переопределяет метод paintComponent для отрисовки сгенерированного изображения множества Мандельброта.
@@ -174,7 +175,7 @@ public class MandelbrotService extends JPanel {
                 } else {
                     ConsoleManager.log("Изображение успешно сгенерировано после " + attempt + " попыток.");
 
-                    imageEncryptionService.initMandelbrotParams(currentParams);
+                    imageEncrypt.initMandelbrotParams(currentParams);
                     imageUtils.setMandelbrotImage(resultImage, currentParams);
                 }
             } catch (InterruptedException e) {
@@ -195,20 +196,20 @@ public class MandelbrotService extends JPanel {
     */
 
     public BufferedImage generateImage(int originalWidth, int originalHeight) {
-        BufferedImage finalFractal = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
+        BufferedImage resultImage = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
             int processors = Runtime.getRuntime().availableProcessors();
-            int chunkWidth = image.getWidth() / processors;
+            int chunkWidth = originalWidth / processors;
 
             List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < processors; i++) {
                 int startX = i * chunkWidth;
-                int width = (i == processors - 1) ? image.getWidth() - startX : chunkWidth;
+                int width = (i == processors - 1) ? originalWidth - startX : chunkWidth;
 
                 futures.add(executor.submit(new MandelbrotThread(
-                        startX, 0, width, image.getHeight(),
-                        ZOOM, MAX_ITER, offsetX, offsetY, finalFractal
+                        startX, 0, width, originalHeight,
+                        ZOOM, MAX_ITER, offsetX, offsetY, resultImage
                 )));
             }
 
@@ -225,7 +226,7 @@ public class MandelbrotService extends JPanel {
         }
 
         repaint();
-        return finalFractal;
+        return resultImage;
     }
 
     /**

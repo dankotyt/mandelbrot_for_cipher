@@ -8,6 +8,8 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
@@ -17,6 +19,7 @@ import java.awt.image.BufferedImage;
 @Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptLoadController {
+    private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
     @FXML private ImageView imageView;
     @FXML private Button continueButton;
     @FXML private Button backButton;
@@ -28,6 +31,7 @@ public class EncryptLoadController {
 
     @FXML
     public void initialize() {
+        logger.info("EncryptLoadController: ImageUtils instance = {}", imageUtils.hashCode());
         loadInputImage();
         setupEventHandlers();
     }

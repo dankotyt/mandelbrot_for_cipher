@@ -22,19 +22,15 @@ public class EncryptionDataSerializer {
         this.processors = Runtime.getRuntime().availableProcessors();
     }
 
-    public EncryptionDataSerializer(int threadCount) {
-        this.processors = threadCount;
-    }
-
     public byte[] serialize(EncryptionResult result) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
 
         byte[] segmentedImageData = serializeImageParallel(result.segmentedImage());
-        byte[] fractalPreviewData = serializeImageParallel(result.fractalImage());
+        byte[] fractalImageData = serializeImageParallel(result.fractalImage());
 
         writeByteArray(dos, segmentedImageData);
-        writeByteArray(dos, fractalPreviewData);
+        writeByteArray(dos, fractalImageData);
         writeEncryptionParams(dos, result.params());
 
         dos.flush();
@@ -132,13 +128,13 @@ public class EncryptionDataSerializer {
         DataInputStream dis = new DataInputStream(bais);
 
         byte[] segmentedImageData = readByteArray(dis);
-        byte[] fractalPreviewData = readByteArray(dis);
+        byte[] fractalImageData = readByteArray(dis);
 
         BufferedImage segmentedImage = deserializeImageSingleThread(segmentedImageData);
-        BufferedImage fractalPreview = deserializeImageSingleThread(fractalPreviewData);
+        BufferedImage fractalImage = deserializeImageSingleThread(fractalImageData);
         EncryptionParams params = readEncryptionParams(dis);
 
-        return new EncryptionResult(segmentedImage, fractalPreview, params);
+        return new EncryptionResult(segmentedImage, fractalImage, params);
     }
 
     private BufferedImage deserializeImageSingleThread(byte[] imageData) throws IOException {

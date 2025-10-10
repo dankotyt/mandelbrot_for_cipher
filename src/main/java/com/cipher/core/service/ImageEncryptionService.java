@@ -22,7 +22,6 @@ import java.util.Map;
 public class ImageEncryptionService {
     private final DeterministicRandomGenerator drbg;
     private final ImageSegmentShuffler imageSegmentShuffler;
-    private final MandelbrotService mandelbrotService;
     private final CryptographicService cryptoService;
 
     private byte[] masterSeed;
@@ -33,42 +32,32 @@ public class ImageEncryptionService {
         this.mandelbrotParams = mandelbrotParams;
     }
 
-//    public SegmentationResult prepareEncryption(BufferedImage image) {
+//    public BufferedImage performEncryption(EncryptionParams params, BufferedImage originalImage) throws Exception {
+//        // 1. Сегментируем оригинал с теми же параметрами
+//        BufferedImage targetImage = extractTargetArea(originalImage, params.area());
+//        BufferedImage targetCopy = ImageUtils.copyImage(targetImage);
 //
-//        masterSeed = generateMasterSeed();
-//        drbg.initialize(masterSeed);
+//        /*todo если шифруем всю картинку - юзаем уже ранее зашафленное изображение;
+//               если часть - то шафлим только часть. Для этого НЕ НУЖНО передавать masterSeed,
+//               т.к. drbg уже там проинициализирован;
+//         */
+//        if (!params.area().isWhole()) {
+//            segmentationResult = imageSegmentShuffler.reshufflePartOfImage(targetCopy);
+//        }
 //
-//        BufferedImage targetCopy = ImageUtils.copyImage(image);
-//        segmentationResult = imageSegmentShuffler.segmentAndShuffle(targetCopy);
-//        return segmentationResult;
+//        MandelbrotParams finalParams = mandelbrotParams.withSize(
+//                segmentationResult.paddedWidth(),
+//                segmentationResult.paddedHeight()
+//        );
+//
+//        //BufferedImage finalFractal = mandelbrotService.generateImage();
+//
+//        // 3. XOR шифрование
+//        return XOR.performXOR(
+//                ImageUtils.convertToARGB(segmentationResult.shuffledImage()),
+//                ImageUtils.convertToARGB(finalFractal)
+//        );
 //    }
-
-    public BufferedImage performEncryption(EncryptionParams params, BufferedImage originalImage) throws Exception {
-        // 1. Сегментируем оригинал с теми же параметрами
-        BufferedImage targetImage = extractTargetArea(originalImage, params.area());
-        BufferedImage targetCopy = ImageUtils.copyImage(targetImage);
-
-        /*todo если шифруем всю картинку - юзаем уже ранее зашафленное изображение;
-               если часть - то шафлим только часть. Для этого НЕ НУЖНО передавать masterSeed,
-               т.к. drbg уже там проинициализирован;
-         */
-        if (!params.area().isWhole()) {
-            segmentationResult = imageSegmentShuffler.reshufflePartOfImage(targetCopy);
-        }
-
-        MandelbrotParams finalParams = mandelbrotParams.withSize(
-                segmentationResult.paddedWidth(),
-                segmentationResult.paddedHeight()
-        );
-
-        //BufferedImage finalFractal = mandelbrotService.generateImage();
-
-        // 3. XOR шифрование
-        return XOR.performXOR(
-                ImageUtils.convertToARGB(segmentationResult.shuffledImage()),
-                ImageUtils.convertToARGB(finalFractal)
-        );
-    }
 
     private BufferedImage extractTargetArea(BufferedImage image, EncryptionArea area) {
         if (area.isWhole()) {
@@ -84,46 +73,8 @@ public class ImageEncryptionService {
         return masterSeed;
     }
 
-    public EncryptionDataResult encryptParams(byte[] serializedParams, byte[] masterSeed) throws Exception {
-        return cryptoService.encryptData(serializedParams, masterSeed);
-    }
+//    public EncryptionDataResult encryptParams(byte[] serializedParams, byte[] masterSeed) throws Exception {
+//        return cryptoService.encryptData(serializedParams, masterSeed);
+//    }
 
-    public byte[] serializeParams(EncryptionParams params) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-
-        try {
-            // Сериализуем все параметры
-            dos.writeBoolean(params.area().isWhole());
-            dos.writeInt(params.area().startX());
-            dos.writeInt(params.area().startY());
-            dos.writeInt(params.area().width());
-            dos.writeInt(params.area().height());
-
-            dos.writeInt(params.segmentation().segmentSize());
-            dos.writeInt(params.segmentation().paddedWidth());
-            dos.writeInt(params.segmentation().paddedHeight());
-
-            // Segment mapping
-            Map<Integer, Integer> mapping = params.segmentation().segmentMapping();
-            dos.writeInt(mapping.size());
-            for (Map.Entry<Integer, Integer> entry : mapping.entrySet()) {
-                dos.writeInt(entry.getKey());
-                dos.writeInt(entry.getValue());
-            }
-
-            // Mandelbrot params
-            dos.writeInt(params.mandelbrot().startMandelbrotWidth());
-            dos.writeInt(params.mandelbrot().startMandelbrotHeight());
-            dos.writeDouble(params.mandelbrot().zoom());
-            dos.writeDouble(params.mandelbrot().offsetX());
-            dos.writeDouble(params.mandelbrot().offsetY());
-            dos.writeInt(params.mandelbrot().maxIter());
-
-        } catch (IOException e) {
-            throw new RuntimeException("Serialization error", e);
-        }
-
-        return baos.toByteArray();
-    }
 }

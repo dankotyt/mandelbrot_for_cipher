@@ -5,6 +5,9 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
@@ -13,20 +16,32 @@ import java.awt.image.BufferedImage;
 @Getter
 @Component
 public class ImageUtils {
+    private static final Logger logger = LoggerFactory.getLogger(ImageUtils.class);
 
-    @Setter
     private BufferedImage originalImage;
     private BufferedImage mandelbrotImage;
     private MandelbrotParams mandelbrotParams;
+
+    public void setOriginalImage(BufferedImage image) {
+        this.originalImage = image;
+        logger.info("ImageUtils: оригинальное изображение установлено, размер: {}x{}, instance: {}",
+                image.getWidth(), image.getHeight(), this.hashCode());
+    }
+
+    public boolean hasOriginalImage() {
+        boolean hasImage = originalImage != null;
+        logger.info("ImageUtils: проверка hasOriginalImage() = {}, instance: {}", hasImage, this.hashCode());
+        return hasImage;
+    }
 
     public void setMandelbrotImage(BufferedImage image, MandelbrotParams params) {
         this.mandelbrotImage = image;
         this.mandelbrotParams = params;
     }
 
-    public boolean hasOriginalImage() {
-        return originalImage != null;
-    }
+//    public boolean hasOriginalImage() {
+//        return originalImage != null;
+//    }
 
     public boolean hasMandelbrotImage() {
         return mandelbrotImage != null;

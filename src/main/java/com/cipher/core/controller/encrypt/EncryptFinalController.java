@@ -1,10 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.neww.EncryptionDataResult;
-import com.cipher.core.dto.neww.EncryptionParams;
-import com.cipher.core.dto.neww.EncryptionPreviewResult;
-import com.cipher.core.service.ImageEncryptionService;
-import com.cipher.core.utils.EncryptionParamsSerializer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
 
@@ -14,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
@@ -33,32 +30,13 @@ public class EncryptFinalController {
 
     private final SceneManager sceneManager;
     private final TempFileManager tempFileManager;
-    private final ImageEncryptionService encryptionService;
-    private final EncryptionParamsSerializer paramsSerializer;
 
-    private EncryptionPreviewResult previewResult;
     private BufferedImage encryptedImage;
-    private EncryptionParams encryptionParams;
-
-    public void setPreviewResult(EncryptionPreviewResult previewResult) {
-        try {
-            this.encryptionParams = previewResult.params();
-            this.encryptedImage = encryptionService.performEncryption(
-                    previewResult.params(),
-                    previewResult.originalImage()
-            );
-            displayEncryptedImage();
-        } catch (Exception e) {
-            logger.error("Ошибка шифрования", e);
-        }
-    }
+    @Setter
+    private EncryptionDataResult encryptionDataResult;
 
     public void setEncryptedImage(BufferedImage encryptedImage) {
         this.encryptedImage = encryptedImage;
-
-        // Загружаем параметры из временного файла
-        this.encryptionParams = tempFileManager.loadEncryptionParams();
-
         displayEncryptedImage();
     }
 
@@ -70,26 +48,6 @@ public class EncryptFinalController {
     private void setupEventHandlers() {
         backButton.setOnAction(e -> handleBack());
         saveButton.setOnAction(e -> handleSave());
-    }
-
-    private void performEncryption() {
-        if (previewResult == null) {
-            logger.error("Параметры шифрования не установлены");
-            return;
-        }
-
-        try {
-            // Выполняем финальное шифрование
-            encryptedImage = encryptionService.performEncryption(
-                    previewResult.params(),
-                    previewResult.originalImage()
-            );
-
-            displayEncryptedImage();
-
-        } catch (Exception e) {
-            logger.error("Ошибка шифрования", e);
-        }
     }
 
     private void displayEncryptedImage() {
@@ -104,15 +62,10 @@ public class EncryptFinalController {
     }
 
     private void handleSave() {
-        if (encryptedImage != null && previewResult != null) {
+        if (encryptedImage != null && encryptionDataResult != null) {
             try {
-                // Сериализуем и шифруем параметры
-                EncryptionDataResult encryptedParams = tempFileManager.loadEncryptedParamsFromTemp();
+                tempFileManager.saveEncryptedData(encryptedImage, encryptionDataResult);
 
-                // Сохраняем через проводник
-                tempFileManager.saveEncryptedData(encryptedImage, encryptedParams);
-
-                // Возвращаемся на начальный экран
                 sceneManager.showStartPanel();
 
             } catch (Exception e) {

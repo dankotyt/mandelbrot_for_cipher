@@ -35,7 +35,7 @@
             <Region styleClass="space-below-title"/>
 
             <StackPane styleClass="decrypt-mode-image-container">
-                <ImageView fx:id="inputImageView"
+                <ImageView fx:id="imageView"
                            fitWidth="640" fitHeight="480" translateX="150"/>
                 <Region styleClass="dark-gray-rect-without-translate"/>
                 <StackPane styleClass="decrypt-mode-button-container">

@@ -61,7 +61,7 @@ public class EncryptBeginController {
         uploadButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Выбрать файл'");
-                tempFileManager.selectImageFileForEncrypt();
+                tempFileManager.selectOriginalImageFile();
                 sceneManager.showEncryptLoadPanel();
             } catch (Exception ex) {
                 logger.error("Ошибка при выборе файла: {}", ex.getMessage(), ex);
