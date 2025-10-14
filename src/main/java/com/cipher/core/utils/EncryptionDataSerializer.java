@@ -3,8 +3,10 @@ package com.cipher.core.utils;
 import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.neww.EncryptionArea;
+import com.cipher.core.dto.neww.EncryptionDataResult;
 import com.cipher.core.dto.neww.EncryptionParams;
 import com.cipher.core.dto.neww.SegmentationParams;
+import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -15,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+@Component
 public class EncryptionDataSerializer {
     private final int processors;
 
@@ -121,6 +124,18 @@ public class EncryptionDataSerializer {
 
         dos.flush();
         return baos.toByteArray();
+    }
+
+    public EncryptionDataResult deserializeEncryptionDataResult(byte[] data) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(data);
+        DataInputStream dis = new DataInputStream(bais);
+
+        // Читаем в той же последовательности, что и при сериализации
+        byte[] encryptedData = readByteArray(dis);
+        byte[] iv = readByteArray(dis);
+        byte[] salt = readByteArray(dis);
+
+        return new EncryptionDataResult(encryptedData, iv, salt);
     }
 
     public EncryptionResult deserialize(byte[] data) throws IOException {

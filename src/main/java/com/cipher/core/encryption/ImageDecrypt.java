@@ -2,15 +2,21 @@ package com.cipher.core.encryption;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
-import java.awt.Graphics2D;
 
+import com.cipher.common.exception.CheckingException;
+import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.dto.neww.EncryptionParams;
 import com.cipher.core.dto.neww.SegmentationParams;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
+import com.cipher.core.utils.EncryptionDataSerializer;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.service.MandelbrotService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +33,8 @@ public class ImageDecrypt {
     private final DeterministicRandomGenerator drbg;
     private final BinaryFile binaryFile;
     private final ImageSegmentShuffler imageSegmentShuffler;
+    private final EncryptionDataSerializer serializer;
+    private final CryptographicService cryptographicService;
 
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -35,66 +43,69 @@ public class ImageDecrypt {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public void decryptImage(String keyFilePath) {
+    public BufferedImage decryptImage(File encryptedFile) throws Exception {
         try {
+            byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
 
-            BufferedImage encryptedImage = ImageIO.read(new File(getTempPath() + "input.png"));
+            EncryptionDataResult encryptedDataResult = serializer.deserializeEncryptionDataResult(fileData);
 
-            MandelbrotParams mandelbrotParams = keyDecoderParams.mandelbrotParams();
-            SegmentationParams segmentationParams = keyDecoderParams.segmentationParams();
+            byte[] masterSeed = getMasterSeedFromDH();
 
-            double zoom = mandelbrotParams.zoom();
-            double offsetX = mandelbrotParams.offsetX();
-            double offsetY = mandelbrotParams.offsetY();
-            int maxIter = mandelbrotParams.maxIter();
-            int segmentSize = segmentationParams.segmentSize();
+            cryptographicService.initMasterSeed(masterSeed);
+            imageSegmentShuffler.initializeWithSeed(masterSeed);
+
+            EncryptionResult result = cryptographicService.decryptData(encryptedDataResult);
+
+            BufferedImage encryptedImage = result.segmentedImage();
+            BufferedImage fractalImage = result.fractalImage();
+            EncryptionParams params = result.params();
+
+            MandelbrotParams mandelbrotParams = params.mandelbrot();
+
+            BufferedImage genFractal = mandelbrotService.generateImage(
+                    mandelbrotParams.startMandelbrotWidth(),
+                    mandelbrotParams.startMandelbrotHeight(), mandelbrotParams.zoom(),
+                    mandelbrotParams.offsetX(), mandelbrotParams.offsetY(),
+                    mandelbrotParams.maxIter());
+
+            if (!compareImages(genFractal, fractalImage)) {
+                throw new CheckingException("Сгенерированный и используемый фракталы отличаются! Возможна подмена!");
+            }
+
+            BufferedImage segmentedImage = XOR.performXOR(encryptedImage, genFractal);
+
+            SegmentationParams segmentationParams = params.segmentation();
             Map<Integer, Integer> segmentMapping = segmentationParams.segmentMapping();
-            int startX = keyDecoderParams.startX();
-            int startY = keyDecoderParams.startY();
-            byte[] encryptedMasterSeed = keyDecoderParams.encryptedMasterSeed();
-            byte[] iv = keyDecoderParams.iv();
-            byte[] salt = keyDecoderParams.salt();
-            int width = segmentationParams.paddedWidth();
-            int height = segmentationParams.paddedHeight();
 
-
-
-            // Выделяем область для дешифровки (если работаем с частью изображения)
-            BufferedImage encryptedArea = encryptedImage;
-            if (width != encryptedImage.getWidth() || height != encryptedImage.getHeight()) {
-                encryptedArea = encryptedImage.getSubimage(startX, startY, width, height);
-            }
-
-            // 2. Генерируем изображение Мандельброта с нужными параметрами и размерами
-            MandelbrotService mandelbrotServiceGenerator = new MandelbrotService();
-            BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
-                    width, height, zoom, offsetX, offsetY, maxIter);
-
-            // 3. Применяем XOR между зашифрованным изображением и Мандельбротом
-            mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
-            encryptedArea = ImageUtils.convertToARGB(encryptedArea);
-
-            BufferedImage xorResult = XOR.performXOR(encryptedArea, mandelbrotImage);
-
-            // 4. Выполняем десегментацию (восстановление порядка сегментов)
-            BufferedImage unshuffledImage = imageSegmentShuffler.unshuffledSegments(
-                    xorResult, segmentMapping, segmentSize);
-
-            // 5. Сохраняем или возвращаем результат
-            if (width != encryptedImage.getWidth() || height != encryptedImage.getHeight()) {
-                // Если работали с частью изображения, вставляем расшифрованную область обратно
-                Graphics2D g2d = encryptedImage.createGraphics();
-                g2d.drawImage(unshuffledImage, startX, startY, null);
-                g2d.dispose();
-                saveDecryptedImage(encryptedImage);
-            } else {
-                // Если работали со всем изображением
-                saveDecryptedImage(unshuffledImage);
-            }
-
-        } catch (IOException e) {
-            logger.error("Ошибка при дешифровании изображения: " + e.getMessage());
+            return imageSegmentShuffler.unshuffledSegments(
+                    segmentedImage,
+                    segmentMapping,
+                    segmentationParams.segmentSize()
+            );
+        } catch (Exception e) {
+            logger.error("Ошибка при дешифровке изображения: {}", e.getMessage(), e);
+            throw new Exception("Не удалось дешифровать изображение: " + e.getMessage(), e);
         }
+    }
+
+    private boolean compareImages(BufferedImage img1, BufferedImage img2) {
+        if (img1.getWidth() != img2.getWidth() || img1.getHeight() != img2.getHeight()) {
+            return false;
+        }
+
+        DataBuffer db1 = img1.getRaster().getDataBuffer();
+        DataBuffer db2 = img2.getRaster().getDataBuffer();
+
+        if (db1.getSize() != db2.getSize()) {
+            return false;
+        }
+
+        for (int i = 0; i < db1.getSize(); i++) {
+            if (db1.getElem(i) != db2.getElem(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected static void saveDecryptedImage(BufferedImage decryptedImage) {

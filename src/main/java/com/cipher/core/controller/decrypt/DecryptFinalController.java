@@ -1,6 +1,7 @@
 package com.cipher.core.controller.decrypt;
 
 //import com.cipher.core.encryption.ImageDecrypt;
+import com.cipher.core.encryption.ImageDecrypt;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -17,6 +18,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
+import java.io.File;
+
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
@@ -30,12 +33,13 @@ public class DecryptFinalController {
     private final SceneManager sceneManager;
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
-    //private final ImageDecrypt imageDecrypt;
+    private final ImageDecrypt imageDecrypt;
     private String keyFilePath;
 
     public void setKeyFilePath(String keyFilePath) {
         this.keyFilePath = keyFilePath;
-        startDecryption();
+        File file = new File(keyFilePath);
+        startDecryption(file);
     }
 
     @FXML
@@ -48,7 +52,7 @@ public class DecryptFinalController {
         saveButton.setOnAction(e -> tempFileManager.saveDecryptedImage()); //todo заменить на полное сохранение
     }
 
-    private void startDecryption() {
+    private void startDecryption(File file) {
         if (keyFilePath == null || keyFilePath.isEmpty()) {
             dialogDisplayer.showErrorDialog("Путь к файлу-ключу не указан");
             return;
@@ -56,8 +60,8 @@ public class DecryptFinalController {
 
         Task<Void> decryptImageTask = new Task<>() {
             @Override
-            protected Void call() {
-                imageDecrypt.decryptImage(keyFilePath);
+            protected Void call() throws Exception {
+                imageDecrypt.decryptImage(file);
                 return null;
             }
         };
