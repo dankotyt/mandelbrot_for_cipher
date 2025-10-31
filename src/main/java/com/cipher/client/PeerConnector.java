@@ -1,5 +1,6 @@
 package com.cipher.client;
 
+import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.service.NetworkDiscoveryService;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +17,6 @@ import java.util.concurrent.CompletableFuture;
 public class PeerConnector {
 
     private final KeyExchangeService keyExchangeService;
-    private final NetworkDiscoveryService discoveryService;
-    private final DiscoveryClient discoveryClient;
     private final KeyExchangeClient keyExchangeClient;
 
     public CompletableFuture<Boolean> connectToPeer(InetAddress peerAddress) {
@@ -30,10 +29,10 @@ public class PeerConnector {
                 }
 
                 // Выполняем обмен ключами
-                boolean success = keyExchangeClient.performKeyExchange(peerAddress);
+                DHKeyExchange keys = keyExchangeService.getCurrentKeys();
+                boolean success = keyExchangeClient.performKeyExchange(peerAddress, keys);
                 if (success) {
                     log.info("Successfully connected to peer: {}", peerAddress.getHostAddress());
-                    discoveryService.onPeerConnected(peerAddress);
                 }
                 return success;
 
@@ -46,7 +45,6 @@ public class PeerConnector {
 
     public void disconnectFromPeer(InetAddress peerAddress) {
         keyExchangeService.closeConnection(peerAddress);
-        discoveryService.onPeerDisconnected(peerAddress);
         log.info("Disconnected from peer: {}", peerAddress.getHostAddress());
     }
 

@@ -4,6 +4,7 @@ import com.cipher.client.KeyExchangeClient;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
 import com.cipher.server.handler.ClientConnectionHandler;
+import com.cipher.server.handler.ClientConnectionHandlerFactory;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ConnectionManager {
     private final NetworkKeyExchangeServiceImpl keyExchangeService;
     private final KeyExchangeClient keyExchangeClient;
+    private final ClientConnectionHandlerFactory handlerFactory;
 
     private final Map<InetAddress, PeerInfo> connectedPeers = new ConcurrentHashMap<>();
     private final ExecutorService connectionExecutor = Executors.newCachedThreadPool();
@@ -49,32 +51,32 @@ public class ConnectionManager {
         }
     }
 
-    public CompletableFuture<Boolean> initiateKeyExchange(InetAddress peerAddress) {
-        if (!running.get()) {
-            log.error("Connection manager is not running");
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                log.info("Initiating key exchange with {}", peerAddress.getHostAddress());
-
-                boolean success = keyExchangeClient.performKeyExchange(peerAddress);
-                if (success) {
-                    PeerInfo peerInfo = new PeerInfo(peerAddress);
-                    connectedPeers.put(peerAddress, peerInfo);
-                    keyExchangeService.addActiveConnection(peerAddress, peerInfo);
-                    log.info("Key exchange successful with {}", peerAddress.getHostAddress());
-                } else {
-                    log.error("Key exchange failed with {}", peerAddress.getHostAddress());
-                }
-                return success;
-            } catch (Exception e) {
-                log.error("Key exchange failed for {}: {}", peerAddress, e.getMessage());
-                return false;
-            }
-        }, connectionExecutor);
-    }
+//    public CompletableFuture<Boolean> initiateKeyExchange(InetAddress peerAddress) {
+//        if (!running.get()) {
+//            log.error("Connection manager is not running");
+//            return CompletableFuture.completedFuture(false);
+//        }
+//
+//        return CompletableFuture.supplyAsync(() -> {
+//            try {
+//                log.info("Initiating key exchange with {}", peerAddress.getHostAddress());
+//
+//                boolean success = keyExchangeClient.performKeyExchange(peerAddress);
+//                if (success) {
+//                    PeerInfo peerInfo = new PeerInfo(peerAddress);
+//                    connectedPeers.put(peerAddress, peerInfo);
+//                    keyExchangeService.addActiveConnection(peerAddress, peerInfo);
+//                    log.info("Key exchange successful with {}", peerAddress.getHostAddress());
+//                } else {
+//                    log.error("Key exchange failed with {}", peerAddress.getHostAddress());
+//                }
+//                return success;
+//            } catch (Exception e) {
+//                log.error("Key exchange failed for {}: {}", peerAddress, e.getMessage());
+//                return false;
+//            }
+//        }, connectionExecutor);
+//    }
 
     public void handleIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey) {
         if (!running.get()) {
@@ -165,16 +167,16 @@ public class ConnectionManager {
         });
     }
 
-    public void performPeriodicKeyRefresh() {
-        connectionExecutor.submit(() -> {
-            connectedPeers.forEach((peer, info) -> {
-                if (info.isKeyExchangeExpired(24 * 60 * 60 * 1000)) { // 24 часа
-                    log.info("Refreshing keys for peer: {}", peer.getHostAddress());
-                    initiateKeyExchange(peer);
-                }
-            });
-        });
-    }
+//    public void performPeriodicKeyRefresh() {
+//        connectionExecutor.submit(() -> {
+//            connectedPeers.forEach((peer, info) -> {
+//                if (info.isKeyExchangeExpired(24 * 60 * 60 * 1000)) { // 24 часа
+//                    log.info("Refreshing keys for peer: {}", peer.getHostAddress());
+//                    initiateKeyExchange(peer);
+//                }
+//            });
+//        });
+//    }
 
     private void startKeyExchangeServer() {
         serverThread = new Thread(() -> {
@@ -188,11 +190,11 @@ public class ConnectionManager {
                         Socket clientSocket = keyExchangeServerSocket.accept();
                         log.info("Incoming connection from: {}", clientSocket.getInetAddress().getHostAddress());
 
-                        ClientConnectionHandler handler = new ClientConnectionHandler(
-                                clientSocket, keyExchangeService);
+                        ClientConnectionHandler handler = handlerFactory.createHandler(clientSocket);
                         connectionExecutor.submit(handler);
+
                     } catch (java.net.SocketTimeoutException e) {
-                        // continue - нормальное поведение для accept с таймаутом
+
                     } catch (Exception e) {
                         if (running.get()) {
                             log.error("Error accepting connection: {}", e.getMessage());

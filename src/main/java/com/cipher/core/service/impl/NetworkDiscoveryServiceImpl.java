@@ -14,10 +14,7 @@ import org.springframework.stereotype.Service;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -40,6 +37,14 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     public void onPeerDiscovered(InetAddress peerAddress) {
         if (discoveredPeers.add(peerAddress)) {
             log.info("New peer discovered: {}", peerAddress.getHostAddress());
+
+            peerConnector.connectToPeer(peerAddress)
+                    .thenAccept(success -> {
+                        if (success) {
+                            onPeerConnected(peerAddress);
+                        }
+                    });
+
             printDiscoveredPeers();
         }
     }
@@ -101,6 +106,21 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
         }
     }
 
+    public CompletableFuture<Boolean> connectToDiscoveredPeer(InetAddress peerAddress) {
+        return peerConnector.connectToPeer(peerAddress)
+                .thenApply(success -> {
+                    if (success) {
+                        onPeerConnected(peerAddress);
+                    }
+                    return success;
+                });
+    }
+
+    public void disconnectFromPeer(InetAddress peerAddress) {
+        peerConnector.disconnectFromPeer(peerAddress);
+        onPeerDisconnected(peerAddress);
+    }
+
     private void startCleanupTask() {
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -138,11 +158,11 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     }
 
     private void validateConnectedPeers() {
-        // Проверяем, что подключенные пиры все еще доступны
         connectedPeers.forEach(peer -> {
             if (!peerConnector.isConnectedTo(peer)) {
                 log.warn("Peer {} is in connected list but connection is lost", peer.getHostAddress());
                 connectedPeers.remove(peer);
+                onPeerDisconnected(peer);
             }
         });
     }

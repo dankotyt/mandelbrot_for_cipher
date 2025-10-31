@@ -50,7 +50,7 @@ public class StartController {
     private void handleConnect() {
         try {
             NetworkUtils.checkNetworkConnection();
-            sceneManager.showNetworkConnectionPanel();
+            sceneManager.showDevicesPanel();
         } catch (NetworkException ex) {
             Platform.runLater(() ->
                     dialogDisplayer.showErrorAlert("Нет подключения",

@@ -80,7 +80,7 @@ public class SceneManager {
     }
 
     public void showDevicesPanel() {
-        showScreen("/fxml/devices/devices-panel.fxml");
+        showScreen("/fxml/network/devices-panel.fxml");
     }
 
     public void showLoginPanel() {

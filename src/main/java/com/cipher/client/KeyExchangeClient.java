@@ -4,6 +4,7 @@ import com.cipher.common.NetworkConstants;
 import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,15 +18,10 @@ import java.net.SocketTimeoutException;
 
 @Slf4j
 @Component
+@NoArgsConstructor
 public class KeyExchangeClient {
 
-    private final KeyExchangeService keyExchangeService;
-
-    public KeyExchangeClient(KeyExchangeService keyExchangeService) {
-        this.keyExchangeService = keyExchangeService;
-    }
-
-    public boolean performKeyExchange(InetAddress peerAddress) {
+    public boolean performKeyExchange(InetAddress peerAddress, DHKeyExchange ourKeys) {
         log.info("Initiating key exchange with {}", peerAddress.getHostAddress());
 
         try (Socket socket = new Socket()) {
@@ -35,8 +31,6 @@ public class KeyExchangeClient {
             try (DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                  DataInputStream in = new DataInputStream(socket.getInputStream())) {
 
-                // Получаем текущие ключи
-                DHKeyExchange ourKeys = keyExchangeService.getCurrentKeys();
                 if (ourKeys == null) {
                     log.error("No current keys available");
                     return false;
@@ -65,13 +59,11 @@ public class KeyExchangeClient {
 
             } catch (SocketTimeoutException e) {
                 log.error("Key exchange timeout with {}: {}", peerAddress.getHostAddress(), e.getMessage());
-                keyExchangeService.generateNewKeys();
                 return false;
             }
 
         } catch (IOException e) {
             log.error("Key exchange failed with {}: {}", peerAddress.getHostAddress(), e.getMessage());
-            keyExchangeService.generateNewKeys();
             return false;
         }
     }

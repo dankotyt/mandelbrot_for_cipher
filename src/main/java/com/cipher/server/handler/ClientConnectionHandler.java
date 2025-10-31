@@ -16,13 +16,16 @@ import java.net.SocketTimeoutException;
 public class ClientConnectionHandler implements Runnable {
 
     private final Socket clientSocket;
-    private final InetAddress clientAddress;
     private final NetworkKeyExchangeServiceImpl networkKeyExchangeService;
+    private final InetAddress clientAddress; // Добавляем поле для адреса клиента
 
     public ClientConnectionHandler(Socket clientSocket, NetworkKeyExchangeServiceImpl networkKeyExchangeService) {
+        if (clientSocket == null) {
+            throw new IllegalArgumentException("Client socket cannot be null");
+        }
         this.clientSocket = clientSocket;
-        this.clientAddress = clientSocket.getInetAddress();
         this.networkKeyExchangeService = networkKeyExchangeService;
+        this.clientAddress = clientSocket.getInetAddress();
     }
 
     @Override
@@ -44,7 +47,6 @@ public class ClientConnectionHandler implements Runnable {
 
             clientSocket.setSoTimeout(30000);
 
-            // Читаем тип сообщения
             String messageType = in.readUTF();
 
             switch (messageType) {
@@ -69,7 +71,6 @@ public class ClientConnectionHandler implements Runnable {
     private void handleKeyExchange(DataInputStream in, DataOutputStream out) throws IOException {
         log.info("Processing key exchange request from {}", clientAddress.getHostAddress());
 
-        // Получаем публичный ключ клиента
         int keyLength = in.readInt();
         if (keyLength <= 0 || keyLength > 10000) {
             throw new IOException("Invalid key length: " + keyLength);
@@ -78,7 +79,6 @@ public class ClientConnectionHandler implements Runnable {
         byte[] clientPublicKeyBytes = new byte[keyLength];
         in.readFully(clientPublicKeyBytes);
 
-        // Отправляем наш публичный ключ
         DHKeyExchange ourKeys = networkKeyExchangeService.getCurrentKeys();
         if (ourKeys == null) {
             sendErrorResponse(out, "No keys available");
@@ -90,10 +90,8 @@ public class ClientConnectionHandler implements Runnable {
         out.write(ourPublicKey);
         out.flush();
 
-        // Вычисляем общий секрет
         ourKeys.computeSharedSecret(DHKeyExchange.publicKeyFromBytes(clientPublicKeyBytes));
 
-        // Уведомляем сервис о новом соединении
         networkKeyExchangeService.processIncomingKeyExchange(clientAddress, clientPublicKeyBytes);
 
         log.info("Key exchange completed with {}", clientAddress.getHostAddress());
@@ -115,7 +113,7 @@ public class ClientConnectionHandler implements Runnable {
 
     private void closeSocket() {
         try {
-            if (!clientSocket.isClosed()) {
+            if (clientSocket != null && !clientSocket.isClosed()) {
                 clientSocket.close();
             }
         } catch (IOException e) {

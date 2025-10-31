@@ -61,9 +61,8 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
     public boolean performKeyExchange(InetAddress peerAddress) {
         try {
             log.info("Выполнение обмена ключами DH с: {}", peerAddress.getHostAddress());
-
-            // Используем KeyExchangeClient для реального обмена ключами
-            boolean success = keyExchangeClient.performKeyExchange(peerAddress);
+            DHKeyExchange ourKeys = currentKeyExchange.get();
+            boolean success = keyExchangeClient.performKeyExchange(peerAddress, ourKeys);
 
             if (success) {
                 // Обновляем информацию о пире
