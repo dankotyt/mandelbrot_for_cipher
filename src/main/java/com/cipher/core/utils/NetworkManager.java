@@ -3,6 +3,7 @@ package com.cipher.core.utils;
 import com.cipher.client.PeerConnector;
 import com.cipher.core.service.ConnectionManager;
 import com.cipher.core.service.KeyExchangeService;
+import com.cipher.core.service.NetworkDiscoveryService;
 import com.cipher.core.service.impl.NetworkDiscoveryServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class NetworkManager {
 
-    private final NetworkDiscoveryServiceImpl networkDiscoveryService;
+    private final NetworkDiscoveryService networkDiscoveryService;
     private final KeyExchangeService keyExchangeService;
     private final PeerConnector peerConnector;
     private final ConnectionManager connectionManager;

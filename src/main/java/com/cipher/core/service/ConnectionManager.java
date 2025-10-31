@@ -4,7 +4,9 @@ import com.cipher.client.KeyExchangeClient;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
 import com.cipher.server.handler.ClientConnectionHandler;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +30,8 @@ public class ConnectionManager {
 
     private ServerSocket keyExchangeServerSocket;
     private Thread serverThread;
+    @Getter @Setter
+    private InetAddress connectedPeer;
 
     public void start() {
         if (running.compareAndSet(false, true)) {

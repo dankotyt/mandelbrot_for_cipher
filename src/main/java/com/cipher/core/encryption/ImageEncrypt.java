@@ -154,13 +154,7 @@ public void encryptWhole(BufferedImage originalImage,
                          MandelbrotService mandelbrotService,
                          ImageSegmentShuffler imageSegmentShuffler,
                          CryptographicService cryptographicService,
-                         SceneManager sceneManager,
-                         InetAddress peerAddress) throws Exception {
-
-    // Проверяем соединение с пиром
-    if (!keyExchangeService.isConnectedTo(peerAddress)) {
-        throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
-    }
+                         SceneManager sceneManager) throws Exception {
 
     SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
     BufferedImage segmentationUpdateImage = segmentationResult.shuffledImage();
@@ -189,7 +183,7 @@ public void encryptWhole(BufferedImage originalImage,
     );
 
     // Передаем peerAddress в cryptographicService
-    EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result, peerAddress);
+    EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
     BufferedImage encryptedImage = XOR.performXOR(segmentationUpdateImage, finalFractal);
 
     sceneManager.showEncryptFinalPanel(encryptedImage, cipherDataResult);
@@ -200,13 +194,7 @@ public void encryptWhole(BufferedImage originalImage,
                             ImageSegmentShuffler imageSegmentShuffler,
                             CryptographicService cryptographicService,
                             Rectangle2D selectedArea,
-                            SceneManager sceneManager,
-                            InetAddress peerAddress) throws Exception {
-
-        // Проверяем соединение с пиром
-        if (!keyExchangeService.isConnectedTo(peerAddress)) {
-            throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
-        }
+                            SceneManager sceneManager) throws Exception {
 
         int startX = (int) selectedArea.getMinX();
         int startY = (int) selectedArea.getMinY();
@@ -271,7 +259,7 @@ public void encryptWhole(BufferedImage originalImage,
         );
 
         // Передаем peerAddress в cryptographicService
-        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result, peerAddress);
+        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
 
         // Передаем полное изображение с зашифрованной областью
         sceneManager.showEncryptFinalPanel(finalImage, cipherDataResult);

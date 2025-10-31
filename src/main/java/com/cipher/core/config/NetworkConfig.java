@@ -48,12 +48,12 @@ public class NetworkConfig {
     }
 
     @Bean
-    public NetworkKeyExchangeServiceImpl keyExchangeService(ConnectionManager connectionManager) {
-        return new NetworkKeyExchangeServiceImpl(connectionManager);
+    public NetworkKeyExchangeServiceImpl keyExchangeService(KeyExchangeClient keyExchangeClient) {
+        return new NetworkKeyExchangeServiceImpl(keyExchangeClient);
     }
 
     @Bean
-    public NetworkManager networkManager(NetworkDiscoveryServiceImpl networkDiscoveryService,
+    public NetworkManager networkManager(NetworkDiscoveryService networkDiscoveryService,
                                          KeyExchangeService keyExchangeService,
                                          PeerConnector peerConnector,
                                          ConnectionManager connectionManager) {

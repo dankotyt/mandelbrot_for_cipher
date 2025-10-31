@@ -4,6 +4,7 @@ import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
+import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.ConsoleManager;
@@ -18,6 +19,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
@@ -49,6 +51,8 @@ public class MandelbrotService extends JPanel {
     private final ImageEncrypt imageEncrypt;
     private final ImageUtils imageUtils;
     private final CryptographicService cryptographicService;
+    private final KeyExchangeService keyExchangeService;
+    private final ConnectionManager connectionManager;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -125,10 +129,16 @@ public class MandelbrotService extends JPanel {
      * @see #checkImageDiversity(BufferedImage)
      */
     public BufferedImage generateImage() {
-        masterSeed = generateMasterSeed();
-        drbg.initialize(masterSeed);
+        InetAddress peerAddress = connectionManager.getConnectedPeer();
+        if (peerAddress == null) {
+            throw new IllegalStateException("No connected peer found. Please establish connection first.");
+        }
+
+        // Получаем мастер-сид из DH обмена
+        byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+
+        // Инициализируем сервисы мастер-сидом
         imageSegmentShuffler.initializeWithSeed(masterSeed);
-        cryptographicService.initMasterSeed(masterSeed);
 
         boolean validImage = false;
         int attempt = 0;

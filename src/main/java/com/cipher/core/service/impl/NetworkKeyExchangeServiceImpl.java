@@ -1,5 +1,6 @@
 package com.cipher.core.service.impl;
 
+import com.cipher.client.KeyExchangeClient;
 import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.model.PeerInfo;
@@ -23,67 +24,116 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
 
     private final AtomicReference<DHKeyExchange> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
-    private final ConnectionManager connectionManager;
+    private final KeyExchangeClient keyExchangeClient;
 
-    public NetworkKeyExchangeServiceImpl(ConnectionManager connectionManager) {
-        this.connectionManager = connectionManager;
+    public NetworkKeyExchangeServiceImpl(KeyExchangeClient keyExchangeClient) {
+        this.keyExchangeClient = keyExchangeClient;
         generateNewKeys();
     }
 
     @Override
-    public byte[] getMasterSeedFromDH(InetAddress peerAddress) {
-        PeerInfo peerInfo = activeConnections.get(peerAddress);
-        if (peerInfo != null && peerInfo.getDhKeys() != null) {
-            byte[] sharedSecret = peerInfo.getDhKeys().getSharedSecretBytes();
-            if (sharedSecret != null) {
-                return sharedSecret;
-            }
-        }
-        throw new IllegalStateException("No active connection or shared secret for peer: " + peerAddress);
+    public DHKeyExchange getCurrentKeys() {
+        return currentKeyExchange.get();
     }
 
     @Override
+    public byte[] getMasterSeedFromDH(InetAddress peerAddress) {
+        try {
+            PeerInfo peerInfo = activeConnections.get(peerAddress);
+            if (peerInfo != null && peerInfo.getDhKeys() != null) {
+                byte[] sharedSecret = peerInfo.getDhKeys().getSharedSecretBytes();
+                if (sharedSecret != null && sharedSecret.length > 0) {
+                    log.debug("Мастер-сид получен для пира: {}, длина: {} байт",
+                            peerAddress.getHostAddress(), sharedSecret.length);
+                    return sharedSecret;
+                }
+            }
+
+            throw new IllegalStateException("Нет активного соединения или общего секрета для пира: " + peerAddress);
+
+        } catch (Exception e) {
+            log.error("Ошибка при получении мастер-сида для {}: {}",
+                    peerAddress.getHostAddress(), e.getMessage(), e);
+            throw new RuntimeException("Не удалось получить мастер-сид", e);
+        }
+    }
+
     public boolean performKeyExchange(InetAddress peerAddress) {
         try {
-            // Используем синхронную версию с таймаутом
-            return connectionManager.initiateKeyExchange(peerAddress)
-                    .get(30, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            log.error("Key exchange timeout for {}: {}", peerAddress, e.getMessage());
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Key exchange interrupted for {}: {}", peerAddress, e.getMessage());
-            return false;
-        } catch (ExecutionException e) {
-            log.error("Key exchange execution failed for {}: {}", peerAddress, e.getMessage());
+            log.info("Выполнение обмена ключами DH с: {}", peerAddress.getHostAddress());
+
+            // Используем KeyExchangeClient для реального обмена ключами
+            boolean success = keyExchangeClient.performKeyExchange(peerAddress);
+
+            if (success) {
+                // Обновляем информацию о пире
+                updatePeerConnection(peerAddress);
+                log.info("Обмен ключами успешно завершен с: {}", peerAddress.getHostAddress());
+            } else {
+                log.error("Обмен ключами не удался с: {}", peerAddress.getHostAddress());
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            log.error("Ошибка при выполнении обмена ключами с {}: {}",
+                    peerAddress.getHostAddress(), e.getMessage(), e);
             return false;
         }
     }
 
     @Override
     public CompletableFuture<Boolean> performKeyExchangeAsync(InetAddress peerAddress) {
-        return connectionManager.initiateKeyExchange(peerAddress);
+        return CompletableFuture.supplyAsync(() -> performKeyExchange(peerAddress))
+                .orTimeout(30, TimeUnit.SECONDS)
+                .exceptionally(throwable -> {
+                    log.error("Асинхронный обмен ключами не удался с {}: {}",
+                            peerAddress.getHostAddress(), throwable.getMessage());
+                    return false;
+                });
+    }
+
+    private void updatePeerConnection(InetAddress peerAddress) {
+        try {
+            // Получаем текущие ключи
+            DHKeyExchange currentKeys = currentKeyExchange.get();
+            if (currentKeys == null) {
+                log.warn("Текущие ключи не найдены, генерируем новые");
+                generateNewKeys();
+                currentKeys = currentKeyExchange.get();
+            }
+
+            // Создаем или обновляем информацию о пире
+            PeerInfo peerInfo = activeConnections.computeIfAbsent(peerAddress,
+                    PeerInfo::new);
+
+            peerInfo.setDhKeys(currentKeys);
+            peerInfo.setStatus(ConnectionStatus.CONNECTED);
+            peerInfo.updateLastSeen();
+            peerInfo.updateKeyExchangeTime();
+
+            log.info("Информация о пире обновлена: {}", peerAddress.getHostAddress());
+
+        } catch (Exception e) {
+            log.error("Ошибка при обновлении информации о пире {}: {}",
+                    peerAddress.getHostAddress(), e.getMessage(), e);
+        }
     }
 
     @Override
     public void generateNewKeys() {
         DHKeyExchange newKeys = new DHKeyExchange();
         currentKeyExchange.set(newKeys);
-
-        activeConnections.forEach((peer, peerInfo) -> {
-            connectionManager.sendKeyInvalidation(peer);
-            performKeyExchangeAsync(peer);
-        });
-
         log.info("Generated new DH keys");
+
+        activeConnections.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
     }
 
     @Override
     public void closeConnection(InetAddress peerAddress) {
         PeerInfo removed = activeConnections.remove(peerAddress);
         if (removed != null) {
-            connectionManager.closeConnection(peerAddress);
+            keyExchangeClient.sendKeyInvalidation(peerAddress);
             log.info("Closed connection to: {}", peerAddress);
         }
     }
@@ -92,11 +142,7 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
     public void closeAllConnections() {
         if (!activeConnections.isEmpty()) {
             log.info("Closing all connections...");
-
-            Map<InetAddress, PeerInfo> connectionsToClose = new ConcurrentHashMap<>(activeConnections);
-
-            connectionsToClose.keySet().forEach(connectionManager::closeConnection);
-
+            activeConnections.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
             activeConnections.clear();
             log.info("All connections closed");
         }
@@ -124,17 +170,13 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public void processIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey) {
-        connectionManager.handleIncomingKeyExchange(peerAddress, publicKey);
+        updatePeerConnection(peerAddress);
     }
 
     // Внутренние методы для использования ConnectionManager и KeyExchangeManager
     public void addActiveConnection(InetAddress peerAddress, PeerInfo peerInfo) {
         activeConnections.put(peerAddress, peerInfo);
         log.info("Added active connection to: {}", peerAddress.getHostAddress());
-    }
-
-    public DHKeyExchange getCurrentKeys() {
-        return currentKeyExchange.get();
     }
 
     public PeerInfo getPeerInfo(InetAddress peerAddress) {
@@ -156,7 +198,7 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
             boolean expired = info.isExpired(timeoutMs);
             if (expired) {
                 log.info("Removed expired connection: {}", entry.getKey().getHostAddress());
-                connectionManager.closeConnection(entry.getKey());
+                keyExchangeClient.sendKeyInvalidation(entry.getKey());
             }
             return expired;
         });

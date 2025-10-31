@@ -1,5 +1,7 @@
 package com.cipher.core.service;
 
+import com.cipher.core.model.DHKeyExchange;
+
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +13,7 @@ public interface KeyExchangeService {
     boolean performKeyExchange(InetAddress peerAddress);
     CompletableFuture<Boolean> performKeyExchangeAsync(InetAddress peerAddress);
     void generateNewKeys();
+    DHKeyExchange getCurrentKeys();
 
     // Управление соединениями
     void closeConnection(InetAddress peerAddress);

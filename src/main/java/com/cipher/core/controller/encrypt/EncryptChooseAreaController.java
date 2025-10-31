@@ -1,11 +1,8 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.dto.EncryptionResult;
-import com.cipher.core.dto.neww.*;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.encryption.XOR;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
@@ -244,15 +241,14 @@ public class EncryptChooseAreaController {
         try {
             BufferedImage originalImage = imageUtils.getOriginalImage();
             if (originalImage != null) {
-                imageEncrypt.encryptWhole(originalImage, mandelbrotService, imageSegmentShuffler, cryptographicService, sceneManager);
+                imageEncrypt.encryptWhole(originalImage, mandelbrotService, imageSegmentShuffler,
+                        cryptographicService, sceneManager);
             }
         } catch (Exception e) {
             logger.error("Ошибка загрузки изображения", e);
             dialogDisplayer.showErrorDialog("Ошибка загрузки изображения");
         }
     }
-
-
 
     private void handleEncryptPart() {
         if (!hasRectangle()) {

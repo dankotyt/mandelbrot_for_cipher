@@ -2,6 +2,7 @@ package com.cipher.client;
 
 import com.cipher.common.NetworkConstants;
 import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,9 +19,9 @@ import java.net.SocketTimeoutException;
 @Component
 public class KeyExchangeClient {
 
-    private final NetworkKeyExchangeServiceImpl keyExchangeService;
+    private final KeyExchangeService keyExchangeService;
 
-    public KeyExchangeClient(NetworkKeyExchangeServiceImpl keyExchangeService) {
+    public KeyExchangeClient(KeyExchangeService keyExchangeService) {
         this.keyExchangeService = keyExchangeService;
     }
 

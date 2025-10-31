@@ -39,4 +39,6 @@ public interface NetworkDiscoveryService {
      * Остановить обнаружение
      */
     void stopDiscovery();
+
+    void initialize();
 }

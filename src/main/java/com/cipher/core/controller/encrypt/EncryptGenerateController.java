@@ -1,13 +1,8 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.dto.EncryptionResult;
-import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.neww.*;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.encryption.XOR;
-import com.cipher.core.service.ImageEncryptionService;
 import com.cipher.core.service.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;

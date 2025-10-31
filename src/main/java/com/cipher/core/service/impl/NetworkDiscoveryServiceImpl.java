@@ -3,6 +3,8 @@ package com.cipher.core.service.impl;
 import com.cipher.client.DiscoveryClient;
 import com.cipher.client.PeerConnector;
 import com.cipher.common.NetworkConstants;
+import com.cipher.core.model.PeerInfo;
+import com.cipher.core.service.ConnectionManager;
 import com.cipher.core.service.NetworkDiscoveryService;
 import com.cipher.server.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -23,8 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     private final DiscoveryServer discoveryServer;
-    private final DiscoveryClient discoveryClient;
     private final PeerConnector peerConnector;
+    private final ConnectionManager connectionManager;
 
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final Set<InetAddress> connectedPeers = ConcurrentHashMap.newKeySet();
@@ -77,7 +80,6 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     public void stopDiscovery() {
         if (initialized.compareAndSet(true, false)) {
             discoveryServer.stop();
-            discoveryClient.stop();
             scheduler.shutdown();
             discoveredPeers.clear();
             connectedPeers.clear();
@@ -85,13 +87,11 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
         }
     }
 
+    @Override
     public void initialize() {
         if (initialized.compareAndSet(false, true)) {
             // Запускаем сервер для анонсирования
             discoveryServer.start();
-
-            // Запускаем клиент для обнаружения
-            discoveryClient.start();
 
             // Запускаем периодические задачи
             startCleanupTask();
@@ -122,16 +122,19 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     }
 
     private void cleanupExpiredPeers() {
-        // В оригинальном App классе была логика очистки по таймауту
-        // Здесь мы просто синхронизируем с DiscoveryClient
-        Set<InetAddress> currentDiscovered = discoveryClient.getDiscoveredPeers();
+        try {
+            // Используем ConnectionManager для очистки устаревших пиров
+            connectionManager.cleanupExpiredPeers(NetworkConstants.PEER_TIMEOUT_MS);
 
-        // Удаляем пиров, которые больше не обнаружены
-        discoveredPeers.removeIf(peer -> !currentDiscovered.contains(peer));
+            // Синхронизируем наш локальный список с ConnectionManager
+            Map<InetAddress, PeerInfo> currentConnected = connectionManager.getConnectedPeers();
 
-        // Также удаляем отключенные пиры из connectedPeers
-        Set<InetAddress> currentConnected = peerConnector.getConnectedPeers();
-        connectedPeers.removeIf(peer -> !currentConnected.contains(peer));
+            // Обновляем connectedPeers
+            connectedPeers.clear();
+            connectedPeers.addAll(currentConnected.keySet());
+        } catch (Exception e) {
+            log.error("Error in cleanupExpiredPeers: {}", e.getMessage());
+        }
     }
 
     private void validateConnectedPeers() {

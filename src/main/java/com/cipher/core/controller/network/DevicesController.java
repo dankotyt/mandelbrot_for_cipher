@@ -1,8 +1,8 @@
 package com.cipher.core.controller.network;
 
-import com.cipher.core.dto.ConnectionRequestDto;
+import com.cipher.core.dto.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
-import com.cipher.core.service.network.ConnectionService;
+import com.cipher.core.service.network.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -23,7 +23,7 @@ import java.util.List;
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
-public class DevicesController implements ConnectionService.ConnectionListener {
+public class DevicesController implements ConnectionServiceImpl.ConnectionListener {
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 
     @FXML private Button backButton;
@@ -35,7 +35,7 @@ public class DevicesController implements ConnectionService.ConnectionListener {
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ConnectionService connectionService;
+    private final ConnectionServiceImpl connectionService;
     private final NetworkService networkService;
 
     private List<DeviceDTO> availableDevices;
@@ -120,7 +120,7 @@ public class DevicesController implements ConnectionService.ConnectionListener {
 
             for (DeviceDTO device : availableDevices) {
                 // Пропускаем текущее устройство
-                if (device.getIp().equals(currentDevice.getIp())) {
+                if (device.ip().equals(currentDevice.ip())) {
                     continue;
                 }
 
@@ -162,33 +162,50 @@ public class DevicesController implements ConnectionService.ConnectionListener {
     }
 
     @Override
-    public void onRequestReceived(ConnectionRequestDto request) {
+    public void onRequestReceived(ConnectionRequestDTO request) {
         // Для Алисы - не используется, так как она только отправляет запросы
     }
 
     @Override
-    public void onRequestAccepted(ConnectionRequestDto request) {
-        logger.info("Запрос принят! Подключение установлено с: {}", request.getToDeviceIp());
+    public void onRequestAccepted(ConnectionRequestDTO request) {
+        logger.info("Запрос принят! Подключение установлено с: {}", request.toDeviceIp());
 
         updateStatus("Подключение установлено!");
 
         dialogDisplayer.showAlert("Успех!","Подключение установлено!\n" +
-                "IP удаленного устройства: " + request.getToDeviceIp() +
-                "\nВаш IP: " + request.getFromDeviceIp());
+                "IP удаленного устройства: " + request.toDeviceIp() +
+                "\nВаш IP: " + request.fromDeviceIp());
     }
 
     @Override
-    public void onRequestRejected(ConnectionRequestDto request) {
-        logger.info("Запрос отклонен устройством: {}", request.getToDeviceIp());
+    public void onRequestRejected(ConnectionRequestDTO request) {
+        logger.info("Запрос отклонен устройством: {}", request.toDeviceIp());
 
         updateStatus("Запрос отклонен");
 
-        dialogDisplayer.showAlert("Информация","Запрос на подключение отклонен устройством:\n" + request.getToDeviceName());
+        dialogDisplayer.showAlert("Информация","Запрос на подключение отклонен устройством:\n" + request.toDeviceName());
     }
 
     private void updateStatus(String status) {
         if (statusLabel != null) {
             statusLabel.setText("Статус: " + status);
+
+            statusLabel.getStyleClass().removeAll(
+                    "status-waiting", "status-searching", "status-success",
+                    "status-error", "status-connected"
+            );
+
+            if (status.contains("Ожидание") || status.contains("ожидание")) {
+                statusLabel.getStyleClass().add("status-waiting");
+            } else if (status.contains("Поиск") || status.contains("поиск")) {
+                statusLabel.getStyleClass().add("status-searching");
+            } else if (status.contains("Успех") || status.contains("установлено")) {
+                statusLabel.getStyleClass().add("status-success");
+            } else if (status.contains("Ошибка") || status.contains("ошибка")) {
+                statusLabel.getStyleClass().add("status-error");
+            } else if (status.contains("Подключение") || status.contains("подключен")) {
+                statusLabel.getStyleClass().add("status-connected");
+            }
         }
     }
 

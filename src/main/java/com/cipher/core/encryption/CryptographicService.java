@@ -2,6 +2,7 @@ package com.cipher.core.encryption;
 
 import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.service.ConnectionManager;
 import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.utils.EncryptionDataSerializer;
 import lombok.Getter;
@@ -35,12 +36,14 @@ public class CryptographicService {
 
     private final EncryptionDataSerializer serializer;
     private final KeyExchangeService keyExchangeService;
+    private final ConnectionManager connectionManager;
 
-
-    public EncryptionDataResult encryptData(EncryptionResult result, InetAddress peerAddress) throws Exception {
+    public EncryptionDataResult encryptData(EncryptionResult result) throws Exception {
         byte[] data = serializer.serialize(result);
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
+
+        InetAddress peerAddress = connectionManager.getConnectedPeer();
 
         // Получаем мастер-сид из DH обмена
         byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
