@@ -2,8 +2,10 @@ package com.cipher.core.encryption;
 
 import com.cipher.core.dto.EncryptionResult;
 import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.utils.EncryptionDataSerializer;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -14,12 +16,15 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.security.spec.KeySpec;
 
 @Component
+@RequiredArgsConstructor
 public class CryptographicService {
     private static final Logger logger = LoggerFactory.getLogger(CryptographicService.class);
+
     @Getter
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     @Getter
@@ -29,42 +34,19 @@ public class CryptographicService {
     private static final int IV_LENGTH = 12;
 
     private final EncryptionDataSerializer serializer;
+    private final KeyExchangeService keyExchangeService;
 
-    private byte[] masterSeed;
 
-    public CryptographicService() {
-        this.serializer = new EncryptionDataSerializer();
-    }
-
-    public void initMasterSeed(byte[] masterSeed) {
-        this.masterSeed = masterSeed.clone();
-    }
-
-    public SecretKey generateKeyFromSeed(byte[] salt) throws Exception {
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(
-                toCharArray(masterSeed),
-                salt,
-                65536,
-                KEY_SIZE
-        );
-        return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
-    }
-
-    //todo вместо byte[] использовать передачу параметров через dto
-    /**
-     * Шифрование данных с использованием AES-GCM
-     */
-    public EncryptionDataResult encryptData(EncryptionResult result) throws Exception {
+    public EncryptionDataResult encryptData(EncryptionResult result, InetAddress peerAddress) throws Exception {
         byte[] data = serializer.serialize(result);
-
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
 
-        //todo на время тестов
-        logger.info("masterSeed: {}", masterSeed);
+        // Получаем мастер-сид из DH обмена
+        byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+        logger.info("Using master seed from DH for peer: {}", peerAddress.getHostAddress());
 
-        SecretKey key = generateKeyFromSeed(salt);
+        SecretKey key = generateKeyFromMasterSeed(masterSeed, salt);
 
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
@@ -75,49 +57,71 @@ public class CryptographicService {
         return new EncryptionDataResult(encryptedData, iv, salt);
     }
 
-    /**
-     * Дешифрование данных
-     */
-    /*
-    *todo нужно подумать, как передавать masterSeed для оффлайна - то ли
-    * внутри бинарника, то ли вводить вручную
-    */
-    public EncryptionResult decryptData(EncryptionDataResult encryptedResult) throws Exception {
-        // 1. Восстанавливаем ключ из salt
-        byte[] salt = encryptedResult.salt();
-        byte[] iv = encryptedResult.iv();
-        byte[] encryptedData = encryptedResult.encryptedData();
+    public EncryptionResult decryptData(EncryptionDataResult encryptedDataResult, InetAddress peerAddress) throws Exception {
+        try {
+            byte[] encryptedData = encryptedDataResult.encryptedData();
+            byte[] iv = encryptedDataResult.iv();
+            byte[] salt = encryptedDataResult.salt();
 
-        SecretKey key = generateKeyFromSeed(salt);
+            // Получаем мастер-сид из DH обмена
+            byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+            logger.info("Using master seed from DH for decryption from peer: {}", peerAddress.getHostAddress());
 
-        // 2. Дешифруем данные
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-        cipher.init(Cipher.DECRYPT_MODE, key, parameterSpec);
+            SecretKey key = generateKeyFromMasterSeed(masterSeed, salt);
 
-        byte[] decryptedData = cipher.doFinal(encryptedData);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+            cipher.init(Cipher.DECRYPT_MODE, key, parameterSpec);
 
-        // 3. Десериализуем расшифрованные данные в DTO
-        return serializer.deserialize(decryptedData);
+            byte[] decryptedData = cipher.doFinal(encryptedData);
+
+            return serializer.deserialize(decryptedData);
+
+        } catch (Exception e) {
+            logger.error("Decryption failed for peer {}: {}", peerAddress.getHostAddress(), e.getMessage());
+            throw new Exception("Decryption failed: " + e.getMessage(), e);
+        }
     }
 
-    public byte[] generateSalt() {
+    private SecretKey generateKeyFromMasterSeed(byte[] masterSeed, byte[] salt) throws Exception {
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            PBEKeySpec spec = new PBEKeySpec(
+                    new String(masterSeed, StandardCharsets.UTF_8).toCharArray(),
+                    salt,
+                    65536, // iterations
+                    256    // key length
+            );
+
+            byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+            return new SecretKeySpec(keyBytes, "AES");
+
+        } catch (Exception e) {
+            logger.error("Key generation failed: {}", e.getMessage());
+            throw new Exception("Failed to generate encryption key: " + e.getMessage(), e);
+        }
+    }
+
+    private byte[] generateSalt() {
         byte[] salt = new byte[SALT_LENGTH];
         new SecureRandom().nextBytes(salt);
         return salt;
     }
 
-    public byte[] generateIV() {
+    private byte[] generateIV() {
         byte[] iv = new byte[IV_LENGTH];
         new SecureRandom().nextBytes(iv);
         return iv;
     }
 
-    private char[] toCharArray(byte[] bytes) {
-        char[] chars = new char[bytes.length];
-        for (int i = 0; i < bytes.length; i++) {
-            chars[i] = (char) (bytes[i] & 0xFF);
+    // Метод для проверки возможности шифрования с указанным пиром
+    public boolean canEncryptToPeer(InetAddress peerAddress) {
+        try {
+            keyExchangeService.getMasterSeedFromDH(peerAddress);
+            return keyExchangeService.isConnectedTo(peerAddress);
+        } catch (Exception e) {
+            logger.warn("Cannot encrypt to peer {}: {}", peerAddress.getHostAddress(), e.getMessage());
+            return false;
         }
-        return chars;
     }
 }

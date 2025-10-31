@@ -4,9 +4,7 @@ import javafx.application.Platform;
 import javafx.scene.control.TextArea;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
 public class ConsoleManager {
     private static final Logger logger = LoggerFactory.getLogger(ConsoleManager.class);
 
@@ -24,6 +22,17 @@ public class ConsoleManager {
             });
         } else {
             logger.info("Console: {}", message);
+        }
+    }
+
+    public static void error(String message) {
+        if (consoleTextArea != null) {
+            Platform.runLater(() -> {
+                consoleTextArea.appendText("[ERROR] " + message + "\n");
+                consoleTextArea.setScrollTop(Double.MAX_VALUE);
+            });
+        } else {
+            logger.error("Console: {}", message);
         }
     }
 

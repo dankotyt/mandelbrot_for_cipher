@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.neww.EncryptionDataResult;
 import com.cipher.core.dto.neww.EncryptionParams;
 import com.cipher.core.dto.neww.SegmentationParams;
+import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.EncryptionDataSerializer;
@@ -35,6 +37,7 @@ public class ImageDecrypt {
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final EncryptionDataSerializer serializer;
     private final CryptographicService cryptographicService;
+    private final KeyExchangeService keyExchangeService;
 
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -43,18 +46,18 @@ public class ImageDecrypt {
         return getProjectRootPath() + "temp" + File.separator;
     }
 
-    public BufferedImage decryptImage(File encryptedFile) throws Exception {
+    public BufferedImage decryptImage(File encryptedFile, InetAddress peerAddress) throws Exception {
         try {
-            byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
+            // Проверяем соединение с пиром
+            if (!keyExchangeService.isConnectedTo(peerAddress)) {
+                throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
+            }
 
+            byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
             EncryptionDataResult encryptedDataResult = serializer.deserializeEncryptionDataResult(fileData);
 
-            byte[] masterSeed = getMasterSeedFromDH();
-
-            cryptographicService.initMasterSeed(masterSeed);
-            imageSegmentShuffler.initializeWithSeed(masterSeed);
-
-            EncryptionResult result = cryptographicService.decryptData(encryptedDataResult);
+            // Дешифруем данные, передавая peerAddress
+            EncryptionResult result = cryptographicService.decryptData(encryptedDataResult, peerAddress);
 
             BufferedImage encryptedImage = result.segmentedImage();
             BufferedImage fractalImage = result.fractalImage();
@@ -64,8 +67,10 @@ public class ImageDecrypt {
 
             BufferedImage genFractal = mandelbrotService.generateImage(
                     mandelbrotParams.startMandelbrotWidth(),
-                    mandelbrotParams.startMandelbrotHeight(), mandelbrotParams.zoom(),
-                    mandelbrotParams.offsetX(), mandelbrotParams.offsetY(),
+                    mandelbrotParams.startMandelbrotHeight(),
+                    mandelbrotParams.zoom(),
+                    mandelbrotParams.offsetX(),
+                    mandelbrotParams.offsetY(),
                     mandelbrotParams.maxIter());
 
             if (!compareImages(genFractal, fractalImage)) {
@@ -83,9 +88,15 @@ public class ImageDecrypt {
                     segmentationParams.segmentSize()
             );
         } catch (Exception e) {
-            logger.error("Ошибка при дешифровке изображения: {}", e.getMessage(), e);
+            logger.error("Ошибка при дешифровке изображения от {}: {}",
+                    peerAddress.getHostAddress(), e.getMessage(), e);
             throw new Exception("Не удалось дешифровать изображение: " + e.getMessage(), e);
         }
+    }
+
+    // Метод для проверки возможности дешифрования
+    public boolean canDecryptFromPeer(InetAddress peerAddress) {
+        return keyExchangeService.isConnectedTo(peerAddress);
     }
 
     private boolean compareImages(BufferedImage img1, BufferedImage img2) {

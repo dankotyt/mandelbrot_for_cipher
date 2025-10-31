@@ -2,6 +2,7 @@ package com.cipher.core.utils;
 
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -72,5 +73,21 @@ public class DialogDisplayer {
                 logger.error("Error showing alert: " + e.getMessage());
             }
         });
+    }
+
+    public boolean showConfirmationDialog(String title, String header, String content,
+                                          String confirmButtonText, String cancelButtonText) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+
+        ButtonType confirmButton = new ButtonType(confirmButtonText);
+        ButtonType cancelButton = new ButtonType(cancelButtonText, ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(confirmButton, cancelButton);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == confirmButton;
     }
 }

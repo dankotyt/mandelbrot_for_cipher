@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.io.File;
+import java.net.InetAddress;
 
 @Controller
 @Scope("prototype")
@@ -34,7 +35,9 @@ public class DecryptFinalController {
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
     private final ImageDecrypt imageDecrypt;
+
     private String keyFilePath;
+    private InetAddress peerAddress;
 
     public void setKeyFilePath(String keyFilePath) {
         this.keyFilePath = keyFilePath;
@@ -61,7 +64,7 @@ public class DecryptFinalController {
         Task<Void> decryptImageTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                imageDecrypt.decryptImage(file);
+                imageDecrypt.decryptImage(file, peerAddress);
                 return null;
             }
         };

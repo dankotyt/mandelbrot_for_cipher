@@ -144,6 +144,292 @@
     -fx-background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* ===== LOCAL NETWORK ===== */
+/* styles.css - дополнительные стили для экрана подключения */
+
+/* Status Label */
+/*.status-label {*/
+/*    -fx-text-fill: #90caf9;*/
+/*    -fx-font-size: 14px;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-font-weight: normal;*/
+/*    -fx-padding: 5px 0;*/
+/*}*/
+
+/*.status-label.success {*/
+/*    -fx-text-fill: #81c784;*/
+/*}*/
+
+/*.status-label.error {*/
+/*    -fx-text-fill: #e57373;*/
+/*}*/
+
+/*.status-label.warning {*/
+/*    -fx-text-fill: #ffb74d;*/
+/*}*/
+
+/*!* Devices Container *!*/
+/*.devices-container {*/
+/*    -fx-background-color: #37474f;*/
+/*    -fx-background-radius: 10px;*/
+/*    -fx-border-color: #546e7a;*/
+/*    -fx-border-radius: 10px;*/
+/*    -fx-border-width: 1px;*/
+/*    -fx-padding: 20px;*/
+/*    -fx-spacing: 15px;*/
+/*    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);*/
+/*}*/
+
+/*.devices-container:hover {*/
+/*    -fx-border-color: #78909c;*/
+/*}*/
+
+/*!* Section Title *!*/
+/*.section-title {*/
+/*    -fx-text-fill: #e3f2fd;*/
+/*    -fx-font-size: 18px;*/
+/*    -fx-font-weight: bold;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-padding: 0 0 10px 0;*/
+/*    -fx-border-color: #455a64;*/
+/*    -fx-border-width: 0 0 2px 0;*/
+/*}*/
+
+/*!* Devices List *!*/
+/*.devices-list {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-border-color: #455a64;*/
+/*    -fx-border-radius: 8px;*/
+/*    -fx-background-radius: 8px;*/
+/*    -fx-border-width: 1px;*/
+/*}*/
+
+/*.devices-list .list-cell {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-text-fill: #e0e0e0;*/
+/*    -fx-font-size: 14px;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-padding: 12px 15px;*/
+/*    -fx-border-color: transparent;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:hover {*/
+/*    -fx-background-color: #37474f;*/
+/*    -fx-text-fill: #ffffff;*/
+/*    -fx-cursor: hand;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:selected {*/
+/*    -fx-background-color: #007acc;*/
+/*    -fx-text-fill: #ffffff;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:selected:hover {*/
+/*    -fx-background-color: #0088ee;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical {*/
+/*    -fx-background-color: #263238;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .thumb {*/
+/*    -fx-background-color: #546e7a;*/
+/*    -fx-background-radius: 4px;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .thumb:hover {*/
+/*    -fx-background-color: #78909c;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .track {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-border-color: transparent;*/
+/*}*/
+
+/* Primary Button */
+.primary-button {
+    -fx-background-color: linear-gradient(to bottom, #007acc, #005a9e);
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial";
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #004d80;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,122,204,0.4), 8, 0, 0, 2);
+    -fx-padding: 12px 25px;
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #0088ee, #0066cc);
+    -fx-border-color: #005599;
+    -fx-scale-x: 1.03;
+    -fx-scale-y: 1.03;
+    -fx-effect: dropshadow(gaussian, rgba(0,136,238,0.5), 10, 0, 0, 3);
+}
+
+.primary-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #005a9e, #004880);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+    -fx-effect: dropshadow(gaussian, rgba(0,90,158,0.3), 5, 0, 0, 1);
+}
+
+.primary-button:disabled {
+    -fx-background-color: #546e7a;
+    -fx-text-fill: #b0bec5;
+    -fx-border-color: #455a64;
+    -fx-effect: none;
+}
+
+/* Info Container */
+.info-container {
+    -fx-background-color: #1e272c;
+    -fx-background-radius: 10px;
+    -fx-border-color: #007acc;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 15px;
+    -fx-spacing: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0,122,204,0.2), 8, 0, 0, 2);
+}
+
+.info-container.connected {
+    -fx-border-color: #81c784;
+}
+
+.info-container.error {
+    -fx-border-color: #e57373;
+}
+
+/* Стили для контейнера устройств */
+.devices-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 20px;
+}
+
+.devices-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.devices-container {
+    -fx-padding: 20px;
+}
+
+/* Стили для кнопок устройств */
+.device-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 15px 30px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);
+    -fx-cursor: hand;
+    -fx-min-width: 300px;
+    -fx-max-width: 300px;
+}
+
+.device-button:hover {
+    -fx-background-color: #45a049;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);
+}
+
+.device-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 1);
+}
+
+/* Стили для сообщения об отсутствии устройств */
+.no-devices-container {
+    -fx-alignment: center;
+}
+
+.no-devices-label {
+    -fx-text-fill: #666666;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+/* Info Text Area */
+.info-text-area {
+    -fx-background-color: #263238;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-border-color: #455a64;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 10px;
+}
+
+.info-text-area .content {
+    -fx-background-color: #263238;
+    -fx-background-radius: 5px;
+}
+
+.info-text-area .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.info-text-area .scroll-bar:vertical {
+    -fx-background-color: #263238;
+}
+
+.info-text-area .scroll-bar:vertical .thumb {
+    -fx-background-color: #546e7a;
+    -fx-background-radius: 4px;
+}
+
+.info-text-area .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #78909c;
+}
+
+.info-text-area .scroll-bar:vertical .track {
+    -fx-background-color: #263238;
+}
+
+/* Дополнительные утилитарные классы */
+.space-below-title {
+    -fx-pref-height: 30px;
+}
+
+.spacer {
+    -fx-pref-height: 20px;
+}
+
+/* Анимации */
+@keyframes pulse {
+    0% { -fx-opacity: 1; }
+    50% { -fx-opacity: 0.7; }
+    100% { -fx-opacity: 1; }
+}
+
+.connecting {
+    -fx-animation: pulse 1.5s infinite;
+}
+
+/* Стили для состояний подключения */
+.connected-device {
+    -fx-background-color: #1b5e20;
+    -fx-text-fill: #c8e6c9;
+}
+
+.connecting-device {
+    -fx-background-color: #ff8f00;
+    -fx-text-fill: #fff3e0;
+}
+
+.error-device {
+    -fx-background-color: #c62828;
+    -fx-text-fill: #ffcdd2;
+}
+
 /* ===== SEED GENERATION PANEL STYLES ===== */
 
 /* Title */

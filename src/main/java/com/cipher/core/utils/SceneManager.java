@@ -75,6 +75,14 @@ public class SceneManager {
 
     public void showSeedGenerationPanel() { showScreen("/fxml/online/seed-generation.fxml");}
 
+    public void showNetworkConnectionPanel() {
+        showScreen("/fxml/online/local-network.fxml");
+    }
+
+    public void showDevicesPanel() {
+        showScreen("/fxml/devices/devices-panel.fxml");
+    }
+
     public void showLoginPanel() {
         showScreen("/fxml/online/login.fxml");
     }

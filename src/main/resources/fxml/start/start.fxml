@@ -27,31 +27,31 @@
         <VBox alignment="CENTER" styleClass="center-vbox">
             <Region styleClass="space-below-title"/>
             <!-- Левая кнопка шифрования с правым отступом -->
-            <Button fx:id="encryptButton" styleClass="icon-button">
-                <graphic>
-                    <ImageView preserveRatio="true" fitWidth="615">
-                        <Image url="@../../elements/icon_lock.png"/>
-                    </ImageView>
-                </graphic>
-            </Button>
+<!--            <Button fx:id="encryptButton" styleClass="icon-button">-->
+<!--                <graphic>-->
+<!--                    <ImageView preserveRatio="true" fitWidth="615">-->
+<!--                        <Image url="@../../elements/icon_lock.png"/>-->
+<!--                    </ImageView>-->
+<!--                </graphic>-->
+<!--            </Button>-->
 
-            <!-- Невидимый прямоугольник для отступа -->
-            <Region prefHeight="30" styleClass="spacer"/>
+<!--            &lt;!&ndash; Невидимый прямоугольник для отступа &ndash;&gt;-->
+<!--            <Region prefHeight="30" styleClass="spacer"/>-->
 
-            <!-- Правая кнопка дешифрования с левым отступом -->
-            <Button fx:id="decryptButton" styleClass="icon-button">
-                <graphic>
-                    <ImageView preserveRatio="true" fitWidth="615">
-                        <Image url="@../../elements/icon_unlock.png"/>
-                    </ImageView>
-                </graphic>
-            </Button>
+<!--            &lt;!&ndash; Правая кнопка дешифрования с левым отступом &ndash;&gt;-->
+<!--            <Button fx:id="decryptButton" styleClass="icon-button">-->
+<!--                <graphic>-->
+<!--                    <ImageView preserveRatio="true" fitWidth="615">-->
+<!--                        <Image url="@../../elements/icon_unlock.png"/>-->
+<!--                    </ImageView>-->
+<!--                </graphic>-->
+<!--            </Button>-->
 
-            <!-- Невидимый прямоугольник для отступа -->
-            <Region prefHeight="30" styleClass="spacer"/>
+<!--            &lt;!&ndash; Невидимый прямоугольник для отступа &ndash;&gt;-->
+<!--            <Region prefHeight="30" styleClass="spacer"/>-->
 
             <!-- Кнопка подключения -->
-            <Button fx:id="connectButton" text="Подключение к серверу"
+            <Button fx:id="connectButton" text="Поиск устройств"
                     styleClass="action-button" prefWidth="380" prefHeight="68"/>
 
             <!-- Невидимый прямоугольник для отступа -->

@@ -41,8 +41,8 @@ public class StartController {
     }
 
     private void setupButtonActions() {
-        encryptButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
-        decryptButton.setOnAction(e -> sceneManager.showDecryptBeginPanel());
+//        encryptButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
+//        decryptButton.setOnAction(e -> sceneManager.showDecryptBeginPanel());
         connectButton.setOnAction(e -> handleConnect());
         exitButton.setOnAction(e -> shutdownApplication());
     }
@@ -50,7 +50,7 @@ public class StartController {
     private void handleConnect() {
         try {
             NetworkUtils.checkNetworkConnection();
-            sceneManager.showConnectionPanel();
+            sceneManager.showNetworkConnectionPanel();
         } catch (NetworkException ex) {
             Platform.runLater(() ->
                     dialogDisplayer.showErrorAlert("Нет подключения",

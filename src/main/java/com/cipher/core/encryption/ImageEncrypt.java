@@ -2,9 +2,12 @@ package com.cipher.core.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.net.InetAddress;
+import java.util.Set;
 
 import com.cipher.core.dto.*;
 import com.cipher.core.dto.neww.*;
+import com.cipher.core.service.KeyExchangeService;
 import com.cipher.core.utils.*;
 import com.cipher.core.service.MandelbrotService;
 import javafx.geometry.Rectangle2D;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class ImageEncrypt {
     private final DialogDisplayer dialogDisplayer;
     private MandelbrotParams mandelbrotParams;
+    private final KeyExchangeService keyExchangeService;
 
     public void initMandelbrotParams(MandelbrotParams mandelbrotParams) {
         this.mandelbrotParams = mandelbrotParams;
@@ -146,46 +150,63 @@ public class ImageEncrypt {
 //                keyDecoderParams, masterSeed);
 //    }
 
-    public void encryptWhole(BufferedImage originalImage, MandelbrotService mandelbrotService,
-                             ImageSegmentShuffler imageSegmentShuffler, CryptographicService cryptographicService,
-                             SceneManager sceneManager) throws Exception {
-        SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
+public void encryptWhole(BufferedImage originalImage,
+                         MandelbrotService mandelbrotService,
+                         ImageSegmentShuffler imageSegmentShuffler,
+                         CryptographicService cryptographicService,
+                         SceneManager sceneManager,
+                         InetAddress peerAddress) throws Exception {
 
-        BufferedImage segmentationUpdateImage = segmentationResult.shuffledImage();
-
-        BufferedImage finalFractal = mandelbrotService
-                .generateImage(segmentationUpdateImage.getWidth(), segmentationUpdateImage.getHeight());
-
-        EncryptionResult result = new EncryptionResult(
-                segmentationUpdateImage,
-                finalFractal,
-                new EncryptionParams(
-                        new EncryptionArea(
-                                0, 0,
-                                segmentationUpdateImage.getWidth(),
-                                segmentationUpdateImage.getHeight(),
-                                true
-                        ),
-                        new SegmentationParams(
-                                segmentationResult.segmentSize(),
-                                segmentationResult.paddedWidth(),
-                                segmentationResult.paddedHeight(),
-                                segmentationResult.segmentMapping()
-                        ),
-                        mandelbrotService.getCurrentParams()
-                )
-        );
-        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
-        BufferedImage encryptedImage = XOR.performXOR(
-                segmentationUpdateImage,
-                finalFractal);
-
-        sceneManager.showEncryptFinalPanel(encryptedImage, cipherDataResult);
+    // Проверяем соединение с пиром
+    if (!keyExchangeService.isConnectedTo(peerAddress)) {
+        throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
     }
 
-    public void encryptPart(BufferedImage originalImage, MandelbrotService mandelbrotService,
-                            ImageSegmentShuffler imageSegmentShuffler, CryptographicService cryptographicService,
-                            Rectangle2D selectedArea, SceneManager sceneManager) throws Exception {
+    SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
+    BufferedImage segmentationUpdateImage = segmentationResult.shuffledImage();
+
+    BufferedImage finalFractal = mandelbrotService
+            .generateImage(segmentationUpdateImage.getWidth(), segmentationUpdateImage.getHeight());
+
+    EncryptionResult result = new EncryptionResult(
+            segmentationUpdateImage,
+            finalFractal,
+            new EncryptionParams(
+                    new EncryptionArea(
+                            0, 0,
+                            segmentationUpdateImage.getWidth(),
+                            segmentationUpdateImage.getHeight(),
+                            true
+                    ),
+                    new SegmentationParams(
+                            segmentationResult.segmentSize(),
+                            segmentationResult.paddedWidth(),
+                            segmentationResult.paddedHeight(),
+                            segmentationResult.segmentMapping()
+                    ),
+                    mandelbrotService.getCurrentParams()
+            )
+    );
+
+    // Передаем peerAddress в cryptographicService
+    EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result, peerAddress);
+    BufferedImage encryptedImage = XOR.performXOR(segmentationUpdateImage, finalFractal);
+
+    sceneManager.showEncryptFinalPanel(encryptedImage, cipherDataResult);
+}
+
+    public void encryptPart(BufferedImage originalImage,
+                            MandelbrotService mandelbrotService,
+                            ImageSegmentShuffler imageSegmentShuffler,
+                            CryptographicService cryptographicService,
+                            Rectangle2D selectedArea,
+                            SceneManager sceneManager,
+                            InetAddress peerAddress) throws Exception {
+
+        // Проверяем соединение с пиром
+        if (!keyExchangeService.isConnectedTo(peerAddress)) {
+            throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
+        }
 
         int startX = (int) selectedArea.getMinX();
         int startY = (int) selectedArea.getMinY();
@@ -211,9 +232,7 @@ public class ImageEncrypt {
         BufferedImage finalFractal = mandelbrotService.generateImage(shuffledWidth, shuffledHeight);
 
         // XOR только выделенной области
-        BufferedImage encryptedPart = XOR.performXOR(
-                segmentationResult.shuffledImage(),
-                finalFractal);
+        BufferedImage encryptedPart = XOR.performXOR(segmentationResult.shuffledImage(), finalFractal);
 
         // Создаем копию всего исходного изображения
         BufferedImage finalImage = new BufferedImage(
@@ -251,9 +270,20 @@ public class ImageEncrypt {
                 )
         );
 
-        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
+        // Передаем peerAddress в cryptographicService
+        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result, peerAddress);
 
         // Передаем полное изображение с зашифрованной областью
         sceneManager.showEncryptFinalPanel(finalImage, cipherDataResult);
+    }
+
+    // Метод для проверки возможности шифрования
+    public boolean canEncryptToPeer(InetAddress peerAddress) {
+        return keyExchangeService.isConnectedTo(peerAddress);
+    }
+
+    // Метод для получения списка доступных пиров
+    public Set<InetAddress> getAvailablePeers() {
+        return keyExchangeService.getActiveConnections().keySet();
     }
 }
