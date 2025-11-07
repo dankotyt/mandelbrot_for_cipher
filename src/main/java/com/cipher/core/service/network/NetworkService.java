@@ -41,10 +41,8 @@ public class NetworkService {
                 futures.add(future);
             }
 
-            // Ждем завершения всех проверок
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-            // Собираем результаты
             for (CompletableFuture<DeviceDTO> future : futures) {
                 DeviceDTO device = future.getNow(null);
                 if (device != null) {
@@ -72,21 +70,19 @@ public class NetworkService {
     }
 
     private boolean isDeviceReachable(String ip) {
-        // Пробуем несколько методов проверки
         return isReachableByPing(ip) || isReachableByPort(ip) || isReachableBySocket(ip);
     }
 
     private boolean isReachableByPing(String ip) {
         try {
             InetAddress address = InetAddress.getByName(ip);
-            return address.isReachable(500); // timeout 500ms
+            return address.isReachable(500);
         } catch (Exception e) {
             return false;
         }
     }
 
     private boolean isReachableByPort(String ip) {
-        // Проверяем порты, которые обычно открыты
         int[] ports = {80, 443, 22, 135, 139, 445, 8080};
 
         for (int port : ports) {
@@ -99,9 +95,8 @@ public class NetworkService {
     }
 
     private boolean isReachableBySocket(String ip) {
-        // Пробуем создать сокет
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(ip, 7), 300); // echo port
+            socket.connect(new InetSocketAddress(ip, 7), 300);
             return true;
         } catch (Exception e) {
             return false;
@@ -116,7 +111,6 @@ public class NetworkService {
             return false;
         }
     }
-
 
     private String getLocalIpAddress() throws SocketException {
         return Collections.list(NetworkInterface.getNetworkInterfaces()).stream()

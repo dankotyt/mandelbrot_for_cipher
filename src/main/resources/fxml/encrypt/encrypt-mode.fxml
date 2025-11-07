@@ -35,8 +35,8 @@
                 <VBox alignment="CENTER" spacing="20" styleClass="button-container">
                     <Button fx:id="generateButton" text="Сгенерировать изображение-ключ"
                             styleClass="encrypt-mode-button"/>
-                    <Button fx:id="manualButton" text="Ввести параметры ключа вручную"
-                            styleClass="encrypt-mode-button"/>
+<!--                    <Button fx:id="manualButton" text="Ввести параметры ключа вручную"-->
+<!--                            styleClass="encrypt-mode-button"/>-->
                 </VBox>
             </StackPane>
         </VBox>

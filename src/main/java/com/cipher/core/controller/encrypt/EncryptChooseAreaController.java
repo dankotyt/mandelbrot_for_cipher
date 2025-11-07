@@ -284,6 +284,6 @@ public class EncryptChooseAreaController {
 
     private void handleSwap() {
         clearRectangles();
-        sceneManager.showChoosenMandelbrotPanel();
+        sceneManager.showEncryptGeneratePanel();
     }
 }

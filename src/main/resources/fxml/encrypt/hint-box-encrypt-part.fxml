@@ -1,46 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.text.Text?>
-<?import javafx.scene.text.TextFlow?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.Region?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
 
-<StackPane xmlns="http://javafx.com/javafx/11.0.1"
-           stylesheets="@../../css/styles.css"
-           styleClass="hint-container">
+<StackPane styleClass="hint-container" stylesheets="@../../css/styles.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
 
-    <Region styleClass="hint-background"/>
+    <Region styleClass="hint-background" />
 
     <VBox styleClass="hint-content">
-        <Text text="Подсказка" styleClass="hint-title"/>
+        <Text styleClass="hint-title" text="Подсказка" />
 
         <HBox styleClass="hint-row">
-            <ImageView styleClass="icon-encrypt-whole"/>
+            <ImageView fitHeight="40.0" fitWidth="40.0" styleClass="icon-encrypt-whole" />
             <TextFlow styleClass="hint-text-flow">
-                <Text text="зашифровать изображение полностью;" styleClass="hint-text"/>
+                <Text styleClass="hint-text" text="зашифровать изображение полностью;" />
             </TextFlow>
         </HBox>
 
         <HBox styleClass="hint-row">
-            <ImageView styleClass="icon-encrypt-part"/>
+            <ImageView fitHeight="40.0" fitWidth="40.0" styleClass="icon-encrypt-part" />
             <TextFlow styleClass="hint-text-flow">
-                <Text text="зашифровать выделенную часть;" styleClass="hint-text"/>
+                <Text styleClass="hint-text" text="зашифровать выделенную часть;" />
             </TextFlow>
         </HBox>
 
         <HBox styleClass="hint-row">
-            <ImageView styleClass="icon-reset-part"/>
+            <ImageView fitHeight="40.0" fitWidth="40.0" styleClass="icon-reset-part" />
             <TextFlow styleClass="hint-text-flow">
-                <Text text="сбросить выделение (ПКМ);" styleClass="hint-text"/>
+                <Text styleClass="hint-text" text="сбросить выделение (ПКМ);" />
             </TextFlow>
         </HBox>
 
         <TextFlow styleClass="hint-text-flow">
-            <Text text="Для шифрования части изображения выделите нужную область"
-                  styleClass="hint-description"/>
+            <Text styleClass="hint-description" text="Для шифрования части изображения выделите нужную область" />
         </TextFlow>
     </VBox>
 </StackPane>

@@ -43,7 +43,8 @@ public class StartController {
     private void setupButtonActions() {
 //        encryptButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
 //        decryptButton.setOnAction(e -> sceneManager.showDecryptBeginPanel());
-        connectButton.setOnAction(e -> handleConnect());
+//        connectButton.setOnAction(e -> handleConnect());
+        connectButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
         exitButton.setOnAction(e -> shutdownApplication());
     }
 
