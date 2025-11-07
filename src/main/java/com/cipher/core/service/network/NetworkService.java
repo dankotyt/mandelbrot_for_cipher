@@ -9,10 +9,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
 @Slf4j
 public class NetworkService {
+    private static final int APP_PORT = 25565;
 
     public DeviceDTO getCurrentDevice() {
         try {
@@ -32,25 +35,35 @@ public class NetworkService {
 
         try {
             String localNetworkPrefix = getLocalNetworkPrefix();
-            log.info("Сканирование сети: {}1-254", localNetworkPrefix);
+            log.info("Сканирование сети на порту {}: {}1-254", APP_PORT, localNetworkPrefix);
 
-            // Сканируем диапазон в нескольких потоках
             for (int i = 1; i <= 254; i++) {
                 String ip = localNetworkPrefix + i;
                 CompletableFuture<DeviceDTO> future = checkDeviceAsync(ip);
                 futures.add(future);
             }
 
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                    futures.toArray(new CompletableFuture[0])
+            );
+
+            try {
+                allFutures.get(5, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                log.warn("Таймаут при сканировании сети");
+            }
 
             for (CompletableFuture<DeviceDTO> future : futures) {
-                DeviceDTO device = future.getNow(null);
-                if (device != null) {
-                    devices.add(device);
+                try {
+                    DeviceDTO device = future.getNow(null);
+                    if (device != null) {
+                        devices.add(device);
+                    }
+                } catch (Exception e) {
                 }
             }
 
-            log.info("Найдено устройств в локальной сети: {}", devices.size());
+            log.info("Найдено устройств с программой: {}", devices.size());
 
         } catch (Exception e) {
             log.error("Ошибка при сканировании сети: {}", e.getMessage());
@@ -61,7 +74,7 @@ public class NetworkService {
 
     private CompletableFuture<DeviceDTO> checkDeviceAsync(String ip) {
         return CompletableFuture.supplyAsync(() -> {
-            if (isDeviceReachable(ip)) {
+            if (isAppRunning(ip)) {
                 String hostname = getHostname(ip);
                 return new DeviceDTO(hostname, ip);
             }
@@ -69,8 +82,8 @@ public class NetworkService {
         });
     }
 
-    private boolean isDeviceReachable(String ip) {
-        return isReachableByPing(ip) || isReachableByPort(ip) || isReachableBySocket(ip);
+    private boolean isAppRunning(String ip) {
+        return isPortOpen(ip, APP_PORT, 500);
     }
 
     private boolean isReachableByPing(String ip) {

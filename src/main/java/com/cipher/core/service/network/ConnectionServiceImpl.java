@@ -1,5 +1,6 @@
 package com.cipher.core.service.network;
 
+import com.cipher.client.service.SenderConnectionService;
 import com.cipher.core.dto.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.service.KeyExchangeService;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**управляет бизнес-логикой подключений**/
 @Service
 @RequiredArgsConstructor
 public class ConnectionServiceImpl implements ConnectionService {
@@ -23,6 +25,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final DialogDisplayer dialogDisplayer;
     private final NetworkService networkService;
     private final KeyExchangeService keyExchangeService;
+    private final SenderConnectionService senderConnectionService;
 
     private final Map<String, ConnectionRequestDTO> pendingRequests = new ConcurrentHashMap<>();
     private final List<ConnectionListener> listeners = new ArrayList<>();
@@ -42,29 +45,25 @@ public class ConnectionServiceImpl implements ConnectionService {
         try {
             DeviceDTO currentDevice = networkService.getCurrentDevice();
 
-            ConnectionRequestDTO request = new ConnectionRequestDTO(
-                    currentDevice.name(),
-                    currentDevice.ip(),
-                    toDevice.name(),
-                    toDevice.ip(),
-                    LocalDateTime.now(),
-                    ConnectionRequestDTO.RequestStatus.PENDING
-            );
+            boolean sent = senderConnectionService.sendConnectionRequest(
+                    toDevice.ip(), currentDevice);
 
-            String requestId = generateRequestId(request.getFromDeviceIpAsInetAddress(),
-                    request.getToDeviceIpAsInetAddress());
-            pendingRequests.put(requestId, request);
+            if (sent) {
+                ConnectionRequestDTO request = new ConnectionRequestDTO(
+                        currentDevice.name(), currentDevice.ip(),
+                        toDevice.name(), toDevice.ip(),
+                        LocalDateTime.now(),
+                        ConnectionRequestDTO.RequestStatus.PENDING
+                );
 
-            logger.info("Запрос на подключение отправлен от {} к {}",
-                    currentDevice.ip(), toDevice.ip());
+                notifyRequestReceived(request);
 
-            simulateNetworkDelay(() -> notifyRequestReceived(request));
+            } else {
+                logger.error("Не удалось отправить запрос к {}", toDevice.ip());
+            }
 
         } catch (Exception e) {
             logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
-            Platform.runLater(() ->
-                    dialogDisplayer.showErrorDialog("Ошибка отправки запроса: " + e.getMessage())
-            );
         }
     }
 
