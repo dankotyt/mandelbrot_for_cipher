@@ -53,6 +53,6 @@ public class EncryptModeController {
     private void setupEventHandlers() {
         backButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
         generateButton.setOnAction(e -> sceneManager.showEncryptGeneratePanel());
-        manualButton.setOnAction(e -> sceneManager.showManualEncryptionPanel());
+//        manualButton.setOnAction(e -> sceneManager.showManualEncryptionPanel());
     }
 }
