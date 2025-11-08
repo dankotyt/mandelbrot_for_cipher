@@ -1629,3 +1629,21 @@
     -fx-background-color: #d1ecf1;
     -fx-border-color: #bee5eb;
 }
+.manual-ip-field {
+    -fx-pref-width: 200px;
+    -fx-pref-height: 35px;
+    -fx-font-size: 14px;
+}
+
+.manual-connect-button {
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
+    -fx-font-size: 14px;
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+}
+
+.manual-connect-button:hover {
+    -fx-background-color: #45a049;
+}
+

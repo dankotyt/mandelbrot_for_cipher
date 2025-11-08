@@ -1,7 +1,10 @@
 package com.cipher.core.service.network;
 
+import com.cipher.core.controller.network.DevicesController;
 import com.cipher.core.dto.DeviceDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.net.*;
@@ -15,6 +18,8 @@ import java.util.concurrent.TimeoutException;
 @Service
 @Slf4j
 public class NetworkService {
+    private static final Logger logger = LoggerFactory.getLogger(NetworkService.class);
+
     private static final int APP_PORT = 25565;
 
     public DeviceDTO getCurrentDevice() {
@@ -82,7 +87,7 @@ public class NetworkService {
         });
     }
 
-    private boolean isAppRunning(String ip) {
+    public boolean isAppRunning(String ip) {
         return isPortOpen(ip, APP_PORT, 500);
     }
 
@@ -125,7 +130,7 @@ public class NetworkService {
         }
     }
 
-    private String getLocalIpAddress() throws SocketException {
+    public String getLocalIpAddress() throws SocketException {
         return Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
                 .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
                 .filter(addr -> !addr.isLoopbackAddress() && addr.isSiteLocalAddress())

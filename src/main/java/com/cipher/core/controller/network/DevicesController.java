@@ -8,8 +8,10 @@ import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,8 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     @FXML private StackPane noDevicesPane;
     @FXML private Label statusLabel;
     @FXML private Label currentDeviceLabel;
+    @FXML private TextField manualIpField;
+    @FXML private Button manualConnectButton;
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
@@ -41,12 +45,14 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private List<DeviceDTO> availableDevices;
     private DeviceDTO currentDevice;
 
+    private volatile long lastRequestTime = 0;
+    private static final long REQUEST_COOLDOWN_MS = 60000;
+
     @FXML
     public void initialize() {
         try {
             logger.info("Инициализация DevicesController");
 
-            // Получаем информацию о текущем устройстве
             currentDevice = networkService.getCurrentDevice();
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
 
@@ -75,6 +81,121 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         });
 
         refreshButton.setOnAction(e -> refreshDevices());
+        manualIpField.setOnAction(e -> handleManualConnection());
+    }
+
+    @FXML
+    private void handleManualConnection() {
+        String ip = manualIpField.getText().trim();
+
+        if (isOnCooldown()) {
+            long remainingSeconds = getRemainingCooldownSeconds();
+            dialogDisplayer.showTimedErrorAlert("Ошибка",
+                    "Слишком частые запросы\nПопробуйте через " + remainingSeconds + " сек.",
+                    3
+            );
+            updateStatus("Подождите перед следующим запросом");
+            return;
+        }
+
+        if (ip.isEmpty()) {
+            dialogDisplayer.showTimedErrorAlert("Ошибка", "Введите IP адрес", 3);
+            return;
+        }
+
+        if (!isValidIpAddress(ip)) {
+            dialogDisplayer.showTimedErrorAlert("Ошибка", "Неверный формат IP адреса", 3);
+            return;
+        }
+
+        if (isSelfIpAddress(ip)) {
+            dialogDisplayer.showTimedErrorAlert("Ошибка", "Нельзя отправить запрос самому себе", 3);
+            updateStatus("Ошибка: запрос самому себе");
+            return;
+        }
+
+        updateStatus("Проверка устройства...");
+
+        new Thread(() -> {
+            try {
+                boolean isReachable = networkService.isAppRunning(ip);
+
+                Platform.runLater(() -> {
+                    if (isReachable) {
+                        lastRequestTime = System.currentTimeMillis();
+
+                        DeviceDTO manualDevice = new DeviceDTO("Ручное подключение", ip);
+                        addDeviceToContainer(manualDevice);
+                        manualIpField.clear();
+                        updateStatus("Устройство добавлено");
+
+                        try {
+                            connectionService.sendConnectionRequest(manualDevice);
+                            dialogDisplayer.showTimedAlert("Успех",
+                                    "Запрос на подключение отправлен устройству:\n" + ip, 5);
+                        } catch (Exception e) {
+                            logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
+                            dialogDisplayer.showTimedErrorAlert("Ошибка",
+                                    "Не удалось отправить запрос: " + e.getMessage(), 3);
+                        }
+
+                    } else {
+                        updateStatus("Устройство не доступно");
+                        dialogDisplayer.showTimedErrorAlert("Ошибка",
+                                "Устройство не доступно\n" +
+                                        "IP: " + ip + "\n" +
+                                        "Убедитесь, что:\n" +
+                                        "• Устройство в сети\n" +
+                                        "• Программа запущена\n" +
+                                        "• Порт 25565 открыт",
+                                5
+                        );
+                    }
+                });
+
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    updateStatus("Ошибка проверки");
+                    dialogDisplayer.showTimedErrorAlert("Ошибка", "Ошибка проверки: " + e.getMessage(), 3);
+                });
+            }
+        }).start();
+    }
+
+    private boolean isValidIpAddress(String ip) {
+        try {
+            if (ip.equals("localhost") || ip.equals("127.0.0.1")) {
+                return true;
+            }
+
+            String[] parts = ip.split("\\.");
+            if (parts.length != 4) return false;
+
+            for (String part : parts) {
+                int value = Integer.parseInt(part);
+                if (value < 0 || value > 255) return false;
+            }
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void addDeviceToContainer(DeviceDTO device) {
+        for (Node node : devicesContainer.getChildren()) {
+            if (node instanceof Button) {
+                Button existingButton = (Button) node;
+                if (existingButton.getText().contains(device.ip())) {
+                    dialogDisplayer.showAlert("Информация", "Устройство уже в списке");
+                    return;
+                }
+            }
+        }
+
+        Button deviceButton = createDeviceButton(device);
+        devicesContainer.getChildren().add(deviceButton);
+        hideNoDevicesMessage();
     }
 
     private void refreshDevices() {
@@ -89,7 +210,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                         loadDevices();
                         updateStatus("Найдено устройств: " + availableDevices.size());
 
-                        // Проверяем входящие запросы
                         connectionService.checkIncomingRequests();
                     });
 
@@ -146,19 +266,63 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
     private void handleDeviceSelection(DeviceDTO device) {
         try {
+            if (isSelfDevice(device)) {
+                dialogDisplayer.showAlert("Информация","Нельзя отправить запрос самому себе");
+                updateStatus("Ошибка: запрос самому себе");
+                return;
+            }
+
+            if (isOnCooldown()) {
+                long remainingSeconds = getRemainingCooldownSeconds();
+                dialogDisplayer.showTimedErrorAlert("Ошибка",
+                        "Слишком частые запросы\nПопробуйте через " + remainingSeconds + " сек.",
+                        3
+                );
+                updateStatus("Подождите перед следующим запросом");
+                return;
+            }
+
             logger.debug("Отправка запроса на подключение к устройству: {}", device);
 
             updateStatus("Отправка запроса...");
 
             connectionService.sendConnectionRequest(device);
 
-            dialogDisplayer.showAlert("Информация","Запрос на подключение отправлен устройству:\n" + device);
-
+            dialogDisplayer.showTimedAlert("Информация","Запрос отправлен устройству: " + device, 5);
         } catch (Exception e) {
             logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
             dialogDisplayer.showErrorDialog("Ошибка при отправке запроса: " + e.getMessage());
             updateStatus("Ошибка отправки");
         }
+    }
+
+    private boolean isSelfDevice(DeviceDTO device) {
+        return device.ip().equals(currentDevice.ip());
+    }
+
+    private boolean isSelfIpAddress(String ip) {
+        try {
+            String localIp = networkService.getLocalIpAddress();
+            return ip.equals(localIp) ||
+                    ip.equals("127.0.0.1") ||
+                    ip.equals("localhost");
+        } catch (Exception e) {
+            logger.error("Ошибка при проверке IP: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isOnCooldown() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastRequest = currentTime - lastRequestTime;
+        return timeSinceLastRequest < REQUEST_COOLDOWN_MS;
+    }
+
+    private long getRemainingCooldownSeconds() {
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastRequest = currentTime - lastRequestTime;
+        long remainingMs = REQUEST_COOLDOWN_MS - timeSinceLastRequest;
+        return (remainingMs / 1000) + 1;
     }
 
     @Override
