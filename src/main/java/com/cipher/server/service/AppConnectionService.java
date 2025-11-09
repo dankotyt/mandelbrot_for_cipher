@@ -2,6 +2,7 @@ package com.cipher.server.service;
 
 import com.cipher.client.PeerConnector;
 import com.cipher.client.service.SenderConnectionService;
+import com.cipher.common.NetworkConstants;
 import com.cipher.core.controller.network.DevicesController;
 import com.cipher.core.dto.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
@@ -22,9 +23,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
+
+import static com.cipher.common.NetworkConstants.APP_PORT;
+import static com.cipher.common.NetworkConstants.CONNECTION_PORT;
 
 /**управление подключениями между устройствами**/
 @Service
@@ -32,9 +37,6 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AppConnectionService {
     private static final Logger logger = LoggerFactory.getLogger(AppConnectionService.class);
-
-
-    private static final int APP_PORT = 25565;
 
     private ServerSocket serverSocket;
     private boolean running = false;
@@ -194,6 +196,24 @@ public class AppConnectionService {
             }
         } catch (IOException e) {
             log.error("Ошибка при остановке сервера: {}", e.getMessage());
+        }
+    }
+
+    public boolean isServerRunning() {
+        try {
+            return isPortOpen("localhost", CONNECTION_PORT, 1000);
+        } catch (Exception e) {
+            log.error("❌ Сервер не запущен: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isPortOpen(String ip, int port, int timeout) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(ip, port), timeout);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

@@ -1,11 +1,13 @@
 package com.cipher.core.controller.network;
 
+import com.cipher.common.NetworkConstants;
 import com.cipher.core.dto.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.service.network.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
+import com.cipher.server.service.AppConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -41,6 +43,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private final DialogDisplayer dialogDisplayer;
     private final ConnectionServiceImpl connectionService;
     private final NetworkService networkService;
+    private final AppConnectionService appConnectionService;
 
     private List<DeviceDTO> availableDevices;
     private DeviceDTO currentDevice;
@@ -52,6 +55,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     public void initialize() {
         try {
             logger.info("Инициализация DevicesController");
+            checkServerStatus();
 
             currentDevice = networkService.getCurrentDevice();
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
@@ -381,5 +385,20 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void hideNoDevicesMessage() {
         noDevicesPane.setVisible(false);
         devicesContainer.setVisible(true);
+    }
+
+    private void checkServerStatus() {
+        try {
+            boolean serverRunning = appConnectionService.isServerRunning();
+            String message = serverRunning ?
+                    "✅ Сервер запущен на порту " + NetworkConstants.APP_PORT :
+                    "❌ Сервер НЕ запущен на порту " + NetworkConstants.APP_PORT;
+
+            dialogDisplayer.showAlert("Статус сервера", message);
+            logger.info("Статус сервера: {}", message);
+
+        } catch (Exception e) {
+            logger.error("Ошибка проверки сервера: {}", e.getMessage());
+        }
     }
 }

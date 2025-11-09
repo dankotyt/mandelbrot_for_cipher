@@ -1,5 +1,6 @@
 package com.cipher.core.service.network;
 
+import com.cipher.common.NetworkConstants;
 import com.cipher.core.controller.network.DevicesController;
 import com.cipher.core.dto.DeviceDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +16,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.cipher.common.NetworkConstants.APP_PORT;
+
 @Service
 @Slf4j
 public class NetworkService {
     private static final Logger logger = LoggerFactory.getLogger(NetworkService.class);
-
-    private static final int APP_PORT = 25565;
 
     public DeviceDTO getCurrentDevice() {
         try {
@@ -88,7 +89,10 @@ public class NetworkService {
     }
 
     public boolean isAppRunning(String ip) {
-        return isPortOpen(ip, APP_PORT, 500);
+        log.debug("🔍 Проверка устройства {} на порту {}", ip, APP_PORT);
+        boolean result = isPortOpen(ip, APP_PORT, 1000); // Увеличиваем таймаут до 1000ms
+        log.debug("✅ Устройство {}: порт {} = {}", ip, APP_PORT, result);
+        return result;
     }
 
     private boolean isReachableByPing(String ip) {
@@ -122,10 +126,13 @@ public class NetworkService {
     }
 
     private boolean isPortOpen(String ip, int port, int timeout) {
+        log.trace("Попытка подключения к {}:{} с таймаутом {}ms", ip, port, timeout);
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(ip, port), timeout);
+            log.debug("✅ Успешное подключение к {}:{}", ip, port);
             return true;
         } catch (Exception e) {
+            log.trace("❌ Не удалось подключиться к {}:{} - {}", ip, port, e.getMessage());
             return false;
         }
     }

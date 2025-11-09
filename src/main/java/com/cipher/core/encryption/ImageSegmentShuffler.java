@@ -36,7 +36,6 @@ public class ImageSegmentShuffler {
         int width = image.getWidth();
         int height = image.getHeight();
 
-        // Обрабатываем края изображения, где сегменты могут быть меньше заданного размера
         for (int y = 0; y < height; y += segmentSize) {
             for (int x = 0; x < width; x += segmentSize) {
                 int segW = Math.min(segmentSize, width - x);

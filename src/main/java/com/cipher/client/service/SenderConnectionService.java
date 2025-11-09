@@ -9,11 +9,12 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+import static com.cipher.common.NetworkConstants.CONNECTION_PORT;
+
 /**Отправляет запрос, его подтверждение и отклонение**/
 @Service
 @Slf4j
 public class SenderConnectionService {
-    private static final int CONNECTION_PORT = 25565;
 
     public boolean sendConnectionRequest(String targetIp, DeviceDTO fromDevice) {
         try (Socket socket = new Socket(targetIp, CONNECTION_PORT)) {
