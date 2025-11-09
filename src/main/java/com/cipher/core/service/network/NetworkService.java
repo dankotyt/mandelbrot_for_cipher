@@ -1,27 +1,20 @@
 package com.cipher.core.service.network;
 
-import com.cipher.common.NetworkConstants;
-import com.cipher.core.controller.network.DevicesController;
 import com.cipher.core.dto.DeviceDTO;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 import static com.cipher.common.NetworkConstants.APP_PORT;
 
 @Service
 @Slf4j
 public class NetworkService {
-    private static final Logger logger = LoggerFactory.getLogger(NetworkService.class);
 
     public DeviceDTO getCurrentDevice() {
         try {
@@ -43,9 +36,18 @@ public class NetworkService {
             String localNetworkPrefix = getLocalNetworkPrefix();
             log.info("Сканирование сети на порту {}: {}1-254", APP_PORT, localNetworkPrefix);
 
+            ExecutorService executor = Executors.newFixedThreadPool(50);
+
             for (int i = 1; i <= 254; i++) {
                 String ip = localNetworkPrefix + i;
-                CompletableFuture<DeviceDTO> future = checkDeviceAsync(ip);
+                CompletableFuture<DeviceDTO> future = CompletableFuture.supplyAsync(() -> {
+                    if (isAppRunning(ip)) {
+                        String hostname = getHostname(ip);
+                        log.info("✅ Найдено устройство с программой: {} ({})", ip, hostname);
+                        return new DeviceDTO(hostname, ip);
+                    }
+                    return null;
+                }, executor);
                 futures.add(future);
             }
 
@@ -54,9 +56,9 @@ public class NetworkService {
             );
 
             try {
-                allFutures.get(5, TimeUnit.SECONDS);
+                allFutures.get(30, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
-                log.warn("Таймаут при сканировании сети");
+                log.warn("Сканирование завершено по таймауту, но некоторые устройства могут быть найдены");
             }
 
             for (CompletableFuture<DeviceDTO> future : futures) {
@@ -65,10 +67,11 @@ public class NetworkService {
                     if (device != null) {
                         devices.add(device);
                     }
-                } catch (Exception e) {
+                } catch (Exception ignored) {
                 }
             }
 
+            executor.shutdown();
             log.info("Найдено устройств с программой: {}", devices.size());
 
         } catch (Exception e) {
@@ -78,61 +81,15 @@ public class NetworkService {
         return devices;
     }
 
-    private CompletableFuture<DeviceDTO> checkDeviceAsync(String ip) {
-        return CompletableFuture.supplyAsync(() -> {
-            if (isAppRunning(ip)) {
-                String hostname = getHostname(ip);
-                return new DeviceDTO(hostname, ip);
-            }
-            return null;
-        });
-    }
-
     public boolean isAppRunning(String ip) {
-        log.debug("🔍 Проверка устройства {} на порту {}", ip, APP_PORT);
-        boolean result = isPortOpen(ip, APP_PORT, 1000); // Увеличиваем таймаут до 1000ms
-        log.debug("✅ Устройство {}: порт {} = {}", ip, APP_PORT, result);
-        return result;
-    }
-
-    private boolean isReachableByPing(String ip) {
-        try {
-            InetAddress address = InetAddress.getByName(ip);
-            return address.isReachable(500);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean isReachableByPort(String ip) {
-        int[] ports = {80, 443, 22, 135, 139, 445, 8080};
-
-        for (int port : ports) {
-            if (isPortOpen(ip, port, 200)) {
-                log.debug("Устройство {} доступно через порт {}", ip, port);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isReachableBySocket(String ip) {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(ip, 7), 300);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return isPortOpen(ip, APP_PORT, 1000);
     }
 
     private boolean isPortOpen(String ip, int port, int timeout) {
-        log.trace("Попытка подключения к {}:{} с таймаутом {}ms", ip, port, timeout);
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(ip, port), timeout);
-            log.debug("✅ Успешное подключение к {}:{}", ip, port);
             return true;
         } catch (Exception e) {
-            log.trace("❌ Не удалось подключиться к {}:{} - {}", ip, port, e.getMessage());
             return false;
         }
     }
@@ -149,15 +106,6 @@ public class NetworkService {
     private String getLocalNetworkPrefix() throws SocketException {
         String localIp = getLocalIpAddress();
         return localIp.substring(0, localIp.lastIndexOf('.') + 1);
-    }
-
-    private boolean isReachable(String ip) {
-        try {
-            InetAddress address = InetAddress.getByName(ip);
-            return address.isReachable(1000); // timeout 1 second
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private String getHostname(String ip) {

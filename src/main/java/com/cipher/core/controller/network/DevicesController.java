@@ -55,7 +55,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     public void initialize() {
         try {
             logger.info("Инициализация DevicesController");
-            checkServerStatus();
 
             currentDevice = networkService.getCurrentDevice();
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
@@ -212,7 +211,9 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
                     Platform.runLater(() -> {
                         loadDevices();
-                        updateStatus("Найдено устройств: " + availableDevices.size());
+                        int displayedDevicesCount = countDisplayedDevices();
+
+                        updateStatus("Найдено устройств: " + displayedDevicesCount);
 
                         connectionService.checkIncomingRequests();
                     });
@@ -229,6 +230,20 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
             logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
             updateStatus("Ошибка поиска устройств");
         }
+    }
+
+    private int countDisplayedDevices() {
+        if (availableDevices == null || availableDevices.isEmpty()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (DeviceDTO device : availableDevices) {
+            if (!device.ip().equals(currentDevice.ip())) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void loadDevices() {
@@ -385,20 +400,5 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void hideNoDevicesMessage() {
         noDevicesPane.setVisible(false);
         devicesContainer.setVisible(true);
-    }
-
-    private void checkServerStatus() {
-        try {
-            boolean serverRunning = appConnectionService.isServerRunning();
-            String message = serverRunning ?
-                    "✅ Сервер запущен на порту " + NetworkConstants.APP_PORT :
-                    "❌ Сервер НЕ запущен на порту " + NetworkConstants.APP_PORT;
-
-            dialogDisplayer.showAlert("Статус сервера", message);
-            logger.info("Статус сервера: {}", message);
-
-        } catch (Exception e) {
-            logger.error("Ошибка проверки сервера: {}", e.getMessage());
-        }
     }
 }
