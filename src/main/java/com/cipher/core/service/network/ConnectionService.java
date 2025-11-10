@@ -1,6 +1,6 @@
 package com.cipher.core.service.network;
 
-import com.cipher.core.dto.ConnectionRequestDTO;
+import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 
 import java.net.InetAddress;

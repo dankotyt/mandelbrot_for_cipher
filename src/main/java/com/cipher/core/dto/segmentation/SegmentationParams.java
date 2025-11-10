@@ -1,4 +1,4 @@
-package com.cipher.core.dto.neww;
+package com.cipher.core.dto.segmentation;
 
 import java.util.Map;
 

@@ -1,8 +1,8 @@
 package com.cipher.server.handler;
 
-import com.cipher.common.NetworkConstants;
+import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.model.DHKeyExchange;
-import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
+import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInputStream;
@@ -17,7 +17,7 @@ public class ClientConnectionHandler implements Runnable {
 
     private final Socket clientSocket;
     private final NetworkKeyExchangeServiceImpl networkKeyExchangeService;
-    private final InetAddress clientAddress; // Добавляем поле для адреса клиента
+    private final InetAddress clientAddress;
 
     public ClientConnectionHandler(Socket clientSocket, NetworkKeyExchangeServiceImpl networkKeyExchangeService) {
         if (clientSocket == null) {

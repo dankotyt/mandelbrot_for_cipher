@@ -1,6 +1,6 @@
 package com.cipher.core.encryption;
 
-import com.cipher.core.dto.neww.SegmentationResult;
+import com.cipher.core.dto.segmentation.SegmentationResult;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.Pair;
 import lombok.RequiredArgsConstructor;

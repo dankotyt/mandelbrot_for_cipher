@@ -1,9 +1,11 @@
-package com.cipher.core.service.network;
+package com.cipher.core.service.network.impl;
 
 import com.cipher.client.service.SenderConnectionService;
-import com.cipher.core.dto.ConnectionRequestDTO;
+import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
-import com.cipher.core.service.KeyExchangeService;
+import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.ConnectionService;
+import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import javafx.application.Platform;
 import lombok.RequiredArgsConstructor;

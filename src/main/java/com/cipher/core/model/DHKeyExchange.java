@@ -1,6 +1,6 @@
 package com.cipher.core.model;
 
-import com.cipher.common.DHCryptoParams;
+import com.cipher.common.utils.DHCryptoParams;
 import lombok.Getter;
 
 import java.math.BigInteger;

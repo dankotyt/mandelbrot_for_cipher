@@ -1,4 +1,4 @@
-package com.cipher.core.dto.neww;
+package com.cipher.core.dto.encryption;
 
 public record EncryptionArea(int startX, int startY, int width, int height, boolean isWhole) {
     public EncryptionArea {

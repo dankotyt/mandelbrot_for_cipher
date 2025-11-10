@@ -1,6 +1,6 @@
 package com.cipher.core.utils;
 
-import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -47,7 +47,6 @@ public class TempFileManager {
             File selectedFile = fileChooser.showOpenDialog(primaryStage);
 
             if (selectedFile != null) {
-                //cleanupTemp();
                 saveInputImageToMemory(selectedFile);
                 logger.info("Файл выбран: {}", selectedFile.getAbsolutePath());
             } else {

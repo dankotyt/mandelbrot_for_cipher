@@ -1,4 +1,4 @@
-package com.cipher.core.service;
+package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.utils.BinaryFile;

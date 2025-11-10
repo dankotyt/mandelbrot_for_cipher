@@ -1,9 +1,7 @@
-package com.cipher.client;
+package com.cipher.client.service;
 
-import com.cipher.common.NetworkConstants;
+import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.model.DHKeyExchange;
-import com.cipher.core.service.KeyExchangeService;
-import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

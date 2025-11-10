@@ -1,13 +1,9 @@
 package com.cipher.core.utils;
 
 import com.cipher.core.controller.decrypt.DecryptFinalController;
-import com.cipher.core.controller.decrypt.DecryptLoadController;
 import com.cipher.core.controller.encrypt.*;
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.neww.EncryptionDataResult;
-import com.cipher.core.dto.neww.EncryptionPreviewResult;
-import com.cipher.core.dto.neww.SegmentationParams;
-import com.cipher.core.dto.neww.SegmentationResult;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.factory.ControllerFactory;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;

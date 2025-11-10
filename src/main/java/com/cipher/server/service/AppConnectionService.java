@@ -1,10 +1,8 @@
 package com.cipher.server.service;
 
-import com.cipher.client.PeerConnector;
+import com.cipher.client.utils.PeerConnector;
 import com.cipher.client.service.SenderConnectionService;
-import com.cipher.common.NetworkConstants;
-import com.cipher.core.controller.network.DevicesController;
-import com.cipher.core.dto.ConnectionRequestDTO;
+import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.NetworkService;
@@ -28,8 +26,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
 
-import static com.cipher.common.NetworkConstants.APP_PORT;
-import static com.cipher.common.NetworkConstants.CONNECTION_PORT;
+import static com.cipher.common.utils.NetworkConstants.APP_PORT;
+import static com.cipher.common.utils.NetworkConstants.CONNECTION_PORT;
 
 /**управление подключениями между устройствами**/
 @Service

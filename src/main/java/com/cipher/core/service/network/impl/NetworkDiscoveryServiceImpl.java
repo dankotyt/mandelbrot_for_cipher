@@ -1,12 +1,11 @@
-package com.cipher.core.service.impl;
+package com.cipher.core.service.network.impl;
 
-import com.cipher.client.DiscoveryClient;
-import com.cipher.client.PeerConnector;
-import com.cipher.common.NetworkConstants;
+import com.cipher.client.utils.PeerConnector;
+import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.model.PeerInfo;
-import com.cipher.core.service.ConnectionManager;
-import com.cipher.core.service.NetworkDiscoveryService;
-import com.cipher.server.DiscoveryServer;
+import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.server.service.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

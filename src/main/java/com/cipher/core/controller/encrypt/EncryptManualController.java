@@ -1,13 +1,11 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.service.EncryptionService;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
-import javafx.scene.image.Image;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,9 +1,9 @@
 package com.cipher.core.encryption;
 
-import com.cipher.core.dto.EncryptionResult;
-import com.cipher.core.dto.neww.EncryptionDataResult;
-import com.cipher.core.service.ConnectionManager;
-import com.cipher.core.service.KeyExchangeService;
+import com.cipher.core.dto.encryption.EncryptionResult;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
+import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.utils.EncryptionDataSerializer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

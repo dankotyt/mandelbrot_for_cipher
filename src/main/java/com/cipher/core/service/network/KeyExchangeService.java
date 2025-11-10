@@ -1,4 +1,4 @@
-package com.cipher.core.service;
+package com.cipher.core.service.network;
 
 import com.cipher.core.model.DHKeyExchange;
 

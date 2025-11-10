@@ -1,21 +1,14 @@
 package com.cipher.core.config;
 
 import com.cipher.client.handler.ClientGlobalExceptionHandler;
-import com.cipher.core.dto.neww.EncryptionParams;
 import com.cipher.core.factory.ControllerFactory;
 import com.cipher.core.utils.*;
-import javafx.application.Platform;
-import javafx.scene.image.Image;
-import javafx.scene.input.KeyCombination;
-import javafx.stage.Stage;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
 
-import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

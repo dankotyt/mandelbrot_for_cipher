@@ -1,7 +1,7 @@
-package com.cipher.client;
+package com.cipher.client.service;
 
-import com.cipher.common.NetworkConstants;
-import com.cipher.core.service.NetworkDiscoveryService;
+import com.cipher.common.utils.NetworkConstants;
+import com.cipher.core.service.network.NetworkDiscoveryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

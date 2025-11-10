@@ -1,6 +1,7 @@
-package com.cipher.core.dto.neww;
+package com.cipher.core.dto.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.dto.segmentation.SegmentationParams;
 
 public record EncryptionParams(
         EncryptionArea area,

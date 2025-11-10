@@ -1,11 +1,10 @@
-package com.cipher.core.service.impl;
+package com.cipher.core.service.network.impl;
 
-import com.cipher.client.KeyExchangeClient;
+import com.cipher.client.service.KeyExchangeClient;
 import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.model.PeerInfo;
-import com.cipher.core.service.ConnectionManager;
-import com.cipher.core.service.KeyExchangeService;
+import com.cipher.core.service.network.KeyExchangeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +12,7 @@ import java.net.InetAddress;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j

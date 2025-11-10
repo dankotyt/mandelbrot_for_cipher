@@ -1,7 +1,7 @@
 //package com.cipher.core.utils;
 //
 //import com.cipher.core.dto.*;
-//import com.cipher.core.dto.neww.SegmentationParams;
+//import com.cipher.core.dto.segmentation.SegmentationParams;
 //import com.cipher.core.encryption.CryptographicService;
 //import lombok.RequiredArgsConstructor;
 //import lombok.Setter;

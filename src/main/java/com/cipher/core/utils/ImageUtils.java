@@ -39,10 +39,6 @@ public class ImageUtils {
         this.mandelbrotParams = params;
     }
 
-//    public boolean hasOriginalImage() {
-//        return originalImage != null;
-//    }
-
     public boolean hasMandelbrotImage() {
         return mandelbrotImage != null;
     }
@@ -64,22 +60,5 @@ public class ImageUtils {
         g.dispose();
 
         return argbImage;
-    }
-    public static BufferedImage copyImage(BufferedImage source) {
-        if (source == null) {
-            throw new IllegalArgumentException("Source image cannot be null");
-        }
-
-        BufferedImage copy = new BufferedImage(
-                source.getWidth(),
-                source.getHeight(),
-                source.getType()
-        );
-
-        Graphics2D g = copy.createGraphics();
-        g.drawImage(source, 0, 0, null);
-        g.dispose();
-
-        return copy;
     }
 }

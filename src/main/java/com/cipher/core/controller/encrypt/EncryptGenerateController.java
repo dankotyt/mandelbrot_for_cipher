@@ -3,7 +3,7 @@ package com.cipher.core.controller.encrypt;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;

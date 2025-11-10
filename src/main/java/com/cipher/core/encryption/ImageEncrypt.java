@@ -6,10 +6,15 @@ import java.net.InetAddress;
 import java.util.Set;
 
 import com.cipher.core.dto.*;
-import com.cipher.core.dto.neww.*;
-import com.cipher.core.service.KeyExchangeService;
+import com.cipher.core.dto.encryption.EncryptionArea;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
+import com.cipher.core.dto.encryption.EncryptionParams;
+import com.cipher.core.dto.encryption.EncryptionResult;
+import com.cipher.core.dto.segmentation.SegmentationParams;
+import com.cipher.core.dto.segmentation.SegmentationResult;
+import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.utils.*;
-import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

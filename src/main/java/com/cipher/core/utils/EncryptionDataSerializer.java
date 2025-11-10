@@ -1,11 +1,11 @@
 package com.cipher.core.utils;
 
-import com.cipher.core.dto.EncryptionResult;
+import com.cipher.core.dto.encryption.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.neww.EncryptionArea;
-import com.cipher.core.dto.neww.EncryptionDataResult;
-import com.cipher.core.dto.neww.EncryptionParams;
-import com.cipher.core.dto.neww.SegmentationParams;
+import com.cipher.core.dto.encryption.EncryptionArea;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
+import com.cipher.core.dto.encryption.EncryptionParams;
+import com.cipher.core.dto.segmentation.SegmentationParams;
 import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;

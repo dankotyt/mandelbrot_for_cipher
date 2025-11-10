@@ -1,6 +1,6 @@
-package com.cipher.server;
+package com.cipher.server.service;
 
-import com.cipher.common.NetworkConstants;
+import com.cipher.common.utils.NetworkConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,4 @@
-package com.cipher.core.service;
+package com.cipher.core.service.network;
 
 import java.net.InetAddress;
 import java.util.Set;

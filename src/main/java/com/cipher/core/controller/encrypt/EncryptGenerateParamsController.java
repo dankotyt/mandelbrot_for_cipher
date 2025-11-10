@@ -1,7 +1,7 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.service.MandelbrotService;
+import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -13,7 +13,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;

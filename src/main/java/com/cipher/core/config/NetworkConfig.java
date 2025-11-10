@@ -1,15 +1,14 @@
 package com.cipher.core.config;
 
-import com.cipher.client.DiscoveryClient;
-import com.cipher.client.KeyExchangeClient;
-import com.cipher.client.PeerConnector;
-import com.cipher.core.service.ConnectionManager;
-import com.cipher.core.service.KeyExchangeService;
-import com.cipher.core.service.NetworkDiscoveryService;
-import com.cipher.core.service.impl.NetworkKeyExchangeServiceImpl;
+import com.cipher.client.service.DiscoveryClient;
+import com.cipher.client.service.KeyExchangeClient;
+import com.cipher.client.utils.PeerConnector;
+import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
 import com.cipher.core.utils.NetworkManager;
-import com.cipher.server.DiscoveryServer;
-import com.cipher.server.handler.ClientConnectionHandler;
+import com.cipher.server.service.DiscoveryServer;
 import com.cipher.server.handler.ClientConnectionHandlerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

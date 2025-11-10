@@ -1,4 +1,4 @@
-package com.cipher.core.dto;
+package com.cipher.core.dto.connection;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;

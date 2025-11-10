@@ -1,6 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
 

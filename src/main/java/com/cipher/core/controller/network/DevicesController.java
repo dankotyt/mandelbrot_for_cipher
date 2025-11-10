@@ -1,9 +1,8 @@
 package com.cipher.core.controller.network;
 
-import com.cipher.common.NetworkConstants;
-import com.cipher.core.dto.ConnectionRequestDTO;
+import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
-import com.cipher.core.service.network.ConnectionServiceImpl;
+import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;

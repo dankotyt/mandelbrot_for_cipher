@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 
-import static com.cipher.common.NetworkConstants.APP_PORT;
+import static com.cipher.common.utils.NetworkConstants.APP_PORT;
 
 @Service
 @Slf4j

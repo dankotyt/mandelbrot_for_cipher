@@ -1,8 +1,7 @@
 package com.cipher.core.utils;
 
-import com.cipher.core.dto.KeyDecoderParams;
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.neww.EncryptionDataResult;
+import com.cipher.core.dto.encryption.EncryptionDataResult;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,11 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
-import static com.cipher.core.service.EncryptionService.getTempPath;
+import static com.cipher.core.service.encryption.EncryptionService.getTempPath;
 
 @Component
 @RequiredArgsConstructor

@@ -9,7 +9,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-import static com.cipher.common.NetworkConstants.CONNECTION_PORT;
+import static com.cipher.common.utils.NetworkConstants.CONNECTION_PORT;
 
 /**Отправляет запрос, его подтверждение и отклонение**/
 @Service

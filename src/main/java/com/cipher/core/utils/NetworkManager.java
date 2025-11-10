@@ -1,10 +1,9 @@
 package com.cipher.core.utils;
 
-import com.cipher.client.PeerConnector;
-import com.cipher.core.service.ConnectionManager;
-import com.cipher.core.service.KeyExchangeService;
-import com.cipher.core.service.NetworkDiscoveryService;
-import com.cipher.core.service.impl.NetworkDiscoveryServiceImpl;
+import com.cipher.client.utils.PeerConnector;
+import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.NetworkDiscoveryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

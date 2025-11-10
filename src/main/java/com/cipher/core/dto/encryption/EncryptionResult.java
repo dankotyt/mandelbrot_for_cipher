@@ -1,6 +1,4 @@
-package com.cipher.core.dto;
-
-import com.cipher.core.dto.neww.EncryptionParams;
+package com.cipher.core.dto.encryption;
 
 import java.awt.image.BufferedImage;
 
