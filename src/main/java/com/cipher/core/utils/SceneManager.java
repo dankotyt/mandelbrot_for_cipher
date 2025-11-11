@@ -2,6 +2,8 @@ package com.cipher.core.utils;
 
 import com.cipher.core.controller.decrypt.DecryptFinalController;
 import com.cipher.core.controller.encrypt.*;
+import com.cipher.core.controller.network.ChatController;
+import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.factory.ControllerFactory;
@@ -205,6 +207,29 @@ public class SceneManager {
             logger.error("Error loading decrypt final screen", e);
             dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
             showDecryptModePanel();
+        }
+    }
+
+
+    public void showChatPanel(DeviceDTO device) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/network/chat.fxml"));
+            loader.setControllerFactory(controllerFactory);
+            Parent root = loader.load();
+
+            ChatController controller = loader.getController();
+            controller.setConnectionInfo(device.name(), device.ip());
+
+            primaryStage.getScene().setRoot(root);
+
+            primaryStage.setTitle("Cipher Chat - " + device.name());
+
+            logger.info("Открыт чат с устройством: {} ({})", device.name(), device.ip());
+
+        } catch (Exception e) {
+            logger.error("Ошибка открытия чата с {}: {}", device.name(), e.getMessage(), e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось открыть чат: " + e.getMessage());
+            showDevicesPanel();
         }
     }
 }

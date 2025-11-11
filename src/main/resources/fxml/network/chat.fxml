@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane styleClass="main-container"
+            stylesheets="@../../css/styles.css"
+            xmlns="http://javafx.com/javafx/17.0.12"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.network.ChatController">
+
+    <top>
+        <BorderPane styleClass="chat-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button" text="Назад" />
+                </HBox>
+            </left>
+            <center>
+                <VBox alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                    <Label fx:id="chatTitleLabel" styleClass="chat-title" text="Чат" />
+                    <Label fx:id="connectionInfoLabel" styleClass="connection-info" text="Подключение..." />
+                </VBox>
+            </center>
+            <right>
+                <HBox alignment="CENTER_RIGHT" style="-fx-padding: 20 20 0 0;" spacing="10">
+                    <Button fx:id="encryptionInfoButton" styleClass="info-button" text="Шифрование" />
+                    <Button fx:id="clearChatButton" styleClass="clear-button" text="Очистить" />
+                </HBox>
+            </right>
+        </BorderPane>
+    </top>
+
+    <center>
+        <VBox alignment="TOP_CENTER" styleClass="chat-center-container" VBox.vgrow="ALWAYS">
+            <ScrollPane fx:id="messagesScrollPane" fitToWidth="true" styleClass="messages-scroll-pane" VBox.vgrow="ALWAYS">
+                <VBox fx:id="messagesContainer" alignment="TOP_CENTER" spacing="10" styleClass="messages-container" />
+            </ScrollPane>
+
+            <StackPane fx:id="noMessagesPane" styleClass="no-messages-container" visible="false">
+                <VBox alignment="CENTER" spacing="15">
+                    <Label styleClass="no-messages-icon" text="💬" />
+                    <Label styleClass="no-messages-label" text="Сообщений пока нет" />
+                    <Label styleClass="no-messages-hint" text="Напишите первое сообщение!" />
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+
+    <bottom>
+        <VBox alignment="CENTER" spacing="10" styleClass="chat-bottom-container">
+            <!-- Статусная строка -->
+            <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 20 5 20;">
+                <Label fx:id="statusLabel" styleClass="chat-status-label" text="Статус: Подключение установлено" />
+                <Region HBox.hgrow="ALWAYS" />
+                <Label fx:id="encryptionStatusLabel" styleClass="encryption-status-label" text="Шифрование: Активно" />
+            </HBox>
+
+            <!-- Поле ввода и кнопки -->
+            <HBox alignment="CENTER" spacing="10" style="-fx-padding: 0 20 20 20;">
+                <TextArea fx:id="messageTextArea"
+                          styleClass="message-text-area"
+                          promptText="Введите сообщение..."
+                          wrapText="true"
+                          prefRowCount="2"
+                          maxWidth="Infinity"
+                          HBox.hgrow="ALWAYS" />
+
+                <VBox spacing="5">
+                    <Button fx:id="sendButton"
+                            styleClass="send-button"
+                            text="Отправить"
+                            defaultButton="true"
+                            prefWidth="100" />
+
+                    <Button fx:id="imageButton"
+                            styleClass="image-button"
+                            text="📷 Изображение"
+                            prefWidth="100" />
+
+                    <Button fx:id="fileButton"
+                            styleClass="file-button"
+                            text="Файл"
+                            prefWidth="100" />
+                </VBox>
+            </HBox>
+        </VBox>
+    </bottom>
+</BorderPane>

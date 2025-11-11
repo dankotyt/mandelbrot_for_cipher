@@ -1,4 +1,4 @@
-package com.cipher.client.service;
+package com.cipher.client.service.localNetwork;
 
 import com.cipher.core.dto.DeviceDTO;
 import lombok.extern.slf4j.Slf4j;

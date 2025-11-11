@@ -16,6 +16,7 @@ public interface KeyExchangeService {
     DHKeyExchange getCurrentKeys();
 
     // Управление соединениями
+    void addConnection(InetAddress peerAddress, DHKeyExchange keys);
     void closeConnection(InetAddress peerAddress);
     void closeAllConnections();
     Map<InetAddress, String> getActiveConnections();

@@ -1,6 +1,6 @@
 //package com.cipher.core.controller.online;
 //
-//import com.cipher.client.service.impl.ClientAuthServiceImpl;
+//import com.cipher.client.service.seedAuthentication.impl.ClientAuthServiceImpl;
 //import com.cipher.common.exception.AuthException;
 //import com.cipher.common.exception.CryptoException;
 //import com.cipher.common.exception.NetworkException;

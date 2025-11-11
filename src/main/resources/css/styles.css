@@ -1647,3 +1647,289 @@
     -fx-background-color: #45a049;
 }
 
+/* Стили для чата */
+.chat-top-container {
+    -fx-background-color: #2c3e50;
+    -fx-border-color: #34495e;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.chat-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.connection-info {
+    -fx-font-size: 12px;
+    -fx-text-fill: #bdc3c7;
+}
+
+.chat-center-container {
+    -fx-background-color: #ecf0f1;
+    -fx-padding: 10px;
+}
+
+.messages-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 5px;
+}
+
+.messages-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.messages-container {
+    -fx-padding: 10px;
+}
+
+.no-messages-container {
+    -fx-alignment: center;
+}
+
+.no-messages-icon {
+    -fx-font-size: 48px;
+    -fx-text-fill: #bdc3c7;
+}
+
+.no-messages-label {
+    -fx-font-size: 16px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.no-messages-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #95a5a6;
+}
+
+/* Стили сообщений */
+.message-box {
+    -fx-padding: 5px;
+}
+
+.message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.own-message .message-content {
+    -fx-background-color: #3498db;
+}
+
+.own-message .message-text {
+    -fx-fill: white;
+}
+
+.received-message .message-content {
+    -fx-background-color: white;
+}
+
+.received-message .message-text {
+    -fx-fill: #2c3e50;
+}
+
+.message-text {
+    -fx-font-size: 14px;
+    -fx-font-family: "Arial";
+}
+
+.message-meta {
+    -fx-padding: 5px 0 0 0;
+}
+
+.message-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.own-message .message-time {
+    -fx-text-fill: #ecf0f1;
+}
+
+.message-status {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+/* Стили для изображений и файлов */
+.image-message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.message-image {
+    -fx-border-radius: 5px;
+    -fx-border-color: #bdc3c7;
+}
+
+.image-file-name {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.image-file-size {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.file-message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.file-icon {
+    -fx-font-size: 24px;
+}
+
+.file-name {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.file-size {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.file-info {
+    -fx-padding: 0 0 0 10px;
+}
+
+.file-content {
+    -fx-alignment: center-left;
+}
+
+/* Стили для нижней панели */
+.chat-bottom-container {
+    -fx-background-color: #34495e;
+    -fx-border-color: #2c3e50;
+    -fx-border-width: 1px 0 0 0;
+}
+
+.chat-status-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #ecf0f1;
+}
+
+.encryption-status-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2ecc71;
+}
+
+.message-text-area {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px;
+    -fx-font-size: 14px;
+}
+
+.message-text-area:focused {
+    -fx-border-color: #3498db;
+}
+
+/* Стили кнопок */
+.send-button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.send-button:hover {
+    -fx-background-color: #2980b9;
+}
+
+.send-button:pressed {
+    -fx-background-color: #21618c;
+}
+
+.file-button {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.file-button:hover {
+    -fx-background-color: #7f8c8d;
+}
+
+.image-button {
+    -fx-background-color: #9b59b6;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.image-button:hover {
+    -fx-background-color: #8e44ad;
+}
+
+.clear-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.clear-button:hover {
+    -fx-background-color: #c0392b;
+}
+
+.info-button {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.info-button:hover {
+    -fx-background-color: #d35400;
+}
+
+.icon-back-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #ecf0f1;
+    -fx-border-radius: 5px;
+    -fx-text-fill: #ecf0f1;
+    -fx-font-size: 14px;
+}
+
+.icon-back-button:hover {
+    -fx-background-color: rgba(236, 240, 241, 0.1);
+}
+
+/* Стили статусов */
+.status-connected {
+    -fx-text-fill: #2ecc71;
+}
+
+.status-error {
+    -fx-text-fill: #e74c3c;
+}
+
+.status-waiting {
+    -fx-text-fill: #f39c12;
+}
+
+.status-success {
+    -fx-text-fill: #27ae60;
+}
+

@@ -1,6 +1,6 @@
 package com.cipher.core.service.network.impl;
 
-import com.cipher.client.service.KeyExchangeClient;
+import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.model.PeerInfo;
@@ -123,6 +123,24 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         log.info("Generated new DH keys");
 
         activeConnections.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
+    }
+
+    @Override
+    public void addConnection(InetAddress peerAddress, DHKeyExchange keys) {
+        try {
+            PeerInfo peerInfo = new PeerInfo(peerAddress);
+            peerInfo.setDhKeys(keys);
+            peerInfo.setStatus(ConnectionStatus.CONNECTED);
+            peerInfo.updateLastSeen();
+            peerInfo.updateKeyExchangeTime();
+
+            activeConnections.put(peerAddress, peerInfo);
+            log.info("Добавлено соединение с: {}", peerAddress.getHostAddress());
+
+        } catch (Exception e) {
+            log.error("Ошибка при добавлении соединения с {}: {}",
+                    peerAddress.getHostAddress(), e.getMessage());
+        }
     }
 
     @Override

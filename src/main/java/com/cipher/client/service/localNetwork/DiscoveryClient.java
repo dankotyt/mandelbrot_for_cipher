@@ -1,4 +1,4 @@
-package com.cipher.client.service;
+package com.cipher.client.service.localNetwork;
 
 import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.service.network.NetworkDiscoveryService;

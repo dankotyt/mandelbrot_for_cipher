@@ -1,4 +1,4 @@
-package com.cipher.server.handler;
+package com.cipher.client.handler;
 
 import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.model.DHKeyExchange;

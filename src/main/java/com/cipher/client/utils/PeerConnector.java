@@ -1,6 +1,6 @@
 package com.cipher.client.utils;
 
-import com.cipher.client.service.KeyExchangeClient;
+import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.DHKeyExchange;
 import com.cipher.core.service.network.KeyExchangeService;
 import lombok.RequiredArgsConstructor;

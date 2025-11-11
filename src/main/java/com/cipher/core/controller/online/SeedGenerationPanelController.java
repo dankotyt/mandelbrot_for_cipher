@@ -1,6 +1,6 @@
 //package com.cipher.core.controller.online;
 //
-//import com.cipher.client.service.impl.SeedServiceImpl;
+//import com.cipher.client.service.seedAuthentication.impl.SeedServiceImpl;
 //import com.cipher.core.utils.DialogDisplayer;
 //import com.cipher.core.utils.SceneManager;
 //import javafx.fxml.FXML;

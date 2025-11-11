@@ -1,4 +1,4 @@
-package com.cipher.server.service;
+package com.cipher.client.service.localNetwork;
 
 import com.cipher.common.utils.NetworkConstants;
 import lombok.extern.slf4j.Slf4j;

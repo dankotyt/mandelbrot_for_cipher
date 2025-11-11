@@ -1,4 +1,4 @@
-package com.cipher.server.handler;
+package com.cipher.client.handler;
 
 import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
 import lombok.RequiredArgsConstructor;

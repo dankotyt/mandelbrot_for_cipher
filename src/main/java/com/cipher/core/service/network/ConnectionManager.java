@@ -1,10 +1,10 @@
 package com.cipher.core.service.network;
 
-import com.cipher.client.service.KeyExchangeClient;
+import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
-import com.cipher.server.handler.ClientConnectionHandler;
-import com.cipher.server.handler.ClientConnectionHandlerFactory;
+import com.cipher.client.handler.ClientConnectionHandler;
+import com.cipher.client.handler.ClientConnectionHandlerFactory;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

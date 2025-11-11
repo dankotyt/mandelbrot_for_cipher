@@ -5,7 +5,7 @@ import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.NetworkDiscoveryService;
-import com.cipher.server.service.DiscoveryServer;
+import com.cipher.client.service.localNetwork.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

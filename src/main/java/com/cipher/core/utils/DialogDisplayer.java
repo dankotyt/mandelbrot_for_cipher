@@ -124,7 +124,7 @@ public class DialogDisplayer {
 
                 if (primaryStage != null) {
                     alert.initOwner(primaryStage);
-                    alert.initModality(Modality.APPLICATION_MODAL);
+                    alert.initModality(Modality.WINDOW_MODAL);
 
                     // Центрируем алерт относительно главного окна
                     alert.setOnShown(event -> {

@@ -1,6 +1,6 @@
 package com.cipher.core.service.network.impl;
 
-import com.cipher.client.service.SenderConnectionService;
+import com.cipher.client.service.localNetwork.SenderConnectionService;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.service.network.KeyExchangeService;

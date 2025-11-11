@@ -1,4 +1,4 @@
-package com.cipher.client.service;
+package com.cipher.client.service.seedAuthentication;
 
 import java.util.List;
 

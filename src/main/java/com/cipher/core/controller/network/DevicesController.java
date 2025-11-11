@@ -6,13 +6,16 @@ import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.server.service.AppConnectionService;
+import com.cipher.client.service.localNetwork.AppConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
@@ -186,8 +189,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
     private void addDeviceToContainer(DeviceDTO device) {
         for (Node node : devicesContainer.getChildren()) {
-            if (node instanceof Button) {
-                Button existingButton = (Button) node;
+            if (node instanceof Button existingButton) {
                 if (existingButton.getText().contains(device.ip())) {
                     dialogDisplayer.showAlert("Информация", "Устройство уже в списке");
                     return;
@@ -274,12 +276,39 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         }
     }
 
+    private void handleChatConnection(DeviceDTO device) {
+        try {
+            logger.info("Открытие P2P чата с устройством: {}", device);
+            sceneManager.showChatPanel(device);
+            updateStatus("Подключение к чату...");
+
+        } catch (Exception e) {
+            logger.error("Ошибка при открытии чата: {}", e.getMessage(), e);
+            dialogDisplayer.showErrorDialog("Ошибка открытия чата: " + e.getMessage());
+        }
+    }
+
     private Button createDeviceButton(DeviceDTO device) {
-        Button button = new Button();
-        button.getStyleClass().add("device-button");
-        button.setText(device.toString());
-        button.setOnAction(e -> handleDeviceSelection(device));
-        return button;
+        HBox buttonContent = new HBox();
+        buttonContent.setAlignment(Pos.CENTER_LEFT);
+        buttonContent.setSpacing(10);
+
+        Label deviceLabel = new Label(device.toString());
+        deviceLabel.getStyleClass().add("device-label");
+
+        Button chatButton = new Button("💬");
+        chatButton.getStyleClass().add("chat-button");
+        chatButton.setOnAction(e -> handleChatConnection(device));
+
+        buttonContent.getChildren().addAll(deviceLabel, chatButton);
+
+        Button containerButton = new Button();
+        containerButton.getStyleClass().add("device-button");
+        containerButton.setGraphic(buttonContent);
+        containerButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        containerButton.setOnAction(e -> handleDeviceSelection(device));
+
+        return containerButton;
     }
 
     private void handleDeviceSelection(DeviceDTO device) {

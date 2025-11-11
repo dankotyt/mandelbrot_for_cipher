@@ -1,8 +1,8 @@
-//package com.cipher.client.service.impl;
+//package com.cipher.client.service.seedAuthentication.impl;
 //
 //import com.cipher.client.exceptions.SeedGenerationException;
 //import com.cipher.client.feign.AccountApiClient;
-//import com.cipher.client.service.SeedService;
+//import com.cipher.client.service.seedAuthentication.SeedService;
 //import com.cipher.client.utils.KeysUtils;
 //import com.cipher.client.utils.NetworkUtils;
 //import com.cipher.common.dto.AuthRequest;
