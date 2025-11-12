@@ -7,11 +7,11 @@ import java.time.Instant;
 @Data
 public class PeerInfo {
     private final InetAddress address;
-    private DHKeyExchange dhKeys;
     private ConnectionStatus status;
     private Instant lastSeen;
     private Instant connectionTime;
     private long lastKeyExchangeTime;
+    private ECDHKeyExchange ecdhKeys;
 
     public PeerInfo(InetAddress address) {
         this.address = address;

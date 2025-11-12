@@ -148,6 +148,11 @@ public class DialogDisplayer {
         alert.setHeaderText(header);
         alert.setContentText(content);
 
+        alert.initModality(Modality.WINDOW_MODAL);
+        if (primaryStage != null) {
+            alert.initOwner(primaryStage);
+        }
+
         ButtonType confirmButton = new ButtonType(confirmButtonText);
         ButtonType cancelButton = new ButtonType(cancelButtonText, ButtonBar.ButtonData.CANCEL_CLOSE);
 

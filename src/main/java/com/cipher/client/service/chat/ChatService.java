@@ -3,7 +3,7 @@ package com.cipher.client.service.chat;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 
 public interface ChatService {
-    boolean connectToPeer(String peerIp, int port);
+    boolean connectToPeer(String peerIp);
 
     void sendMessage(String message);
     void sendImage(byte[] imageData, String fileName);
@@ -22,6 +22,7 @@ public interface ChatService {
     interface ChatListener {
         void onMessageReceived(ChatMessageDTO message);
         void onImageReceived(ChatMessageDTO imageMessage);
+        void onFileReceived(ChatMessageDTO fileMessage);
         void onConnectionStatusChanged(boolean connected, String peerInfo);
         void onError(String errorMessage);
         void onIncomingConnection(String peerIp);

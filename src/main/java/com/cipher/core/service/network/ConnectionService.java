@@ -19,5 +19,6 @@ public interface ConnectionService {
         void onRequestReceived(ConnectionRequestDTO request);
         void onRequestAccepted(ConnectionRequestDTO request);
         void onRequestRejected(ConnectionRequestDTO request);
+        void onError(String errorText);
     }
 }

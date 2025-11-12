@@ -1,12 +1,12 @@
 package com.cipher.core.controller.network;
 
-import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.dto.connection.ConnectionRequestDTO;
+import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.client.service.localNetwork.AppConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -29,7 +29,7 @@ import java.util.List;
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
-public class DevicesController implements ConnectionServiceImpl.ConnectionListener {
+public class DevicesController {
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 
     @FXML private Button backButton;
@@ -45,7 +45,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private final DialogDisplayer dialogDisplayer;
     private final ConnectionServiceImpl connectionService;
     private final NetworkService networkService;
-    private final AppConnectionService appConnectionService;
 
     private List<DeviceDTO> availableDevices;
     private DeviceDTO currentDevice;
@@ -62,7 +61,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
 
             setupEventHandlers();
-            connectionService.addListener(this);
+            setupConnectionListener();
             refreshDevices();
 
             logger.info("DevicesController инициализирован успешно");
@@ -73,10 +72,65 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         }
     }
 
+    private void setupConnectionListener() {
+        ConnectionService.ConnectionListener connectionAdapter = new ConnectionService.ConnectionListener() {
+            @Override
+            public void onRequestReceived(ConnectionRequestDTO request) {
+                Platform.runLater(() -> {
+                    boolean accepted = dialogDisplayer.showConfirmationDialog(
+                            "Запрос на подключение",
+                            "Входящее подключение",
+                            String.format("Устройство '%s' (%s) хочет подключиться\n\nПринять подключение?",
+                                    request.fromDeviceName(), request.fromDeviceIp()),
+                            "Принять",
+                            "Отклонить"
+                    );
+
+                    if (accepted) {
+                        connectionService.acceptConnectionRequest(request);
+                    } else {
+                        connectionService.rejectConnectionRequest(request);
+                    }
+                });
+            }
+
+            @Override
+            public void onRequestAccepted(ConnectionRequestDTO request) {
+                Platform.runLater(() -> {
+                    dialogDisplayer.showSuccessDialog(
+                            String.format("Подключение принято!\nУстройство: %s (%s)",
+                                    request.fromDeviceName(), request.fromDeviceIp())
+                    );
+                    DeviceDTO device = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
+                    sceneManager.showChatPanel(device);
+                });
+            }
+
+            @Override
+            public void onRequestRejected(ConnectionRequestDTO request) {
+                Platform.runLater(() -> {
+                    dialogDisplayer.showErrorMessage(
+                            String.format("Устройство '%s' отклонило ваш запрос", request.fromDeviceName())
+                    );
+                });
+            }
+
+            @Override
+            public void onError(String errorText) {
+                Platform.runLater(() -> {
+                    dialogDisplayer.showErrorDialog(errorText);
+                    updateStatus("❌ " + errorText);
+                });
+            }
+        };
+
+        // Регистрируем адаптер в сервисе
+        connectionService.addListener(connectionAdapter);
+    }
+
     private void setupEventHandlers() {
         backButton.setOnAction(e -> {
             try {
-                connectionService.removeListener(this);
                 logger.debug("Нажата кнопка 'Назад'");
                 sceneManager.showStartPanel();
             } catch (Exception ex) {
@@ -370,31 +424,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         long timeSinceLastRequest = currentTime - lastRequestTime;
         long remainingMs = REQUEST_COOLDOWN_MS - timeSinceLastRequest;
         return (remainingMs / 1000) + 1;
-    }
-
-    @Override
-    public void onRequestReceived(ConnectionRequestDTO request) {
-        // Для Алисы - не используется, так как она только отправляет запросы
-    }
-
-    @Override
-    public void onRequestAccepted(ConnectionRequestDTO request) {
-        logger.info("Запрос принят! Подключение установлено с: {}", request.toDeviceIp());
-
-        updateStatus("Подключение установлено!");
-
-        dialogDisplayer.showAlert("Успех!","Подключение установлено!\n" +
-                "IP удаленного устройства: " + request.toDeviceIp() +
-                "\nВаш IP: " + request.fromDeviceIp());
-    }
-
-    @Override
-    public void onRequestRejected(ConnectionRequestDTO request) {
-        logger.info("Запрос отклонен устройством: {}", request.toDeviceIp());
-
-        updateStatus("Запрос отклонен");
-
-        dialogDisplayer.showAlert("Информация","Запрос на подключение отклонен устройством:\n" + request.toDeviceName());
     }
 
     private void updateStatus(String status) {

@@ -1,8 +1,8 @@
 package com.cipher.core.service.network;
 
 import com.cipher.client.service.localNetwork.KeyExchangeClient;
+import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.PeerInfo;
-import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
 import com.cipher.client.handler.ClientConnectionHandler;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
 import lombok.Getter;
@@ -22,11 +22,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 @RequiredArgsConstructor
 public class ConnectionManager {
-    private final NetworkKeyExchangeServiceImpl keyExchangeService;
+    private final KeyExchangeService keyExchangeService;
     private final KeyExchangeClient keyExchangeClient;
     private final ClientConnectionHandlerFactory handlerFactory;
 
     private final Map<InetAddress, PeerInfo> connectedPeers = new ConcurrentHashMap<>();
+    private final Map<InetAddress, Socket> peerSockets = new ConcurrentHashMap<>();
     private final ExecutorService connectionExecutor = Executors.newCachedThreadPool();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -34,6 +35,38 @@ public class ConnectionManager {
     private Thread serverThread;
     @Getter @Setter
     private InetAddress connectedPeer;
+
+    public PeerInfo getPeerInfo(InetAddress peerAddress) {
+        return connectedPeers.get(peerAddress);
+    }
+
+    public boolean isConnectedTo(InetAddress peerAddress) {
+        PeerInfo peerInfo = connectedPeers.get(peerAddress);
+        return peerInfo != null && peerInfo.getStatus() == ConnectionStatus.CONNECTED;
+    }
+
+    public Socket getSocketForPeer(InetAddress peerAddress) {
+        return peerSockets.get(peerAddress);
+    }
+
+    public void addPeerSocket(InetAddress peerAddress, Socket socket) {
+        peerSockets.put(peerAddress, socket);
+        log.debug("🔌 Сокет добавлен для: {}", peerAddress.getHostAddress());
+    }
+
+    public void removePeerSocket(InetAddress peerAddress) {
+        Socket removed = peerSockets.remove(peerAddress);
+        if (removed != null) {
+            try {
+                if (!removed.isClosed()) {
+                    removed.close();
+                }
+            } catch (Exception e) {
+                log.warn("Ошибка при закрытии сокета: {}", e.getMessage());
+            }
+        }
+        log.debug("🔌 Сокет удален для: {}", peerAddress.getHostAddress());
+    }
 
     public void start() {
         if (running.compareAndSet(false, true)) {
@@ -101,8 +134,9 @@ public class ConnectionManager {
                 while (running.get() && !Thread.currentThread().isInterrupted()) {
                     try {
                         Socket clientSocket = keyExchangeServerSocket.accept();
+                        InetAddress clientAddress = clientSocket.getInetAddress();
                         log.info("Incoming connection from: {}", clientSocket.getInetAddress().getHostAddress());
-
+                        addPeerSocket(clientAddress, clientSocket);
                         ClientConnectionHandler handler = handlerFactory.createHandler(clientSocket);
                         connectionExecutor.submit(handler);
 

@@ -21,6 +21,19 @@ public class ChatMessageDTO {
         TEXT, IMAGE, FILE, SYSTEM
     }
 
+    public ChatMessageDTO withFileData(byte[] newFileData) {
+        return new ChatMessageDTO(
+                content,
+                timestamp,
+                sender,
+                encrypted,
+                type,
+                newFileData,
+                fileName,
+                newFileData != null ? newFileData.length : 0
+        );
+    }
+
     public boolean isImage() {
         return type == MessageType.IMAGE;
     }
