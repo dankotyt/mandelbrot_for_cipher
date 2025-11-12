@@ -5,6 +5,7 @@ import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.utils.NetworkManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,8 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
+    private NetworkManager.DevicesUpdateCallback devicesCallback;
+
     private static final long CLEANUP_INTERVAL_MS = 30000; // 30 секунд
 
     @Override
@@ -36,25 +39,19 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
         if (discoveredPeers.add(peerAddress)) {
             log.info("🆕 Новое устройство обнаружено: {}", peerAddress.getHostAddress());
 
-            // 🔑 АСИНХРОННЫЙ обмен ключами
-            keyExchangeService.performKeyExchangeAsync(peerAddress)
-                    .thenAccept(success -> {
-                        if (success) {
-                            onPeerConnected(peerAddress);
-                            log.info("✅ Успешное подключение к: {}", peerAddress.getHostAddress());
-                        } else {
-                            log.warn("❌ Не удалось подключиться к: {}", peerAddress.getHostAddress());
-                            discoveredPeers.remove(peerAddress);
-                        }
-                    })
-                    .exceptionally(throwable -> {
-                        log.error("❌ Ошибка при подключении к {}: {}",
-                                peerAddress.getHostAddress(), throwable.getMessage());
-                        discoveredPeers.remove(peerAddress);
-                        return null;
-                    });
-
+            // ✅ ТОЛЬКО обнаружение, без автоматического подключения
             printDiscoveredPeers();
+
+            // ✅ Уведомляем UI о новом устройстве
+            notifyDeviceDiscovered(peerAddress);
+        }
+    }
+
+    private void notifyDeviceDiscovered(InetAddress peerAddress) {
+        if (devicesCallback != null) {
+            devicesCallback.onDeviceDiscovered(peerAddress);
+        } else {
+            log.debug("📢 Новое устройство: {} (UI callback не установлен)", peerAddress.getHostAddress());
         }
     }
 
