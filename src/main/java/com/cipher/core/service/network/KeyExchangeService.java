@@ -1,6 +1,6 @@
 package com.cipher.core.service.network;
 
-import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.model.ECDHKeyExchange;
 
 import java.net.InetAddress;
 import java.util.Map;
@@ -13,10 +13,10 @@ public interface KeyExchangeService {
     boolean performKeyExchange(InetAddress peerAddress);
     CompletableFuture<Boolean> performKeyExchangeAsync(InetAddress peerAddress);
     void generateNewKeys();
-    DHKeyExchange getCurrentKeys();
+    ECDHKeyExchange getCurrentKeys();
 
     // Управление соединениями
-    void addConnection(InetAddress peerAddress, DHKeyExchange keys);
+    void addConnection(InetAddress peerAddress, ECDHKeyExchange keys);
     void closeConnection(InetAddress peerAddress);
     void closeAllConnections();
     Map<InetAddress, String> getActiveConnections();

@@ -1,7 +1,7 @@
 package com.cipher.client.service.localNetwork;
 
 import com.cipher.common.utils.NetworkConstants;
-import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.model.ECDHKeyExchange;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ import java.net.SocketTimeoutException;
 @NoArgsConstructor
 public class KeyExchangeClient {
 
-    public boolean performKeyExchange(InetAddress peerAddress, DHKeyExchange ourKeys) {
+    public boolean performKeyExchange(InetAddress peerAddress, ECDHKeyExchange ourKeys) {
         log.info("Initiating key exchange with {}", peerAddress.getHostAddress());
 
         try (Socket socket = new Socket()) {
@@ -50,7 +50,7 @@ public class KeyExchangeClient {
                 in.readFully(peerPublicKeyBytes);
 
                 // Вычисляем общий секрет
-                ourKeys.computeSharedSecret(DHKeyExchange.publicKeyFromBytes(peerPublicKeyBytes));
+                ourKeys.computeSharedSecret(peerPublicKeyBytes);
 
                 log.info("Key exchange completed successfully with {}", peerAddress.getHostAddress());
                 return true;

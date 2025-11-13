@@ -6,7 +6,7 @@ import com.cipher.client.utils.PeerConnector;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
-import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
+import com.cipher.core.service.network.impl.ECDHKeyExchangeServiceImpl;
 import com.cipher.core.utils.NetworkManager;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
@@ -34,14 +34,14 @@ public class NetworkConfig {
 
 
     @Bean
-    public ConnectionManager connectionManager(NetworkKeyExchangeServiceImpl keyExchangeService,
+    public ConnectionManager connectionManager(KeyExchangeService keyExchangeService,
                                                KeyExchangeClient keyExchangeClient, ClientConnectionHandlerFactory handlerFactory) {
         return new ConnectionManager(keyExchangeService, keyExchangeClient, handlerFactory);
     }
 
     @Bean
-    public NetworkKeyExchangeServiceImpl keyExchangeService(KeyExchangeClient keyExchangeClient) {
-        return new NetworkKeyExchangeServiceImpl(keyExchangeClient);
+    public KeyExchangeService keyExchangeService(KeyExchangeClient keyExchangeClient) {
+        return new ECDHKeyExchangeServiceImpl(keyExchangeClient);
     }
 
     @Bean
@@ -54,7 +54,7 @@ public class NetworkConfig {
 
     @Bean
     public ClientConnectionHandlerFactory clientConnectionHandlerFactory(
-            NetworkKeyExchangeServiceImpl keyExchangeService) {
+            KeyExchangeService keyExchangeService) {
         return new ClientConnectionHandlerFactory(keyExchangeService);
     }
 }

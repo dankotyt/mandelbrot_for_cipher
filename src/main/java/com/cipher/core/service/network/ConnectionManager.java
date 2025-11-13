@@ -2,7 +2,6 @@ package com.cipher.core.service.network;
 
 import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.PeerInfo;
-import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
 import com.cipher.client.handler.ClientConnectionHandler;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
 import lombok.Getter;
@@ -22,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Component
 @RequiredArgsConstructor
 public class ConnectionManager {
-    private final NetworkKeyExchangeServiceImpl keyExchangeService;
+    private final KeyExchangeService keyExchangeService;
     private final KeyExchangeClient keyExchangeClient;
     private final ClientConnectionHandlerFactory handlerFactory;
 

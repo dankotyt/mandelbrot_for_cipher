@@ -5,7 +5,7 @@ import com.cipher.client.utils.PeerConnector;
 import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
-import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkService;
@@ -121,14 +121,14 @@ public class AppConnectionService {
                 in.readFully(clientPublicKeyBytes);
 
                 // Отправляем наш публичный ключ
-                DHKeyExchange ourKeys = keyExchangeService.getCurrentKeys();
+                ECDHKeyExchange ourKeys = keyExchangeService.getCurrentKeys();
                 byte[] ourPublicKey = ourKeys.getPublicKeyBytes();
                 out.writeInt(ourPublicKey.length);
                 out.write(ourPublicKey);
                 out.flush();
 
                 // Вычисляем общий секрет
-                ourKeys.computeSharedSecret(DHKeyExchange.publicKeyFromBytes(clientPublicKeyBytes));
+                ourKeys.computeSharedSecret(clientPublicKeyBytes);
 
                 // Сохраняем соединение
                 keyExchangeService.addConnection(clientSocket.getInetAddress(), ourKeys);

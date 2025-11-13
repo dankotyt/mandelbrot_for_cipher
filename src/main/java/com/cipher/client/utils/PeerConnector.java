@@ -1,7 +1,7 @@
 package com.cipher.client.utils;
 
 import com.cipher.client.service.localNetwork.KeyExchangeClient;
-import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.service.network.KeyExchangeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class PeerConnector {
                 }
 
                 // Выполняем обмен ключами
-                DHKeyExchange keys = keyExchangeService.getCurrentKeys();
+                ECDHKeyExchange keys = keyExchangeService.getCurrentKeys();
                 boolean success = keyExchangeClient.performKeyExchange(peerAddress, keys);
                 if (success) {
                     log.info("Successfully connected to peer: {}", peerAddress.getHostAddress());

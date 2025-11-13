@@ -2,7 +2,7 @@ package com.cipher.core.service.network.impl;
 
 import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.ConnectionStatus;
-import com.cipher.core.model.DHKeyExchange;
+import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.KeyExchangeService;
 import lombok.extern.slf4j.Slf4j;
@@ -17,19 +17,19 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
-public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
+public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
-    private final AtomicReference<DHKeyExchange> currentKeyExchange = new AtomicReference<>();
+    private final AtomicReference<ECDHKeyExchange> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
     private final KeyExchangeClient keyExchangeClient;
 
-    public NetworkKeyExchangeServiceImpl(KeyExchangeClient keyExchangeClient) {
+    public ECDHKeyExchangeServiceImpl(KeyExchangeClient keyExchangeClient) {
         this.keyExchangeClient = keyExchangeClient;
         generateNewKeys();
     }
 
     @Override
-    public DHKeyExchange getCurrentKeys() {
+    public ECDHKeyExchange getCurrentKeys() {
         return currentKeyExchange.get();
     }
 
@@ -37,42 +37,42 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
     public byte[] getMasterSeedFromDH(InetAddress peerAddress) {
         try {
             PeerInfo peerInfo = activeConnections.get(peerAddress);
-            if (peerInfo != null && peerInfo.getDhKeys() != null) {
-                byte[] sharedSecret = peerInfo.getDhKeys().getSharedSecretBytes();
+            if (peerInfo != null && peerInfo.getEcdhKeys() != null) {
+                byte[] sharedSecret = peerInfo.getEcdhKeys().getSharedSecretBytes();
                 if (sharedSecret != null && sharedSecret.length > 0) {
-                    log.debug("Мастер-сид получен для пира: {}, длина: {} байт",
+                    log.debug("ECDH мастер-сид получен для пира: {}, длина: {} байт",
                             peerAddress.getHostAddress(), sharedSecret.length);
                     return sharedSecret;
                 }
             }
 
-            throw new IllegalStateException("Нет активного соединения или общего секрета для пира: " + peerAddress);
+            throw new IllegalStateException("Нет активного ECDH соединения или общего секрета для пира: " + peerAddress);
 
         } catch (Exception e) {
-            log.error("Ошибка при получении мастер-сида для {}: {}",
+            log.error("Ошибка при получении ECDH мастер-сида для {}: {}",
                     peerAddress.getHostAddress(), e.getMessage(), e);
-            throw new RuntimeException("Не удалось получить мастер-сид", e);
+            throw new RuntimeException("Не удалось получить ECDH мастер-сид", e);
         }
     }
 
+    @Override
     public boolean performKeyExchange(InetAddress peerAddress) {
         try {
-            log.info("Выполнение обмена ключами DH с: {}", peerAddress.getHostAddress());
-            DHKeyExchange ourKeys = currentKeyExchange.get();
+            log.info("Выполнение ECDH обмена ключами с: {}", peerAddress.getHostAddress());
+            ECDHKeyExchange ourKeys = currentKeyExchange.get();
             boolean success = keyExchangeClient.performKeyExchange(peerAddress, ourKeys);
 
             if (success) {
-                // Обновляем информацию о пире
                 updatePeerConnection(peerAddress);
-                log.info("Обмен ключами успешно завершен с: {}", peerAddress.getHostAddress());
+                log.info("ECDH обмен ключами успешно завершен с: {}", peerAddress.getHostAddress());
             } else {
-                log.error("Обмен ключами не удался с: {}", peerAddress.getHostAddress());
+                log.error("ECDH обмен ключами не удался с: {}", peerAddress.getHostAddress());
             }
 
             return success;
 
         } catch (Exception e) {
-            log.error("Ошибка при выполнении обмена ключами с {}: {}",
+            log.error("Ошибка при выполнении ECDH обмена ключами с {}: {}",
                     peerAddress.getHostAddress(), e.getMessage(), e);
             return false;
         }
@@ -83,7 +83,7 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         return CompletableFuture.supplyAsync(() -> performKeyExchange(peerAddress))
                 .orTimeout(30, TimeUnit.SECONDS)
                 .exceptionally(throwable -> {
-                    log.error("Асинхронный обмен ключами не удался с {}: {}",
+                    log.error("Асинхронный ECDH обмен ключами не удался с {}: {}",
                             peerAddress.getHostAddress(), throwable.getMessage());
                     return false;
                 });
@@ -91,54 +91,54 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
 
     private void updatePeerConnection(InetAddress peerAddress) {
         try {
-            // Получаем текущие ключи
-            DHKeyExchange currentKeys = currentKeyExchange.get();
+            ECDHKeyExchange currentKeys = currentKeyExchange.get();
             if (currentKeys == null) {
-                log.warn("Текущие ключи не найдены, генерируем новые");
+                log.warn("Текущие ECDH ключи не найдены, генерируем новые");
                 generateNewKeys();
                 currentKeys = currentKeyExchange.get();
             }
 
-            // Создаем или обновляем информацию о пире
-            PeerInfo peerInfo = activeConnections.computeIfAbsent(peerAddress,
-                    PeerInfo::new);
-
-            peerInfo.setDhKeys(currentKeys);
+            PeerInfo peerInfo = activeConnections.computeIfAbsent(peerAddress, PeerInfo::new);
+            peerInfo.setEcdhKeys(currentKeys);
             peerInfo.setStatus(ConnectionStatus.CONNECTED);
             peerInfo.updateLastSeen();
             peerInfo.updateKeyExchangeTime();
 
-            log.info("Информация о пире обновлена: {}", peerAddress.getHostAddress());
+            log.info("ECDH информация о пире обновлена: {}", peerAddress.getHostAddress());
 
         } catch (Exception e) {
-            log.error("Ошибка при обновлении информации о пире {}: {}",
+            log.error("Ошибка при обновлении ECDH информации о пире {}: {}",
                     peerAddress.getHostAddress(), e.getMessage(), e);
         }
     }
 
     @Override
     public void generateNewKeys() {
-        DHKeyExchange newKeys = new DHKeyExchange();
+        ECDHKeyExchange newKeys = new ECDHKeyExchange();
         currentKeyExchange.set(newKeys);
-        log.info("Generated new DH keys");
+        log.info("Generated new ECDH keys");
 
         activeConnections.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
     }
 
     @Override
-    public void addConnection(InetAddress peerAddress, DHKeyExchange keys) {
+    public void addConnection(InetAddress peerAddress, ECDHKeyExchange keys) {
         try {
+            if (keys == null) {
+                throw new IllegalArgumentException("Expected ECDHKeyExchange instance");
+            }
+
             PeerInfo peerInfo = new PeerInfo(peerAddress);
-            peerInfo.setDhKeys(keys);
+            peerInfo.setEcdhKeys(keys);
             peerInfo.setStatus(ConnectionStatus.CONNECTED);
             peerInfo.updateLastSeen();
             peerInfo.updateKeyExchangeTime();
 
             activeConnections.put(peerAddress, peerInfo);
-            log.info("Добавлено соединение с: {}", peerAddress.getHostAddress());
+            log.info("Добавлено ECDH соединение с: {}", peerAddress.getHostAddress());
 
         } catch (Exception e) {
-            log.error("Ошибка при добавлении соединения с {}: {}",
+            log.error("Ошибка при добавлении ECDH соединения с {}: {}",
                     peerAddress.getHostAddress(), e.getMessage());
         }
     }
@@ -148,17 +148,17 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         PeerInfo removed = activeConnections.remove(peerAddress);
         if (removed != null) {
             keyExchangeClient.sendKeyInvalidation(peerAddress);
-            log.info("Closed connection to: {}", peerAddress);
+            log.info("Closed ECDH connection to: {}", peerAddress);
         }
     }
 
     @Override
     public void closeAllConnections() {
         if (!activeConnections.isEmpty()) {
-            log.info("Closing all connections...");
+            log.info("Closing all ECDH connections...");
             activeConnections.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
             activeConnections.clear();
-            log.info("All connections closed");
+            log.info("All ECDH connections closed");
         }
     }
 
@@ -187,10 +187,10 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         updatePeerConnection(peerAddress);
     }
 
-    // Внутренние методы для использования ConnectionManager и KeyExchangeManager
+    // Внутренние методы
     public void addActiveConnection(InetAddress peerAddress, PeerInfo peerInfo) {
         activeConnections.put(peerAddress, peerInfo);
-        log.info("Added active connection to: {}", peerAddress.getHostAddress());
+        log.info("Added active ECDH connection to: {}", peerAddress.getHostAddress());
     }
 
     public PeerInfo getPeerInfo(InetAddress peerAddress) {
@@ -202,7 +202,7 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         if (peerInfo != null) {
             peerInfo.setStatus(status);
             peerInfo.updateLastSeen();
-            log.debug("Updated status for {}: {}", peerAddress.getHostAddress(), status);
+            log.debug("Updated ECDH status for {}: {}", peerAddress.getHostAddress(), status);
         }
     }
 
@@ -211,7 +211,7 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
             PeerInfo info = entry.getValue();
             boolean expired = info.isExpired(timeoutMs);
             if (expired) {
-                log.info("Removed expired connection: {}", entry.getKey().getHostAddress());
+                log.info("Removed expired ECDH connection: {}", entry.getKey().getHostAddress());
                 keyExchangeClient.sendKeyInvalidation(entry.getKey());
             }
             return expired;
@@ -222,12 +222,12 @@ public class NetworkKeyExchangeServiceImpl implements KeyExchangeService {
         return activeConnections.size();
     }
 
-    public void setDhKeysForPeer(InetAddress peerAddress, DHKeyExchange dhKeys) {
+    public void setEcdhKeysForPeer(InetAddress peerAddress, ECDHKeyExchange ecdhKeys) {
         PeerInfo peerInfo = activeConnections.get(peerAddress);
         if (peerInfo != null) {
-            peerInfo.setDhKeys(dhKeys);
+            peerInfo.setEcdhKeys(ecdhKeys);
             peerInfo.updateKeyExchangeTime();
-            log.info("Set DH keys for peer: {}", peerAddress.getHostAddress());
+            log.info("Set ECDH keys for peer: {}", peerAddress.getHostAddress());
         }
     }
 }

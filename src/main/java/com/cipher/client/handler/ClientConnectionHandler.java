@@ -1,8 +1,8 @@
 package com.cipher.client.handler;
 
 import com.cipher.common.utils.NetworkConstants;
-import com.cipher.core.model.DHKeyExchange;
-import com.cipher.core.service.network.impl.NetworkKeyExchangeServiceImpl;
+import com.cipher.core.model.ECDHKeyExchange;
+import com.cipher.core.service.network.KeyExchangeService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInputStream;
@@ -16,15 +16,15 @@ import java.net.SocketTimeoutException;
 public class ClientConnectionHandler implements Runnable {
 
     private final Socket clientSocket;
-    private final NetworkKeyExchangeServiceImpl networkKeyExchangeService;
+    private final KeyExchangeService keyExchangeService;
     private final InetAddress clientAddress;
 
-    public ClientConnectionHandler(Socket clientSocket, NetworkKeyExchangeServiceImpl networkKeyExchangeService) {
+    public ClientConnectionHandler(Socket clientSocket, KeyExchangeService keyExchangeService) {
         if (clientSocket == null) {
             throw new IllegalArgumentException("Client socket cannot be null");
         }
         this.clientSocket = clientSocket;
-        this.networkKeyExchangeService = networkKeyExchangeService;
+        this.keyExchangeService = keyExchangeService;
         this.clientAddress = clientSocket.getInetAddress();
     }
 
@@ -79,7 +79,7 @@ public class ClientConnectionHandler implements Runnable {
         byte[] clientPublicKeyBytes = new byte[keyLength];
         in.readFully(clientPublicKeyBytes);
 
-        DHKeyExchange ourKeys = networkKeyExchangeService.getCurrentKeys();
+        ECDHKeyExchange ourKeys = keyExchangeService.getCurrentKeys();
         if (ourKeys == null) {
             sendErrorResponse(out, "No keys available");
             return;
@@ -90,16 +90,16 @@ public class ClientConnectionHandler implements Runnable {
         out.write(ourPublicKey);
         out.flush();
 
-        ourKeys.computeSharedSecret(DHKeyExchange.publicKeyFromBytes(clientPublicKeyBytes));
+        ourKeys.computeSharedSecret(clientPublicKeyBytes);
 
-        networkKeyExchangeService.processIncomingKeyExchange(clientAddress, clientPublicKeyBytes);
+        keyExchangeService.addConnection(clientAddress, ourKeys);
 
         log.info("Key exchange completed with {}", clientAddress.getHostAddress());
     }
 
     private void handleKeyInvalidation() {
         log.info("Received key invalidation from {}", clientAddress.getHostAddress());
-        networkKeyExchangeService.generateNewKeys();
+        keyExchangeService.generateNewKeys();
     }
 
     private void sendErrorResponse(DataOutputStream out, String errorMessage) {
