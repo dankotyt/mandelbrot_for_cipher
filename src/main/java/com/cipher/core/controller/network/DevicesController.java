@@ -3,7 +3,6 @@ package com.cipher.core.controller.network;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.service.network.ConnectionService;
-import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -43,7 +42,7 @@ public class DevicesController {
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ConnectionServiceImpl connectionService;
+    private final ConnectionService connectionService;
     private final NetworkService networkService;
 
     private List<DeviceDTO> availableDevices;
@@ -269,8 +268,6 @@ public class DevicesController {
                         int displayedDevicesCount = countDisplayedDevices();
 
                         updateStatus("Найдено устройств: " + displayedDevicesCount);
-
-                        connectionService.checkIncomingRequests();
                     });
 
                 } catch (Exception e) {

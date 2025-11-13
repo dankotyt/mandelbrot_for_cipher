@@ -49,17 +49,14 @@ public class ConnectionCoordinatorService implements ConnectionService {
         try {
             DeviceDTO currentDevice = networkService.getCurrentDevice();
 
-            boolean sent = senderConnectionService.sendConnectionRequest(
-                    toDevice.ip(), currentDevice);
+            boolean sent = senderConnectionService.sendConnectionRequest(toDevice.ip(), currentDevice);
 
             if (sent) {
                 ConnectionRequestDTO request = createRequestDTO(
                         toDevice, ConnectionRequestDTO.RequestStatus.PENDING);
                 notifyRequestReceived(request);
-                log.info("📨 Запрос на подключение отправлен к: {}", toDevice.ip());
-            } else {
-                log.error("❌ Не удалось отправить запрос к {}", toDevice.ip());
-                notifyError("Не удалось отправить запрос подключения");
+               } else {
+               notifyError("Не удалось отправить запрос подключения");
             }
 
         } catch (Exception e) {
@@ -128,11 +125,44 @@ public class ConnectionCoordinatorService implements ConnectionService {
         return keyExchangeService.performKeyExchange(peerAddress);
     }
 
-    @Override
-    public void checkIncomingRequests() {
-        // В этой архитекции входящие запросы обрабатываются автоматически
-        // через NetworkBootstrap -> KeyExchangeServer -> ConnectionCoordinatorService
-        log.debug("Проверка входящих запросов...");
+    /**
+     * Обрабатывает входящий запрос на подключение
+     */
+    public void handleIncomingRequest(ConnectionRequestDTO request) {
+        log.info("📨 Обработка входящего запроса от: {} ({})",
+                request.fromDeviceName(), request.fromDeviceIp());
+
+        // ✅ ОБЕРНУТЬ В Platform.runLater для UI операций
+        Platform.runLater(() -> {
+            // Уведомляем слушателей (UI) о новом запросе
+            notifyRequestReceived(request);
+
+            // Автоматически показываем диалог подтверждения
+            showIncomingRequestDialog(request);
+        });
+    }
+
+    /**
+     * Показывает диалог подтверждения входящего запроса
+     */
+    private void showIncomingRequestDialog(ConnectionRequestDTO request) {
+        // Используем DialogDisplayer для показа диалога
+        boolean accepted = dialogDisplayer.showConfirmationDialog(
+                "Запрос на подключение",
+                "Входящее подключение",
+                "Получен запрос на подключение от:\n" +
+                        "Устройство: " + request.fromDeviceName() + "\n" +
+                        "IP: " + request.fromDeviceIp() + "\n\n" +
+                        "Принять подключение?",
+                "Принять",
+                "Отклонить"
+        );
+
+        if (accepted) {
+            acceptConnectionRequest(request);
+        } else {
+            rejectConnectionRequest(request);
+        }
     }
 
     // Вспомогательные методы

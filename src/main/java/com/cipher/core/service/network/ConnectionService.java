@@ -12,7 +12,6 @@ public interface ConnectionService {
     void sendConnectionRequest(DeviceDTO toDevice);
     void acceptConnectionRequest(ConnectionRequestDTO request);
     void rejectConnectionRequest(ConnectionRequestDTO request);
-    void checkIncomingRequests();
     boolean performKeyExchange(InetAddress peerAddress);
 
     interface ConnectionListener {

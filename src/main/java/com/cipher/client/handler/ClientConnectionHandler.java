@@ -81,11 +81,10 @@ public class ClientConnectionHandler implements Runnable {
      * Определяет тип соединения (ключи или чат)
      */
     private String determineConnectionType() throws IOException {
-        // Сохраняем первоначальный таймаут
         int originalTimeout = clientSocket.getSoTimeout();
 
         try {
-            clientSocket.setSoTimeout(5000); // 5 секунд на определение типа
+            clientSocket.setSoTimeout(5000);
 
             DataInputStream in = new DataInputStream(clientSocket.getInputStream());
             return in.readUTF();
@@ -137,9 +136,6 @@ public class ClientConnectionHandler implements Runnable {
         }
     }
 
-    /**
-     * ✅ НОВЫЙ МЕТОД: Обработка соединения для сообщений чата
-     */
     private void handleChatConnection() {
         String peerIp = clientAddress.getHostAddress();
 

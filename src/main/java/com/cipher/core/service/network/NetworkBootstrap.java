@@ -1,5 +1,6 @@
 package com.cipher.core.service.network;
 
+import com.cipher.client.service.localNetwork.ConnectionRequestServer;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.KeyExchangeServer;
@@ -22,11 +23,13 @@ public class NetworkBootstrap {
     private final DiscoveryServer discoveryServer;
     private final DiscoveryClient discoveryClient;
     private final KeyExchangeServer keyExchangeServer;
+    private final ConnectionRequestServer connectionRequestServer;
 
     @PostConstruct
     public void startNetworkServices() {
         log.info("🚀 Запуск сетевых сервисов...");
 
+        connectionRequestServer.startServer();
         keyExchangeServer.startServer();
         discoveryServer.start();
         discoveryClient.start();
@@ -38,6 +41,7 @@ public class NetworkBootstrap {
     public void stopNetworkServices() {
         log.info("🛑 Остановка сетевых сервисов...");
 
+        connectionRequestServer.stopServer();
         keyExchangeServer.stopServer();
         discoveryServer.stop();
         discoveryClient.stop();
