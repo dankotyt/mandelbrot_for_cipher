@@ -140,12 +140,35 @@ public class NetworkService {
     }
 
     public String getLocalIpAddress() throws SocketException {
-        return Collections.list(NetworkInterface.getNetworkInterfaces()).stream()
-                .flatMap(ni -> Collections.list(ni.getInetAddresses()).stream())
-                .filter(addr -> !addr.isLoopbackAddress() && addr.isSiteLocalAddress())
-                .map(InetAddress::getHostAddress)
-                .findFirst()
-                .orElse("127.0.0.1");
+        log.debug("🔧 Getting local IP address...");
+
+        List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+
+        for (NetworkInterface ni : interfaces) {
+            // Пропускаем выключенные интерфейсы и loopback
+            if (!ni.isUp() || ni.isLoopback()) {
+                continue;
+            }
+
+            for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+                // Берем только IPv4 адреса
+                if (addr instanceof Inet4Address && addr.isSiteLocalAddress()) {
+                    String ip = addr.getHostAddress();
+                    log.info("🔧 Selected local IP: {} from interface: {}", ip, ni.getDisplayName());
+                    return ip;
+                }
+            }
+        }
+
+        // Fallback
+        try {
+            String fallbackIp = InetAddress.getLocalHost().getHostAddress();
+            log.warn("⚠️ Using fallback local IP: {}", fallbackIp);
+            return fallbackIp;
+        } catch (Exception e) {
+            log.error("🚨 Failed to get any local IP, using 127.0.0.1");
+            return "127.0.0.1";
+        }
     }
 
     private String getLocalNetworkPrefix() throws SocketException {

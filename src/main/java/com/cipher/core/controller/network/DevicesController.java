@@ -28,7 +28,7 @@ import java.util.List;
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
-public class DevicesController {
+public class DevicesController implements ConnectionService.ConnectionListener {
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 
     @FXML private Button backButton;
@@ -60,7 +60,7 @@ public class DevicesController {
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
 
             setupEventHandlers();
-            setupConnectionListener();
+            connectionService.addListener(this);
             refreshDevices();
 
             logger.info("DevicesController инициализирован успешно");
@@ -71,65 +71,69 @@ public class DevicesController {
         }
     }
 
-    private void setupConnectionListener() {
-        ConnectionService.ConnectionListener connectionAdapter = new ConnectionService.ConnectionListener() {
-            @Override
-            public void onRequestReceived(ConnectionRequestDTO request) {
-                Platform.runLater(() -> {
-                    boolean accepted = dialogDisplayer.showConfirmationDialog(
-                            "Запрос на подключение",
-                            "Входящее подключение",
-                            String.format("Устройство '%s' (%s) хочет подключиться\n\nПринять подключение?",
-                                    request.fromDeviceName(), request.fromDeviceIp()),
-                            "Принять",
-                            "Отклонить"
-                    );
+    @Override
+    public void onRequestReceived(ConnectionRequestDTO request) {
+        Platform.runLater(() -> {
+            boolean accepted = dialogDisplayer.showConfirmationDialog(
+                    "Запрос на подключение",
+                    "Входящее подключение",
+                    "Получен запрос на подключение от:\n" +
+                            "Устройство: " + request.fromDeviceName() + "\n" +
+                            "IP: " + request.fromDeviceIp() + "\n\n" +
+                            "Принять подключение?",
+                    "Принять",
+                    "Отклонить"
+            );
 
-                    if (accepted) {
-                        connectionService.acceptConnectionRequest(request);
-                    } else {
-                        connectionService.rejectConnectionRequest(request);
-                    }
-                });
+            if (accepted) {
+                connectionService.acceptConnectionRequest(request);
+            } else {
+                connectionService.rejectConnectionRequest(request);
             }
+        });
+    }
 
-            @Override
-            public void onRequestAccepted(ConnectionRequestDTO request) {
-                Platform.runLater(() -> {
-                    dialogDisplayer.showSuccessDialog(
-                            String.format("Подключение принято!\nУстройство: %s (%s)",
-                                    request.fromDeviceName(), request.fromDeviceIp())
-                    );
-                    DeviceDTO device = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
-                    sceneManager.showChatPanel(device);
-                });
-            }
+    @Override
+    public void onRequestAccepted(ConnectionRequestDTO request) {
+        Platform.runLater(() -> {
+            logger.info("Запрос принят! Подключение установлено с: {}", request.fromDeviceIp());
+            updateStatus("Подключение установлено!");
 
-            @Override
-            public void onRequestRejected(ConnectionRequestDTO request) {
-                Platform.runLater(() -> {
-                    dialogDisplayer.showErrorMessage(
-                            String.format("Устройство '%s' отклонило ваш запрос", request.fromDeviceName())
-                    );
-                });
-            }
+            dialogDisplayer.showSuccessDialog(
+                    String.format("Подключение установлено!\nУстройство: %s (%s)",
+                            request.fromDeviceName(), request.fromDeviceIp())
+            );
 
-            @Override
-            public void onError(String errorText) {
-                Platform.runLater(() -> {
-                    dialogDisplayer.showErrorDialog(errorText);
-                    updateStatus("❌ " + errorText);
-                });
-            }
-        };
+            // Переходим в чат
+            DeviceDTO device = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
+            sceneManager.showChatPanel(device);
+        });
+    }
 
-        // Регистрируем адаптер в сервисе
-        connectionService.addListener(connectionAdapter);
+    @Override
+    public void onRequestRejected(ConnectionRequestDTO request) {
+        Platform.runLater(() -> {
+            logger.info("Запрос отклонен устройством: {}", request.fromDeviceIp());
+            updateStatus("Запрос отклонен");
+
+            dialogDisplayer.showErrorMessage(
+                    String.format("Устройство '%s' отклонило ваш запрос", request.fromDeviceName())
+            );
+        });
+    }
+
+    @Override
+    public void onError(String errorText) {
+        Platform.runLater(() -> {
+            dialogDisplayer.showErrorDialog(errorText);
+            updateStatus("❌ " + errorText);
+        });
     }
 
     private void setupEventHandlers() {
         backButton.setOnAction(e -> {
             try {
+                connectionService.removeListener(this);
                 logger.debug("Нажата кнопка 'Назад'");
                 sceneManager.showStartPanel();
             } catch (Exception ex) {
@@ -264,6 +268,17 @@ public class DevicesController {
                     availableDevices = networkService.discoverLocalDevices();
 
                     Platform.runLater(() -> {
+                        // ✅ ДИАГНОСТИКА ДО ЗАГРУЗКИ
+                        logger.info("=== ОБНОВЛЕНИЕ СПИСКА УСТРОЙСТВ ===");
+                        logger.info("Найдено устройств: {}",
+                                availableDevices != null ? availableDevices.size() : 0);
+
+                        if (availableDevices != null) {
+                            for (DeviceDTO device : availableDevices) {
+                                logger.info("Обнаружено устройство: {} ({})", device.name(), device.ip());
+                            }
+                        }
+
                         loadDevices();
                         int displayedDevicesCount = countDisplayedDevices();
 
@@ -302,24 +317,51 @@ public class DevicesController {
         try {
             devicesContainer.getChildren().clear();
 
-            if (availableDevices.isEmpty()) {
+            if (availableDevices == null || availableDevices.isEmpty()) {
                 showNoDevicesMessage();
                 return;
             }
 
             hideNoDevicesMessage();
 
+            // ✅ УЛУЧШЕННАЯ ФИЛЬТРАЦИЯ С ДИАГНОСТИКОЙ
+            logger.info("=== ФИЛЬТРАЦИЯ УСТРОЙСТВ ===");
+            logger.info("Текущее устройство: {} ({})", currentDevice.name(), currentDevice.ip());
+
+            int addedCount = 0;
+            int skippedCount = 0;
+
             for (DeviceDTO device : availableDevices) {
-                // Пропускаем текущее устройство
-                if (device.ip().equals(currentDevice.ip())) {
+                // ✅ СТРОГАЯ ПРОВЕРКА - не наше ли это устройство
+                if (isSelfDevice(device)) {
+                    logger.warn("🚫 Пропущено собственное устройство: {} ({})",
+                            device.name(), device.ip());
+                    skippedCount++;
+                    continue;
+                }
+
+                // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА - валидный ли IP
+                if (!isValidIpAddress(device.ip())) {
+                    logger.warn("🚫 Пропущено устройство с невалидным IP: {} ({})",
+                            device.name(), device.ip());
+                    skippedCount++;
                     continue;
                 }
 
                 Button deviceButton = createDeviceButton(device);
                 devicesContainer.getChildren().add(deviceButton);
+                addedCount++;
+
+                logger.info("✅ Добавлено устройство: {} ({})", device.name(), device.ip());
             }
 
-            logger.info("Загружено {} устройств", availableDevices.size());
+            logger.info("=== РЕЗУЛЬТАТ ФИЛЬТРАЦИИ ===");
+            logger.info("Добавлено: {}, Пропущено: {}, Всего в availableDevices: {}",
+                    addedCount, skippedCount, availableDevices.size());
+
+            if (addedCount == 0) {
+                showNoDevicesMessage();
+            }
 
         } catch (Exception e) {
             logger.error("Ошибка при загрузке устройств: {}", e.getMessage(), e);
@@ -364,9 +406,24 @@ public class DevicesController {
 
     private void handleDeviceSelection(DeviceDTO device) {
         try {
+            // ✅ УСИЛЕННАЯ ПРОВЕРКА ПЕРЕД ОТПРАВКОЙ
+            logger.info("=== ОБРАБОТКА ВЫБОРА УСТРОЙСТВА ===");
+            logger.info("Выбрано устройство: {} ({})", device.name(), device.ip());
+            logger.info("Текущее устройство: {} ({})", currentDevice.name(), currentDevice.ip());
+
             if (isSelfDevice(device)) {
-                dialogDisplayer.showAlert("Информация","Нельзя отправить запрос самому себе");
+                logger.error("🚫 КРИТИЧЕСКАЯ ОШИБКА: Выбрано собственное устройство!");
+                logger.error("Device: {} ({}), Current: {} ({})",
+                        device.name(), device.ip(), currentDevice.name(), currentDevice.ip());
+                dialogDisplayer.showAlert("Ошибка", "Нельзя отправить запрос самому себе");
                 updateStatus("Ошибка: запрос самому себе");
+                return;
+            }
+
+            // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА IP
+            if (!isValidIpAddress(device.ip())) {
+                logger.error("🚫 Невалидный IP у выбранного устройства: {}", device.ip());
+                dialogDisplayer.showAlert("Ошибка", "Неверный IP адрес устройства");
                 return;
             }
 
@@ -380,13 +437,16 @@ public class DevicesController {
                 return;
             }
 
-            logger.debug("Отправка запроса на подключение к устройству: {}", device);
+            logger.info("🔄 Отправка запроса к устройству: {} ({})", device.name(), device.ip());
 
             updateStatus("Отправка запроса...");
+            lastRequestTime = System.currentTimeMillis();
 
+            // ✅ ОТПРАВКА ЗАПРОСА
             connectionService.sendConnectionRequest(device);
 
-            dialogDisplayer.showTimedAlert("Информация","Запрос отправлен устройству: " + device, 5);
+            dialogDisplayer.showTimedAlert("Информация", "Запрос отправлен устройству: " + device, 5);
+
         } catch (Exception e) {
             logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
             dialogDisplayer.showErrorDialog("Ошибка при отправке запроса: " + e.getMessage());
@@ -395,7 +455,22 @@ public class DevicesController {
     }
 
     private boolean isSelfDevice(DeviceDTO device) {
-        return device.ip().equals(currentDevice.ip());
+        if (device == null || currentDevice == null) {
+            return true; // Безопаснее считать своим, если данные неполные
+        }
+
+        boolean isSameIp = device.ip().equals(currentDevice.ip());
+        boolean isSameName = device.name().equals(currentDevice.name());
+
+        // Считаем своим, если совпадает IP ИЛИ имя (для дополнительной безопасности)
+        boolean isSelf = isSameIp || isSameName;
+
+        if (isSelf) {
+            logger.debug("Обнаружено собственное устройство: {} ({}), текущее: {} ({})",
+                    device.name(), device.ip(), currentDevice.name(), currentDevice.ip());
+        }
+
+        return isSelf;
     }
 
     private boolean isSelfIpAddress(String ip) {

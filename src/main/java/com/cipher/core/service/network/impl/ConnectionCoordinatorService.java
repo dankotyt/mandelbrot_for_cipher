@@ -136,9 +136,6 @@ public class ConnectionCoordinatorService implements ConnectionService {
         Platform.runLater(() -> {
             // Уведомляем слушателей (UI) о новом запросе
             notifyRequestReceived(request);
-
-            // Автоматически показываем диалог подтверждения
-            showIncomingRequestDialog(request);
         });
     }
 
@@ -205,6 +202,26 @@ public class ConnectionCoordinatorService implements ConnectionService {
         Platform.runLater(() -> {
             for (ConnectionListener listener : listeners) {
                 listener.onError(errorMessage);
+            }
+        });
+    }
+
+    public void handleResponseReceived(ConnectionRequestDTO response) {
+        log.info("📨 Обработка ответа на запрос подключения: {} от {}",
+                response.status(), response.fromDeviceIp());
+
+        Platform.runLater(() -> {
+            switch (response.status()) {
+                case ACCEPTED:
+                    // ✅ НЕ открываем чат автоматически - ждем завершения обмена ключами
+                    log.info("✅ Запрос принят удаленным устройством: {}", response.fromDeviceIp());
+                    notifyRequestAccepted(response);
+                    break;
+                case REJECTED:
+                    notifyRequestRejected(response);
+                    break;
+                default:
+                    log.warn("Неизвестный статус ответа: {}", response.status());
             }
         });
     }

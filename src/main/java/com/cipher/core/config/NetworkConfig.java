@@ -6,6 +6,7 @@ import com.cipher.core.service.chat.IncomingMessageHandler;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.service.network.impl.ECDHKeyExchangeServiceImpl;
 import com.cipher.core.utils.NetworkManager;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
@@ -22,8 +23,8 @@ public class NetworkConfig {
     }
 
     @Bean
-    public DiscoveryClient discoveryClient(NetworkDiscoveryService discoveryService) {
-        return new DiscoveryClient(discoveryService);
+    public DiscoveryClient discoveryClient(NetworkDiscoveryService discoveryService, NetworkService networkService) {
+        return new DiscoveryClient(discoveryService, networkService);
     }
 
     @Bean

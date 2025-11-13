@@ -1,6 +1,7 @@
 package com.cipher.client.service.localNetwork;
 
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.service.network.NetworkService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,21 +17,29 @@ import static com.cipher.common.utils.NetworkConstants.CONNECTION_PORT;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class SenderConnectionService {
 
+    private final NetworkService networkService;
     private final ConcurrentHashMap<String, Long> rejectedRequests = new ConcurrentHashMap<>();
     private static final long REJECT_COOLDOWN_MS = 60000;
+    private final String localIpAddress;
+
+    public SenderConnectionService(NetworkService networkService) {
+        this.networkService = networkService;
+        try {
+            this.localIpAddress = networkService.getLocalIpAddress();
+            log.info("🔧 SenderConnectionService initialized with local IP: {}", localIpAddress);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get local IP address", e);
+        }
+    }
 
     public boolean sendConnectionRequest(String targetIp, DeviceDTO fromDevice) {
-        if (!canSendRequestTo(targetIp)) {
-            log.warn("🚫 Запрос к {} заблокирован - недавно был отклонен", targetIp);
-            return false;
-        }
+        log.info("🔍 Sending DIRECT connection request to: {} (from: {} {})",
+                targetIp, fromDevice.name(), fromDevice.ip());
 
+        // ✅ ТОЧЕЧНОЕ ПОДКЛЮЧЕНИЕ К КОНКРЕТНОМУ IP
         try (Socket socket = new Socket()) {
-            log.debug("Попытка подключения к {}:{}", targetIp, CONNECTION_PORT);
-
             socket.connect(new InetSocketAddress(targetIp, CONNECTION_PORT), 2000);
 
             OutputStream output = socket.getOutputStream();
@@ -39,12 +48,26 @@ public class SenderConnectionService {
             String request = "CONNECT_REQUEST:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(request);
 
-            log.info("✅ Запрос на подключение отправлен к: {}", targetIp);
+            log.info("✅ Запрос на подключение отправлен КОНКРЕТНО к: {}", targetIp);
             return true;
         } catch (IOException e) {
             log.warn("❌ Не удалось отправить запрос к {}: {}", targetIp, e.getMessage());
             return false;
         }
+    }
+
+    private boolean isOwnIpAddress(String ip) {
+        if (ip == null) return true;
+
+        boolean isOwn = ip.equals(localIpAddress) ||
+                ip.equals("127.0.0.1") ||
+                ip.equals("localhost");
+
+        if (isOwn) {
+            log.error("🚫 BLOCKED: Attempt to connect to own IP: {} (local: {})", ip, localIpAddress);
+        }
+
+        return isOwn;
     }
 
     public void sendAcceptResponse(String targetIp, DeviceDTO fromDevice) {

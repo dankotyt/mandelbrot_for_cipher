@@ -2,14 +2,12 @@ package com.cipher.client.service.localNetwork;
 
 import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.NetworkService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,9 +21,16 @@ public class DiscoveryClient implements Runnable {
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final NetworkDiscoveryService discoveryService;
     private Thread listenerThread;
+    private final String localIpAddress;
 
-    public DiscoveryClient(NetworkDiscoveryService discoveryService) {
+    public DiscoveryClient(NetworkDiscoveryService discoveryService, NetworkService networkService) {
         this.discoveryService = discoveryService;
+        try {
+            this.localIpAddress = networkService.getLocalIpAddress();
+            log.info("🔧 DiscoveryClient initialized with local IP: {}", localIpAddress);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get local IP address", e);
+        }
     }
 
     @Override
@@ -47,8 +52,16 @@ public class DiscoveryClient implements Runnable {
 
                     if (NetworkConstants.DISCOVERY_MESSAGE.equals(message)) {
                         InetAddress senderAddress = packet.getAddress();
-                        if (!isOwnAddress(senderAddress) && discoveredPeers.add(senderAddress)) {
-                            log.info("Discovered new peer: {}", senderAddress.getHostAddress());
+                        String senderIp = senderAddress.getHostAddress();
+
+                        // ✅ СТРОГАЯ ПРОВЕРКА - игнорируем собственные сообщения
+                        if (isOwnMessage(senderIp) || isOwnAddress(senderAddress)) {
+                            log.debug("🚫 Ignoring own discovery message from: {}", senderIp);
+                            continue;
+                        }
+
+                        if (discoveredPeers.add(senderAddress)) {
+                            log.info("🆕 Discovered new peer: {}", senderIp);
                             discoveryService.onPeerDiscovered(senderAddress);
                         }
                     }
@@ -67,12 +80,28 @@ public class DiscoveryClient implements Runnable {
         log.info("Discovery client stopped");
     }
 
+    private boolean isOwnMessage(String senderIp) {
+        if (senderIp == null) return true;
+
+        boolean isOwn = senderIp.equals(localIpAddress) ||
+                senderIp.equals("127.0.0.1") ||
+                senderIp.equals("localhost");
+
+        if (isOwn) {
+            log.debug("🚫 Filtered own IP in discovery: {}", senderIp);
+        }
+
+        return isOwn;
+    }
+
     private boolean isOwnAddress(InetAddress address) {
         try {
             return address.isAnyLocalAddress() ||
                     address.isLoopbackAddress() ||
-                    java.net.NetworkInterface.getByInetAddress(address) != null;
+                    NetworkInterface.getByInetAddress(address) != null;
         } catch (Exception e) {
+            log.warn("Error checking network interface for address {}: {}",
+                    address.getHostAddress(), e.getMessage());
             return false;
         }
     }

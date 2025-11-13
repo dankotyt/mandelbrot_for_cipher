@@ -4,6 +4,7 @@ import com.cipher.client.service.localNetwork.ConnectionRequestServer;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.KeyExchangeServer;
+import com.cipher.core.service.network.impl.NetworkDiscoveryServiceImpl;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,13 @@ public class NetworkBootstrap {
     private final DiscoveryClient discoveryClient;
     private final KeyExchangeServer keyExchangeServer;
     private final ConnectionRequestServer connectionRequestServer;
+    private final NetworkDiscoveryServiceImpl networkDiscoveryService;
 
     @PostConstruct
     public void startNetworkServices() {
         log.info("🚀 Запуск сетевых сервисов...");
+
+        networkDiscoveryService.initialize();
 
         connectionRequestServer.startServer();
         keyExchangeServer.startServer();
@@ -45,6 +49,7 @@ public class NetworkBootstrap {
         keyExchangeServer.stopServer();
         discoveryServer.stop();
         discoveryClient.stop();
+        networkDiscoveryService.shutdown();
 
         log.info("✅ Сетевые сервисы остановлены");
     }
