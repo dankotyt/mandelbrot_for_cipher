@@ -21,6 +21,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     private final AtomicReference<ECDHKeyExchange> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
+    private final Map<InetAddress, Boolean> connectionInProgress = new ConcurrentHashMap<>();
     private final KeyExchangeClient keyExchangeClient;
 
     public ECDHKeyExchangeServiceImpl(KeyExchangeClient keyExchangeClient) {
@@ -57,8 +58,19 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public boolean performKeyExchange(InetAddress peerAddress) {
+        if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
+            log.debug("Подключение к {} уже выполняется, пропускаем", peerAddress.getHostAddress());
+            return false;
+        }
+
         try {
             log.info("Выполнение ECDH обмена ключами с: {}", peerAddress.getHostAddress());
+
+            if (isConnectedTo(peerAddress)) {
+                log.debug("Уже подключены к {}, пропускаем обмен ключами", peerAddress.getHostAddress());
+                return true;
+            }
+
             ECDHKeyExchange ourKeys = currentKeyExchange.get();
             boolean success = keyExchangeClient.performKeyExchange(peerAddress, ourKeys);
 
@@ -75,6 +87,8 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             log.error("Ошибка при выполнении ECDH обмена ключами с {}: {}",
                     peerAddress.getHostAddress(), e.getMessage(), e);
             return false;
+        } finally {
+            connectionInProgress.remove(peerAddress);
         }
     }
 
@@ -85,6 +99,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 .exceptionally(throwable -> {
                     log.error("Асинхронный ECDH обмен ключами не удался с {}: {}",
                             peerAddress.getHostAddress(), throwable.getMessage());
+                    connectionInProgress.remove(peerAddress);
                     return false;
                 });
     }
@@ -123,9 +138,18 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public void addConnection(InetAddress peerAddress, ECDHKeyExchange keys) {
+        if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
+            log.debug("Входящее подключение от {} уже обрабатывается", peerAddress.getHostAddress());
+            return;
+        }
+
         try {
             if (keys == null) {
                 throw new IllegalArgumentException("Expected ECDHKeyExchange instance");
+            }
+
+            if (isConnectedTo(peerAddress)) {
+                log.debug("Подключение к {} уже существует, обновляем ключи", peerAddress.getHostAddress());
             }
 
             PeerInfo peerInfo = new PeerInfo(peerAddress);
@@ -140,6 +164,8 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         } catch (Exception e) {
             log.error("Ошибка при добавлении ECDH соединения с {}: {}",
                     peerAddress.getHostAddress(), e.getMessage());
+        } finally {
+            connectionInProgress.remove(peerAddress);
         }
     }
 
@@ -229,5 +255,9 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             peerInfo.updateKeyExchangeTime();
             log.info("Set ECDH keys for peer: {}", peerAddress.getHostAddress());
         }
+    }
+
+    public boolean isConnectionInProgress(InetAddress peerAddress) {
+        return connectionInProgress.containsKey(peerAddress);
     }
 }

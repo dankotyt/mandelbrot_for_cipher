@@ -31,6 +31,8 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import static com.cipher.common.utils.NetworkConstants.CHAT_PORT;
+
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
@@ -59,7 +61,6 @@ public class ChatController implements ChatService.ChatListener {
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
-    private final int chatPort = NetworkConstants.CHAT_PORT;
 
     @FXML
     public void initialize() {
@@ -71,7 +72,7 @@ public class ChatController implements ChatService.ChatListener {
             setupUI();
 
             // Запускаем прослушивание входящих подключений
-            chatService.startListening(chatPort);
+            chatService.startListening(CHAT_PORT);
 
             logger.info("ChatController инициализирован успешно");
 
@@ -94,7 +95,7 @@ public class ChatController implements ChatService.ChatListener {
             updateStatus("Подключение...");
 
             // Пытаемся подключиться к пиру
-            boolean connected = chatService.connectToPeer(deviceIp, chatPort);
+            boolean connected = chatService.connectToPeer(deviceIp);
             if (connected) {
                 updateStatus("Подключение установлено");
             } else {

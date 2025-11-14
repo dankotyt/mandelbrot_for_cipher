@@ -10,6 +10,7 @@ import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
+import com.cipher.core.utils.SceneManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import javafx.application.Platform;
@@ -50,6 +51,7 @@ public class AppConnectionService {
     private final PeerConnector peerConnector;
     private final KeyExchangeService keyExchangeService;
     private final P2PChatServiceImpl chatService;
+    private final SceneManager sceneManager;
 
     @PostConstruct
     public void startServer() {
@@ -255,20 +257,26 @@ public class AppConnectionService {
         connectionService.acceptConnectionRequest(request);
 
         try {
+            InetAddress peerAddress = InetAddress.getByName(clientIp);
             // 1. 🔑 Сначала обмен ключами
             log.info("🔄 Запуск обмена ключами с: {}", clientIp);
-            boolean keyExchangeSuccess = peerConnector.connectToPeer(InetAddress.getByName(clientIp)).get();
+            boolean keyExchangeSuccess = peerConnector.connectToPeer(peerAddress).get();
 
             if (keyExchangeSuccess) {
                 log.info("✅ Обмен ключами успешно завершен с: {}", clientIp);
 
-                // 2. 💬 Затем подключаем чат
-                boolean chatConnected = chatService.connectToPeer(clientIp, NetworkConstants.CHAT_PORT);
+                boolean chatConnected = chatService.connectToPeer(clientIp);
 
                 if (chatConnected) {
                     log.info("✅ Чат подключен с: {}", clientIp);
-
-
+                    Platform.runLater(() -> {
+                        try {
+                            sceneManager.showChatPanel(remoteDevice);
+                            log.info("✅ Чат автоматически открыт с: {}", clientIp);
+                        } catch (Exception e) {
+                            log.error("❌ Ошибка при автоматическом открытии чата: {}", e.getMessage());
+                        }
+                    });
                 } else {
                     log.error("❌ Не удалось подключить чат с: {}", clientIp);
                 }

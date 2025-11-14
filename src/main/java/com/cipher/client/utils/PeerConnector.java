@@ -22,10 +22,9 @@ public class PeerConnector {
     public CompletableFuture<Boolean> connectToPeer(InetAddress peerAddress) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // Проверяем доступность пира
-                if (!keyExchangeClient.testConnection(peerAddress)) {
-                    log.warn("Peer {} is not reachable", peerAddress.getHostAddress());
-                    return false;
+                if (keyExchangeService.isConnectedTo(peerAddress)) {
+                    log.debug("Уже подключены к {}", peerAddress.getHostAddress());
+                    return true;
                 }
 
                 // Выполняем обмен ключами

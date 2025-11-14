@@ -39,7 +39,7 @@ public class P2PChatServiceImpl implements ChatService {
 
 
     @Override
-    public boolean connectToPeer(String peerIp, int port) {
+    public boolean connectToPeer(String peerIp) {
         try {
             if (connected) {
                 disconnect();
