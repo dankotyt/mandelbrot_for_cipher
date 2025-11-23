@@ -3,7 +3,6 @@ package com.cipher.core.controller.network;
 import com.cipher.client.service.chat.ChatService;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.common.utils.NetworkConstants;
-import com.cipher.core.TestEncryptionRunner;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -20,7 +19,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,12 +56,9 @@ public class ChatController implements ChatService.ChatListener {
     @FXML private Label chatTitleLabel;
     @FXML private Label connectionInfoLabel;
 
-    @FXML private Button testButton;
-
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ChatService chatService;
-    private final TestEncryptionRunner testEncryptionRunner;
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
@@ -146,17 +141,6 @@ public class ChatController implements ChatService.ChatListener {
         }).start();
     }
 
-    @FXML
-    private void handleRunEncryptionTest() {
-        try {
-            Stage primaryStage = (Stage) backButton.getScene().getWindow();
-            testEncryptionRunner.runEncryptionTest(primaryStage);
-        } catch (Exception e) {
-            logger.error("Ошибка запуска теста: {}", e.getMessage());
-            dialogDisplayer.showErrorDialog("Ошибка запуска теста: " + e.getMessage());
-        }
-    }
-
     private void setupEventHandlers() {
         backButton.setOnAction(e -> handleBack());
         sendButton.setOnAction(e -> handleSendMessage());
@@ -164,8 +148,6 @@ public class ChatController implements ChatService.ChatListener {
         imageButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
         clearChatButton.setOnAction(e -> handleClearChat());
         encryptionInfoButton.setOnAction(e -> showEncryptionInfo());
-
-        testButton.setOnAction(e -> handleRunEncryptionTest());
 
         messageTextArea.setOnKeyPressed(event -> {
             switch (event.getCode()) {
