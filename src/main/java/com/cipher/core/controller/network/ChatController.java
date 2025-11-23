@@ -3,6 +3,8 @@ package com.cipher.core.controller.network;
 import com.cipher.client.service.chat.ChatService;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.common.utils.NetworkConstants;
+import com.cipher.core.TestEncryptionRunner;
+import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import javafx.application.Platform;
@@ -18,6 +20,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,9 +58,12 @@ public class ChatController implements ChatService.ChatListener {
     @FXML private Label chatTitleLabel;
     @FXML private Label connectionInfoLabel;
 
+    @FXML private Button testButton;
+
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ChatService chatService;
+    private final TestEncryptionRunner testEncryptionRunner;
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
@@ -70,9 +76,6 @@ public class ChatController implements ChatService.ChatListener {
             setupEventHandlers();
             chatService.addListener(this);
             setupUI();
-
-            // Запускаем прослушивание входящих подключений
-            chatService.startListening(CHAT_PORT);
 
             logger.info("ChatController инициализирован успешно");
 
@@ -92,26 +95,77 @@ public class ChatController implements ChatService.ChatListener {
         Platform.runLater(() -> {
             chatTitleLabel.setText("Чат с " + deviceName);
             connectionInfoLabel.setText("IP: " + deviceIp);
-            updateStatus("Подключение...");
+            updateStatus("Установка P2P соединения...");
 
-            // Пытаемся подключиться к пиру
-            boolean connected = chatService.connectToPeer(deviceIp);
-            if (connected) {
-                updateStatus("Подключение установлено");
-            } else {
-                updateStatus("Ошибка подключения");
-                dialogDisplayer.showErrorDialog("Не удалось подключиться к " + deviceIp);
-            }
+            // Автоматически устанавливаем P2P соединение
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500); // Даем время на инициализацию UI
+
+                    boolean connected = chatService.connectToPeer(deviceIp);
+
+                    Platform.runLater(() -> {
+                        if (connected) {
+                            updateStatus("P2P соединение установлено ✓");
+                            encryptionStatusLabel.setText("Шифрование: Активно");
+                        } else {
+                            updateStatus("Ожидание P2P соединения...");
+                            // Автоповтор через 3 секунды
+                            attemptAutoReconnection();
+                        }
+                    });
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
         });
+    }
+
+    private void attemptAutoReconnection() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+                if (!chatService.isConnected() && remoteDeviceIp != null) {
+                    logger.info("Автоповтор подключения к: {}", remoteDeviceIp);
+                    boolean reconnected = chatService.connectToPeer(remoteDeviceIp);
+
+                    Platform.runLater(() -> {
+                        if (reconnected) {
+                            updateStatus("P2P соединение установлено ✓");
+                            encryptionStatusLabel.setText("Шифрование: Активно");
+                        } else {
+                            updateStatus("Ожидание P2P соединения...");
+                            attemptAutoReconnection();
+                        }
+                    });
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+    }
+
+    @FXML
+    private void handleRunEncryptionTest() {
+        try {
+            Stage primaryStage = (Stage) backButton.getScene().getWindow();
+            testEncryptionRunner.runEncryptionTest(primaryStage);
+        } catch (Exception e) {
+            logger.error("Ошибка запуска теста: {}", e.getMessage());
+            dialogDisplayer.showErrorDialog("Ошибка запуска теста: " + e.getMessage());
+        }
     }
 
     private void setupEventHandlers() {
         backButton.setOnAction(e -> handleBack());
         sendButton.setOnAction(e -> handleSendMessage());
         fileButton.setOnAction(e -> handleFileSend());
-        imageButton.setOnAction(e -> handleImageSend());
+        imageButton.setOnAction(e -> sceneManager.showEncryptBeginPanel());
         clearChatButton.setOnAction(e -> handleClearChat());
         encryptionInfoButton.setOnAction(e -> showEncryptionInfo());
+
+        testButton.setOnAction(e -> handleRunEncryptionTest());
 
         messageTextArea.setOnKeyPressed(event -> {
             switch (event.getCode()) {
@@ -129,7 +183,12 @@ public class ChatController implements ChatService.ChatListener {
 
     private void setupUI() {
         messageTextArea.setWrapText(true);
-        messagesScrollPane.vvalueProperty().bind(messagesContainer.heightProperty());
+        messagesContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
+            Platform.runLater(() -> {
+                messagesScrollPane.setVvalue(1.0);
+            });
+        });
+
         showNoMessagesHint();
     }
 
@@ -141,9 +200,11 @@ public class ChatController implements ChatService.ChatListener {
             return;
         }
 
+        // Простая проверка соединения
         if (!chatService.isConnected()) {
             dialogDisplayer.showTimedErrorAlert("Ошибка", "Соединение не установлено", 3);
-            updateStatus("Ошибка: соединение потеряно");
+            updateStatus("Ожидание подключения...");
+            attemptAutoReconnection();
             return;
         }
 
@@ -154,17 +215,24 @@ public class ChatController implements ChatService.ChatListener {
             displayTextMessage(messageText, true);
 
             messageTextArea.clear();
-            updateStatus("Сообщение отправлено");
+            updateStatus("Сообщение отправлено ✓");
 
         } catch (Exception e) {
             logger.error("Ошибка при отправке сообщения: {}", e.getMessage(), e);
             dialogDisplayer.showTimedErrorAlert("Ошибка", "Не удалось отправить сообщение", 3);
             updateStatus("Ошибка отправки");
+            attemptAutoReconnection();
         }
     }
 
     @FXML
     private void handleImageSend() {
+        if (!chatService.isConnected()) {
+            dialogDisplayer.showTimedErrorAlert("Ошибка", "Соединение не установлено", 3);
+            updateStatus("Ошибка: соединение не подтверждено");
+            return;
+        }
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Выберите изображение");
         fileChooser.getExtensionFilters().addAll(
@@ -195,6 +263,12 @@ public class ChatController implements ChatService.ChatListener {
 
     @FXML
     private void handleFileSend() {
+        if (!chatService.isConnected()) {
+            dialogDisplayer.showTimedErrorAlert("Ошибка", "Соединение не установлено", 3);
+            updateStatus("Ошибка: соединение не подтверждено");
+            return;
+        }
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Выберите файл");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
@@ -322,6 +396,20 @@ public class ChatController implements ChatService.ChatListener {
         });
     }
 
+    @Override
+    public void onIncomingChatConnection(String peerIp) {
+        Platform.runLater(() -> {
+            if (this.remoteDeviceIp == null) {
+                try {
+                    DeviceDTO device = new DeviceDTO("Peer", peerIp);
+                    sceneManager.showChatPanel(device);
+                    logger.info("✅ Чат автоматически открыт с входящим подключением: {}", peerIp);
+                } catch (Exception e) {
+                    logger.error("❌ Ошибка автоматического открытия чата: {}", e.getMessage());
+                }
+            }
+        });
+    }
 
     private void displayTextMessage(String text, boolean isOwnMessage) {
         hideNoMessagesHint();
@@ -339,7 +427,7 @@ public class ChatController implements ChatService.ChatListener {
 
         VBox messageContent = new VBox();
         messageContent.getStyleClass().add("message-content");
-        messageContent.setMaxWidth(400);
+        messageBox.setMaxWidth(400);
 
         // Текст сообщения
         TextFlow textFlow = new TextFlow();

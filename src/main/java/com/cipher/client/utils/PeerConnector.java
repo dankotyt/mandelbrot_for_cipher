@@ -27,9 +27,7 @@ public class PeerConnector {
                     return true;
                 }
 
-                // Выполняем обмен ключами
-                ECDHKeyExchange keys = keyExchangeService.getCurrentKeys();
-                boolean success = keyExchangeClient.performKeyExchange(peerAddress, keys);
+                boolean success = keyExchangeService.performKeyExchange(peerAddress);
                 if (success) {
                     log.info("Successfully connected to peer: {}", peerAddress.getHostAddress());
                 }

@@ -129,7 +129,18 @@ public class MandelbrotService extends JPanel {
     public BufferedImage generateImage() {
         InetAddress peerAddress = connectionManager.getConnectedPeer();
         if (peerAddress == null) {
-            throw new IllegalStateException("No connected peer found. Please establish connection first.");
+            Map<InetAddress, String> activeConnections = keyExchangeService.getActiveConnections();
+            if (!activeConnections.isEmpty()) {
+                peerAddress = activeConnections.keySet().iterator().next();
+                connectionManager.setConnectedPeer(peerAddress);
+            } else {
+                throw new IllegalStateException("No connected peer found. Please establish connection first.");
+            }
+        }
+
+        if (!keyExchangeService.hasKeysForPeer(peerAddress.getHostAddress())) {
+            throw new IllegalStateException("No encryption keys available for peer: " +
+                    peerAddress.getHostAddress() + ". Please perform key exchange first.");
         }
 
         // Получаем мастер-сид из DH обмена
@@ -204,33 +215,68 @@ public class MandelbrotService extends JPanel {
     */
 
     public BufferedImage generateImage(int originalWidth, int originalHeight) {
-        BufferedImage resultImage = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
+        BufferedImage resultImage = null;
+        boolean validImage = false;
+        int attempt = 0;
 
-        try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
-            int processors = Runtime.getRuntime().availableProcessors();
-            int chunkWidth = originalWidth / processors;
+        // Генерируем фрактал до тех пор, пока не получим валидный
+        while (!validImage && !Thread.currentThread().isInterrupted()) { // ограничим попытки
+            attempt++;
 
-            List<Future<?>> futures = new ArrayList<>();
-            for (int i = 0; i < processors; i++) {
-                int startX = i * chunkWidth;
-                int width = (i == processors - 1) ? originalWidth - startX : chunkWidth;
+            // Генерируем случайные параметры для каждой попытки
+            randomPositionOnPlenty();
 
-                futures.add(executor.submit(new MandelbrotThread(
-                        startX, 0, width, originalHeight,
-                        ZOOM, MAX_ITER, offsetX, offsetY, resultImage
-                )));
+            resultImage = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
+
+            try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+                int processors = Runtime.getRuntime().availableProcessors();
+                int chunkWidth = originalWidth / processors;
+
+                List<Future<?>> futures = new ArrayList<>();
+                for (int i = 0; i < processors; i++) {
+                    int startX = i * chunkWidth;
+                    int width = (i == processors - 1) ? originalWidth - startX : chunkWidth;
+
+                    futures.add(executor.submit(new MandelbrotThread(
+                            startX, 0, width, originalHeight,
+                            ZOOM, MAX_ITER, offsetX, offsetY, resultImage
+                    )));
+                }
+
+                for (Future<?> future : futures) {
+                    future.get();
+                }
+
+                // ПРОВЕРЯЕМ КАЧЕСТВО ИЗОБРАЖЕНИЯ
+                validImage = checkImageDiversity(resultImage);
+
+                if (validImage) {
+                    currentParams = new MandelbrotParams(
+                            originalWidth,
+                            originalHeight,
+                            ZOOM,
+                            offsetX,
+                            offsetY,
+                            MAX_ITER
+                    );
+                    logger.debug("✅ Успешно сгенерирован валидный фрактал после {} попыток", attempt);
+                } else {
+                    logger.debug("🔄 Попытка {}: фрактал не прошел проверку качества", attempt);
+                }
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Генерация прервана", e);
+                return null;
+            } catch (ExecutionException e) {
+                logger.error("Ошибка в потоке вычислений", e);
+                // Продолжаем попытки
             }
+        }
 
-            for (Future<?> future : futures) {
-                future.get();
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.error("Генерация прервана", e);
+        if (!validImage) {
+            logger.error("❌ Не удалось сгенерировать валидный фрактал после {} попыток", attempt);
             return null;
-        } catch (ExecutionException e) {
-            logger.error("Ошибка в потоке вычислений", e);
-            throw new RuntimeException("Ошибка генерации фрактала", e);
         }
 
         repaint();

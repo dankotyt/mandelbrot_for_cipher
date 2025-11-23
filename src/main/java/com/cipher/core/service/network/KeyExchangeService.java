@@ -28,4 +28,9 @@ public interface KeyExchangeService {
     // Обработка входящих ключей
     void processIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey);
 
+    void savePeerKeys(String peerIp, ECDHKeyExchange keys);
+    ECDHKeyExchange getPeerKeys(String peerIp);
+    boolean hasKeysForPeer(String peerIp);
+    void removePeerKeys(String peerIp);
+
 }

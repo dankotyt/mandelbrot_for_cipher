@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -31,8 +33,62 @@ public class ConnectionManager {
 
     private ServerSocket keyExchangeServerSocket;
     private Thread serverThread;
-    @Getter @Setter
+    private final Map<String, InetAddress> persistentConnectedPeers = new ConcurrentHashMap<>();
+    private InetAddress lastConnectedPeer;
+
     private InetAddress connectedPeer;
+
+    public void setConnectedPeer(InetAddress peerAddress) {
+        this.lastConnectedPeer = peerAddress;
+        if (peerAddress != null) {
+            persistentConnectedPeers.put(peerAddress.getHostAddress(), peerAddress);
+        }
+        log.info("✅ Установлен подключенный пир: {}",
+                peerAddress != null ? peerAddress.getHostAddress() : "null");
+    }
+
+    public InetAddress getConnectedPeer() {
+        // Сначала пробуем получить последний подключенный пир
+        if (lastConnectedPeer != null &&
+                keyExchangeService.isConnectedTo(lastConnectedPeer)) {
+            return lastConnectedPeer;
+        }
+
+        // Если последний не доступен, ищем любого доступного пира
+        for (InetAddress peer : persistentConnectedPeers.values()) {
+            if (keyExchangeService.isConnectedTo(peer)) {
+                lastConnectedPeer = peer; // Обновляем последний доступный
+                log.info("🔄 Восстановлен подключенный пир из хранилища: {}",
+                        peer.getHostAddress());
+                return peer;
+            }
+        }
+
+        log.warn("❌ Нет доступных подключенных пиров в хранилище");
+        return null;
+    }
+
+    /**
+     * Получает всех подключенных пиров
+     */
+    public List<InetAddress> getAllConnectedPeers() {
+        return persistentConnectedPeers.values().stream()
+                .filter(keyExchangeService::isConnectedTo)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Очищает информацию о пире
+     */
+    public void removePeer(InetAddress peerAddress) {
+        if (peerAddress != null) {
+            persistentConnectedPeers.remove(peerAddress.getHostAddress());
+            if (peerAddress.equals(lastConnectedPeer)) {
+                lastConnectedPeer = null;
+            }
+            log.info("🗑️ Удален пир из хранилища: {}", peerAddress.getHostAddress());
+        }
+    }
 
     public void start() {
         if (running.compareAndSet(false, true)) {
@@ -146,5 +202,9 @@ public class ConnectionManager {
                 log.warn("Error closing server socket: {}", e.getMessage());
             }
         }
+    }
+
+    public boolean hasConnectedPeer() {
+        return connectedPeer != null;
     }
 }

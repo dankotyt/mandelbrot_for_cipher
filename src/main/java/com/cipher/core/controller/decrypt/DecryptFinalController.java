@@ -2,6 +2,7 @@ package com.cipher.core.controller.decrypt;
 
 //import com.cipher.core.encryption.ImageDecrypt;
 import com.cipher.core.encryption.ImageDecrypt;
+import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -35,6 +36,7 @@ public class DecryptFinalController {
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
     private final ImageDecrypt imageDecrypt;
+    private final ConnectionManager connectionManager;
 
     private String keyFilePath;
     private InetAddress peerAddress;
@@ -42,12 +44,27 @@ public class DecryptFinalController {
     public void setKeyFilePath(String keyFilePath) {
         this.keyFilePath = keyFilePath;
         File file = new File(keyFilePath);
+
+        this.peerAddress = connectionManager.getConnectedPeer();
+        if (this.peerAddress == null) {
+            dialogDisplayer.showErrorDialog("Не установлено соединение с пиром. Сначала подключитесь к устройству.");
+            return;
+        }
+
         startDecryption(file);
     }
 
     @FXML
     public void initialize() {
         setupEventHandlers();
+
+        this.peerAddress = connectionManager.getConnectedPeer();
+        if (this.peerAddress != null) {
+            logger.info("✅ Контроллер дешифрования инициализирован с пиром: {}",
+                    peerAddress.getHostAddress());
+        } else {
+            logger.warn("⚠️ Контроллер дешифрования инициализирован без подключенного пира");
+        }
     }
 
     private void setupEventHandlers() {
@@ -59,6 +76,15 @@ public class DecryptFinalController {
         if (keyFilePath == null || keyFilePath.isEmpty()) {
             dialogDisplayer.showErrorDialog("Путь к файлу-ключу не указан");
             return;
+        }
+
+        if (peerAddress == null) {
+            peerAddress = connectionManager.getConnectedPeer();
+            if (peerAddress == null) {
+                dialogDisplayer.showErrorDialog("Не установлено соединение с пиром. Сначала подключитесь к устройству.");
+                return;
+            }
+            logger.info("🔄 Пир восстановлен из ConnectionManager: {}", peerAddress.getHostAddress());
         }
 
         Task<Void> decryptImageTask = new Task<>() {

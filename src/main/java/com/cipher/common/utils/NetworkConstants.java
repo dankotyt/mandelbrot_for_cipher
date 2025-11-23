@@ -11,5 +11,5 @@ public class NetworkConstants {
     public static final long PEER_TIMEOUT_MS = 5000;
     public static final int APP_PORT = 25565;
     public static final int CONNECTION_PORT = 25565;
-    public static final int CHAT_PORT = 25565;
+    public static final int CHAT_PORT = 25566;
 }

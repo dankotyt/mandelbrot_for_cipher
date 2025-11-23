@@ -26,11 +26,12 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     private final DialogDisplayer dialogDisplayer;
     private final NetworkService networkService;
-    private final KeyExchangeService keyExchangeService;
     private final SenderConnectionService senderConnectionService;
 
     private final Map<String, ConnectionRequestDTO> pendingRequests = new ConcurrentHashMap<>();
+    private final Map<String, ConnectionRequestDTO> establishedConnections = new ConcurrentHashMap<>();
     private final List<ConnectionListener> listeners = new ArrayList<>();
+    private final Map<String, Object> requestLocks = new ConcurrentHashMap<>();
 
     @Override
     public void addListener(ConnectionListener listener) {
@@ -44,29 +45,55 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void sendConnectionRequest(DeviceDTO toDevice) {
-        try {
-            DeviceDTO currentDevice = networkService.getCurrentDevice();
+        String lockKey = toDevice.ip();
+        Object lock = requestLocks.computeIfAbsent(lockKey, k -> new Object());
 
-            boolean sent = senderConnectionService.sendConnectionRequest(
-                    toDevice.ip(), currentDevice);
+        synchronized (lock) {
+            try {
+                if (isRequestPending(toDevice.ip())) {
+                    logger.warn("Запрос к {} уже отправлен", toDevice.ip());
+                    return;
+                }
 
-            if (sent) {
-                ConnectionRequestDTO request = new ConnectionRequestDTO(
-                        currentDevice.name(), currentDevice.ip(),
-                        toDevice.name(), toDevice.ip(),
-                        LocalDateTime.now(),
-                        ConnectionRequestDTO.RequestStatus.PENDING
-                );
+                DeviceDTO currentDevice = networkService.getCurrentDevice();
+                boolean sent = senderConnectionService.sendConnectionRequest(toDevice.ip(), currentDevice);
 
-                notifyRequestReceived(request);
+                if (sent) {
+                    ConnectionRequestDTO request = new ConnectionRequestDTO(
+                            currentDevice.name(), currentDevice.ip(),
+                            toDevice.name(), toDevice.ip(),
+                            LocalDateTime.now(),
+                            ConnectionRequestDTO.RequestStatus.PENDING
+                    );
 
-            } else {
-                logger.error("Не удалось отправить запрос к {}", toDevice.ip());
+                    String requestId = generateRequestId(request.getFromDeviceIpAsInetAddress(),
+                            request.getToDeviceIpAsInetAddress());
+                    pendingRequests.put(requestId, request);
+
+                    notifyRequestReceived(request);
+                } else {
+                    logger.error("Не удалось отправить запрос к {}", toDevice.ip());
+                }
+
+            } catch (Exception e) {
+                logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
             }
-
-        } catch (Exception e) {
-            logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
         }
+    }
+
+    private boolean isRequestPending(String deviceIp) {
+        return pendingRequests.values().stream()
+                .anyMatch(request ->
+                        request.toDeviceIp().equals(deviceIp) &&
+                                request.status() == ConnectionRequestDTO.RequestStatus.PENDING);
+    }
+
+    @Override
+    public boolean isConnectionEstablished(String deviceIp) {
+        return establishedConnections.values().stream()
+                .anyMatch(request ->
+                        request.toDeviceIp().equals(deviceIp) &&
+                                request.status() == ConnectionRequestDTO.RequestStatus.ACCEPTED);
     }
 
     @Override
@@ -85,6 +112,7 @@ public class ConnectionServiceImpl implements ConnectionService {
             );
 
             pendingRequests.remove(requestId);
+            establishedConnections.put(requestId, updatedRequest); // Сохраняем установленное соединение
 
             logger.info("Запрос на подключение принят: {} -> {}",
                     request.fromDeviceIp(), request.toDeviceIp());
@@ -131,43 +159,6 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .filter(request -> request.toDeviceIp().equals(currentDevice.ip()))
                 .filter(request -> request.status() == ConnectionRequestDTO.RequestStatus.PENDING)
                 .forEach(this::showIncomingRequestAlert);
-    }
-
-    @Override
-    public boolean performKeyExchange(InetAddress peerAddress) {
-        try {
-            logger.info("Начало реального обмена ключами DH с: {}", peerAddress.getHostAddress());
-
-            // Выполняем реальный обмен ключами DH
-            boolean success = keyExchangeService.performKeyExchange(peerAddress);
-
-            if (success) {
-                logger.info("Обмен ключами DH успешно завершен с: {}", peerAddress.getHostAddress());
-
-                // Проверяем, что мастер-сид действительно получен
-                try {
-                    byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
-                    if (masterSeed != null && masterSeed.length > 0) {
-                        logger.info("Мастер-сид успешно получен, длина: {} байт", masterSeed.length);
-                        return true;
-                    } else {
-                        logger.error("Мастер-сид не был получен после обмена ключами");
-                        return false;
-                    }
-                } catch (Exception e) {
-                    logger.error("Ошибка при получении мастер-сида: {}", e.getMessage(), e);
-                    return false;
-                }
-            } else {
-                logger.error("Обмен ключами DH не удался с: {}", peerAddress.getHostAddress());
-                return false;
-            }
-
-        } catch (Exception e) {
-            logger.error("Критическая ошибка при обмене ключами DH с {}: {}",
-                    peerAddress.getHostAddress(), e.getMessage(), e);
-            return false;
-        }
     }
 
     private void showIncomingRequestAlert(ConnectionRequestDTO request) {

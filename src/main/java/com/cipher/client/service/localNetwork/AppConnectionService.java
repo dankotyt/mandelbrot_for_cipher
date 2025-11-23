@@ -6,6 +6,7 @@ import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.model.ECDHKeyExchange;
+import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkService;
@@ -52,6 +53,7 @@ public class AppConnectionService {
     private final KeyExchangeService keyExchangeService;
     private final P2PChatServiceImpl chatService;
     private final SceneManager sceneManager;
+    private final ConnectionManager connectionManager;
 
     @PostConstruct
     public void startServer() {
@@ -202,7 +204,7 @@ public class AppConnectionService {
                     "Получен запрос на подключение от:\n" +
                             "Устройство: " + remoteDevice.name() + "\n" +
                             "IP: " + remoteDevice.ip() + "\n\n" +
-                            "Принять подключение?",
+                            "Принять подключение и открыть чат?",
                     "Принять",
                     "Отклонить"
             );
@@ -216,13 +218,25 @@ public class AppConnectionService {
                         ConnectionRequestDTO.RequestStatus.ACCEPTED);
                 connectionService.acceptConnectionRequest(request);
 
-                // 🔑 ЗАПУСКАЕМ ОБМЕН КЛЮЧАМИ АКТИВНО (мы подключаемся к пиру)
+                try {
+                    // УСТАНАВЛИВАЕМ ПОДКЛЮЧЕННОГО ПИРА В CONNECTION MANAGER
+                    InetAddress peerAddress = InetAddress.getByName(clientIp);
+                    connectionManager.setConnectedPeer(peerAddress);
+
+                    sceneManager.showChatPanel(remoteDevice);
+                    logger.info("✅ Чат автоматически открыт с: {}", clientIp);
+                } catch (Exception e) {
+                    logger.error("❌ Ошибка при автоматическом открытии чата: {}", e.getMessage());
+                }
+
+                // Запускаем обмен ключами в фоне
                 new Thread(() -> {
                     try {
                         log.info("🔄 Инициируем обмен ключами с: {}", clientIp);
-                        Thread.sleep(1000); // Даем время на отправку подтверждения
+                        Thread.sleep(1000);
 
-                        boolean keyExchangeSuccess = peerConnector.connectToPeer(InetAddress.getByName(clientIp)).get();
+                        InetAddress peerAddress = InetAddress.getByName(clientIp);
+                        boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
 
                         if (keyExchangeSuccess) {
                             log.info("✅ Обмен ключами успешно завершен с: {}", clientIp);
@@ -258,28 +272,25 @@ public class AppConnectionService {
 
         try {
             InetAddress peerAddress = InetAddress.getByName(clientIp);
-            // 1. 🔑 Сначала обмен ключами
-            log.info("🔄 Запуск обмена ключами с: {}", clientIp);
-            boolean keyExchangeSuccess = peerConnector.connectToPeer(peerAddress).get();
+
+            connectionManager.setConnectedPeer(peerAddress);
+
+            boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
 
             if (keyExchangeSuccess) {
                 log.info("✅ Обмен ключами успешно завершен с: {}", clientIp);
 
-                boolean chatConnected = chatService.connectToPeer(clientIp);
-
-                if (chatConnected) {
-                    log.info("✅ Чат подключен с: {}", clientIp);
-                    Platform.runLater(() -> {
-                        try {
-                            sceneManager.showChatPanel(remoteDevice);
-                            log.info("✅ Чат автоматически открыт с: {}", clientIp);
-                        } catch (Exception e) {
-                            log.error("❌ Ошибка при автоматическом открытии чата: {}", e.getMessage());
-                        }
-                    });
-                } else {
-                    log.error("❌ Не удалось подключить чат с: {}", clientIp);
+                if (keyExchangeService.hasKeysForPeer(clientIp)) {
+                    log.info("✅ Ключи успешно сохранены для: {}", clientIp);
                 }
+
+                // УВЕДОМЛЯЕМ, что подключение установлено, но НЕ открываем чат автоматически
+                // Чат уже был открыт при отправке запроса
+                Platform.runLater(() -> {
+                    // Можно показать уведомление, что подключение установлено
+                    logger.info("✅ Подключение установлено с: {}", clientIp);
+                });
+
             } else {
                 log.error("❌ Обмен ключами не удался с: {}", clientIp);
             }

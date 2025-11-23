@@ -3,11 +3,16 @@ package com.cipher.common.dto.chat;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Builder
 @Getter
-public class ChatMessageDTO {
+public class ChatMessageDTO implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private String content;
     private LocalDateTime timestamp;
     private String sender;

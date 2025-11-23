@@ -25,5 +25,6 @@ public interface ChatService {
         void onConnectionStatusChanged(boolean connected, String peerInfo);
         void onError(String errorMessage);
         void onIncomingConnection(String peerIp);
+        void onIncomingChatConnection(String peerIp);
     }
 }

@@ -2,6 +2,7 @@ package com.cipher.core.controller.network;
 
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
@@ -16,6 +17,7 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +47,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private final DialogDisplayer dialogDisplayer;
     private final ConnectionServiceImpl connectionService;
     private final NetworkService networkService;
-    private final AppConnectionService appConnectionService;
+    private final KeyExchangeService keyExchangeService;
 
     private List<DeviceDTO> availableDevices;
     private DeviceDTO currentDevice;
@@ -278,13 +280,36 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
     private void handleChatConnection(DeviceDTO device) {
         try {
-            logger.info("Открытие P2P чата с устройством: {}", device);
+            if (isSelfDevice(device)) {
+                dialogDisplayer.showAlert("Информация", "Нельзя открыть чат с самим собой");
+                return;
+            }
+
+            if (isOnCooldown()) {
+                long remainingSeconds = getRemainingCooldownSeconds();
+                dialogDisplayer.showTimedErrorAlert("Ошибка",
+                        "Слишком частые запросы\nПопробуйте через " + remainingSeconds + " сек.",
+                        3
+                );
+                updateStatus("Подождите перед следующим запросом");
+                return;
+            }
+
+            logger.info("Отправка запроса на подключение и открытие чата с: {}", device);
+            updateStatus("Отправка запроса...");
+
+            // Сразу открываем чат (ожидающий подключения)
             sceneManager.showChatPanel(device);
-            updateStatus("Подключение к чату...");
+
+            // Отправляем запрос на подключение
+            connectionService.sendConnectionRequest(device);
+
+            updateStatus("Запрос отправлен");
 
         } catch (Exception e) {
             logger.error("Ошибка при открытии чата: {}", e.getMessage(), e);
             dialogDisplayer.showErrorDialog("Ошибка открытия чата: " + e.getMessage());
+            updateStatus("Ошибка отправки");
         }
     }
 
@@ -296,17 +321,25 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         Label deviceLabel = new Label(device.toString());
         deviceLabel.getStyleClass().add("device-label");
 
-        Button chatButton = new Button("💬");
+        HBox buttonsContainer = new HBox();
+        buttonsContainer.setAlignment(Pos.CENTER_RIGHT);
+        buttonsContainer.setSpacing(5);
+
+        // УБИРАЕМ кнопку "Подключиться", оставляем только "Чат"
+        Button chatButton = new Button("💬 Чат");
         chatButton.getStyleClass().add("chat-button");
         chatButton.setOnAction(e -> handleChatConnection(device));
 
-        buttonContent.getChildren().addAll(deviceLabel, chatButton);
+        buttonsContainer.getChildren().add(chatButton);
+
+        buttonContent.getChildren().addAll(deviceLabel, buttonsContainer);
+        HBox.setHgrow(deviceLabel, Priority.ALWAYS);
 
         Button containerButton = new Button();
         containerButton.getStyleClass().add("device-button");
         containerButton.setGraphic(buttonContent);
         containerButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        containerButton.setOnAction(e -> handleDeviceSelection(device));
+        containerButton.setMaxWidth(Double.MAX_VALUE);
 
         return containerButton;
     }

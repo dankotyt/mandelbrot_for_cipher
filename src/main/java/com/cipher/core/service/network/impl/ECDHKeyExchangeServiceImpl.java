@@ -5,7 +5,11 @@ import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.KeyExchangeService;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -18,15 +22,34 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Service
 public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
+    private static final Logger logger = LoggerFactory.getLogger(ECDHKeyExchangeServiceImpl.class);
 
     private final AtomicReference<ECDHKeyExchange> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
     private final Map<InetAddress, Boolean> connectionInProgress = new ConcurrentHashMap<>();
     private final KeyExchangeClient keyExchangeClient;
+    private final Map<String, ECDHKeyExchange> peerKeys = new ConcurrentHashMap<>();
+    private final Map<String, Object> peerLocks = new ConcurrentHashMap<>();
 
     public ECDHKeyExchangeServiceImpl(KeyExchangeClient keyExchangeClient) {
         this.keyExchangeClient = keyExchangeClient;
         generateNewKeys();
+    }
+
+    @PostConstruct
+    public void init() {
+        generateNewKeys();
+        activeConnections.clear();
+        peerKeys.clear();
+        connectionInProgress.clear();
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        closeAllConnections();
+        activeConnections.clear();
+        peerKeys.clear();
+        connectionInProgress.clear();
     }
 
     @Override
@@ -58,37 +81,42 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public boolean performKeyExchange(InetAddress peerAddress) {
-        if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
-            log.debug("Подключение к {} уже выполняется, пропускаем", peerAddress.getHostAddress());
-            return false;
-        }
+        String peerIp = peerAddress.getHostAddress();
+        Object lock = peerLocks.computeIfAbsent(peerIp, k -> new Object());
 
-        try {
-            log.info("Выполнение ECDH обмена ключами с: {}", peerAddress.getHostAddress());
-
-            if (isConnectedTo(peerAddress)) {
-                log.debug("Уже подключены к {}, пропускаем обмен ключами", peerAddress.getHostAddress());
-                return true;
+        synchronized (lock) {
+            if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
+                log.debug("Подключение к {} уже выполняется, пропускаем", peerIp);
+                return false;
             }
 
-            ECDHKeyExchange ourKeys = currentKeyExchange.get();
-            boolean success = keyExchangeClient.performKeyExchange(peerAddress, ourKeys);
+            try {
+                log.info("Выполнение ECDH обмена ключами с: {}", peerIp);
 
-            if (success) {
-                updatePeerConnection(peerAddress);
-                log.info("ECDH обмен ключами успешно завершен с: {}", peerAddress.getHostAddress());
-            } else {
-                log.error("ECDH обмен ключами не удался с: {}", peerAddress.getHostAddress());
+                if (isConnectedTo(peerAddress)) {
+                    log.debug("Уже подключены к {}, пропускаем обмен ключами", peerIp);
+                    return true;
+                }
+
+                ECDHKeyExchange ourKeys = currentKeyExchange.get();
+                boolean success = keyExchangeClient.performKeyExchange(peerAddress, ourKeys);
+
+                if (success) {
+                    savePeerKeys(peerIp, ourKeys);
+                    updatePeerConnection(peerAddress);
+                    log.info("✅ ECDH обмен ключами успешно завершен с: {}", peerIp);
+                } else {
+                    log.error("❌ ECDH обмен ключами не удался с: {}", peerIp);
+                }
+
+                return success;
+
+            } catch (Exception e) {
+                log.error("❌ Ошибка при выполнении ECDH обмена ключами с {}: {}", peerIp, e.getMessage(), e);
+                return false;
+            } finally {
+                connectionInProgress.remove(peerAddress);
             }
-
-            return success;
-
-        } catch (Exception e) {
-            log.error("Ошибка при выполнении ECDH обмена ключами с {}: {}",
-                    peerAddress.getHostAddress(), e.getMessage(), e);
-            return false;
-        } finally {
-            connectionInProgress.remove(peerAddress);
         }
     }
 
@@ -102,6 +130,31 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                     connectionInProgress.remove(peerAddress);
                     return false;
                 });
+    }
+
+    @Override
+    public void savePeerKeys(String peerIp, ECDHKeyExchange keys) {
+        peerKeys.put(peerIp, keys);
+        logger.info("Сохранены ключи для пира: {}", peerIp);
+    }
+
+    @Override
+    public ECDHKeyExchange getPeerKeys(String peerIp) {
+        return peerKeys.get(peerIp);
+    }
+
+    @Override
+    public boolean hasKeysForPeer(String peerIp) {
+        return peerKeys.containsKey(peerIp);
+    }
+
+    @Override
+    public void removePeerKeys(String peerIp) {
+        ECDHKeyExchange removed = peerKeys.remove(peerIp);
+        if (removed != null) {
+            removed.invalidate();
+            log.info("Удалены ключи для пира: {}", peerIp);
+        }
     }
 
     private void updatePeerConnection(InetAddress peerAddress) {
@@ -147,6 +200,8 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             if (keys == null) {
                 throw new IllegalArgumentException("Expected ECDHKeyExchange instance");
             }
+
+            savePeerKeys(peerAddress.getHostAddress(), keys);
 
             if (isConnectedTo(peerAddress)) {
                 log.debug("Подключение к {} уже существует, обновляем ключи", peerAddress.getHostAddress());

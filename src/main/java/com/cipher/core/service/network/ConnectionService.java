@@ -13,7 +13,7 @@ public interface ConnectionService {
     void acceptConnectionRequest(ConnectionRequestDTO request);
     void rejectConnectionRequest(ConnectionRequestDTO request);
     void checkIncomingRequests();
-    boolean performKeyExchange(InetAddress peerAddress);
+    boolean isConnectionEstablished(String deviceIp);
 
     interface ConnectionListener {
         void onRequestReceived(ConnectionRequestDTO request);
