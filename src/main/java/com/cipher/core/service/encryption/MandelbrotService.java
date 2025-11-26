@@ -179,8 +179,6 @@ public class MandelbrotService extends JPanel {
                 }
 
                 currentParams = new MandelbrotParams(
-                        startMandelbrotWidth,
-                        startMandelbrotHeight,
                         ZOOM,
                         offsetX,
                         offsetY,

@@ -35,7 +35,7 @@
 //        EncryptionResult encryptionResult = cryptoService.encryptData(masterSeed, masterSeed);
 //
 //        this.sessionDTO = new EncryptionSessionParams(
-//                encryptionResult.encryptedData(),
+//                encryptionResult.encryptedImageData(),
 //                encryptionResult.iv(),
 //                encryptionResult.salt(),
 //                CryptographicService.getALGORITHM(),

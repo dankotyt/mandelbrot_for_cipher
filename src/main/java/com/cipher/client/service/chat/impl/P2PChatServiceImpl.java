@@ -136,7 +136,7 @@ public class P2PChatServiceImpl implements ChatService {
 
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(peerIp, chatPort), 10000);
-            socket.setSoTimeout(30000);
+            socket.setSoTimeout(0);
             connectedSocket = socket;
 
             setupStreams(connectedSocket);

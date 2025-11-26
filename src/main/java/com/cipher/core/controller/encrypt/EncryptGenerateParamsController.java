@@ -25,7 +25,6 @@ import java.awt.image.BufferedImage;
 @RequiredArgsConstructor
 public class EncryptGenerateParamsController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateParamsController.class);
-    private final ImageUtils imageUtils;
 
     @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
@@ -39,6 +38,7 @@ public class EncryptGenerateParamsController {
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
+    private final ImageUtils imageUtils;
 
     private Task<Image> currentTask;
     private MandelbrotParams mandelbrotParams;
@@ -104,11 +104,12 @@ public class EncryptGenerateParamsController {
             @Override
             protected Image call() {
                 try {
+                    BufferedImage originalImage = imageUtils.getOriginalImage();
 
                     // Генерация изображения с использованием параметров
                     BufferedImage mandelbrotImage = mandelbrotService.generateImage(
-                            mandelbrotParams.startMandelbrotWidth(),
-                            mandelbrotParams.startMandelbrotHeight(),
+                            originalImage.getWidth(),
+                            originalImage.getHeight(),
                             mandelbrotParams.zoom(),
                             mandelbrotParams.offsetX(),
                             mandelbrotParams.offsetY(),

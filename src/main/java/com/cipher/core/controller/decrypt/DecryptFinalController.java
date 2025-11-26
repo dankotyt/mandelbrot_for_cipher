@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.InetAddress;
 
@@ -87,11 +88,11 @@ public class DecryptFinalController {
             logger.info("🔄 Пир восстановлен из ConnectionManager: {}", peerAddress.getHostAddress());
         }
 
-        Task<Void> decryptImageTask = new Task<>() {
+        Task<BufferedImage> decryptImageTask = new Task<>() {
             @Override
-            protected Void call() throws Exception {
-                imageDecrypt.decryptImage(file, peerAddress);
-                return null;
+            protected BufferedImage call() throws Exception {
+                return imageDecrypt.decryptImage(file, peerAddress);
+
             }
         };
 

@@ -24,6 +24,7 @@ public class TempFileManager {
     private final DialogDisplayer displayer;
     private final SceneManager sceneManager;
     private final ImageUtils imageUtils;
+    private final EncryptionDataSerializer serializer;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -384,18 +385,11 @@ public class TempFileManager {
      * Сохраняет зашифрованные параметры в бинарный файл
      */
     private void saveBinaryParams(EncryptionDataResult encryptedParams, String filePath) throws IOException {
-        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(filePath))) {
-            // Записываем IV (12 bytes)
-            dos.writeInt(encryptedParams.iv().length);
-            dos.write(encryptedParams.iv());
+        // Сериализуем для файла
+        byte[] fileData = serializer.serializeForFile(encryptedParams);
 
-            // Записываем Salt (16 bytes)
-            dos.writeInt(encryptedParams.salt().length);
-            dos.write(encryptedParams.salt());
-
-            // Записываем зашифрованные данные
-            dos.writeInt(encryptedParams.encryptedData().length);
-            dos.write(encryptedParams.encryptedData());
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            fos.write(fileData);
         }
     }
 
@@ -403,24 +397,10 @@ public class TempFileManager {
      * Загружает зашифрованные параметры из файла
      */
     public EncryptionDataResult loadEncryptedParams(File paramsFile) throws IOException {
-        try (DataInputStream dis = new DataInputStream(new FileInputStream(paramsFile))) {
-            // Читаем IV
-            int ivLength = dis.readInt();
-            byte[] iv = new byte[ivLength];
-            dis.readFully(iv);
+        byte[] fileData = Files.readAllBytes(paramsFile.toPath());
 
-            // Читаем Salt
-            int saltLength = dis.readInt();
-            byte[] salt = new byte[saltLength];
-            dis.readFully(salt);
-
-            // Читаем зашифрованные данные
-            int dataLength = dis.readInt();
-            byte[] encryptedData = new byte[dataLength];
-            dis.readFully(encryptedData);
-
-            return new EncryptionDataResult(encryptedData, iv, salt);
-        }
+        // Десериализуем из файла
+        return serializer.deserializeFromFile(fileData);
     }
 
     public void saveDecryptedImage() {

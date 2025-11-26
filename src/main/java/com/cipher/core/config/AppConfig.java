@@ -39,8 +39,8 @@ public class AppConfig {
 
     @Bean
     public TempFileManager tempFileManager(DialogDisplayer dialogDisplayer, SceneManager sceneManager,
-                                            ImageUtils imageUtils) {
-        return new TempFileManager(dialogDisplayer, sceneManager, imageUtils);
+                                            ImageUtils imageUtils, EncryptionDataSerializer encryptionDataSerializer) {
+        return new TempFileManager(dialogDisplayer, sceneManager, imageUtils, encryptionDataSerializer);
     }
 
     @Bean

@@ -24,7 +24,7 @@ public class EncryptionService {
             throw new IllegalArgumentException("Некорректные данные");
         }
 
-        MandelbrotParams params = new MandelbrotParams(width, height, zoom, x, y, iterations);
+        MandelbrotParams params = new MandelbrotParams(zoom, x, y, iterations);
 
         binaryFile.saveMandelbrotParamsToBinaryFile(
                 getTempPath() + "mandelbrot_params.bin",

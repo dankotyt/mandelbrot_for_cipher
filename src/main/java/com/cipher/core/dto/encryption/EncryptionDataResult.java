@@ -1,7 +1,8 @@
 package com.cipher.core.dto.encryption;
 
 public record EncryptionDataResult(
-        byte[] encryptedData,
+        byte[] encryptedImageData,
+        EncryptionParams params,
         byte[] iv,
         byte[] salt
 ) {}

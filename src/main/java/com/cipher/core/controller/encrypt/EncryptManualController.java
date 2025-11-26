@@ -81,8 +81,6 @@ public class EncryptManualController {
                 return;
             }
             MandelbrotParams mandelbrotParams = new MandelbrotParams(
-                    originalImage.getWidth(),
-                    originalImage.getHeight(),
                     zoom,
                     x, y,
                     iterations

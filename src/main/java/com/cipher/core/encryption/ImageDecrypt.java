@@ -20,6 +20,7 @@ import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.EncryptionDataSerializer;
 import com.cipher.core.service.encryption.MandelbrotService;
+import com.cipher.core.utils.TempFileManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,7 @@ public class ImageDecrypt {
     private final EncryptionDataSerializer serializer;
     private final CryptographicService cryptographicService;
     private final KeyExchangeService keyExchangeService;
+    private final TempFileManager tempFileManager;
 
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -47,37 +49,33 @@ public class ImageDecrypt {
 
     public BufferedImage decryptImage(File encryptedFile, InetAddress peerAddress) throws Exception {
         try {
-            // Проверяем соединение с пиром
             if (!keyExchangeService.isConnectedTo(peerAddress)) {
                 throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
             }
 
-            byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
-            EncryptionDataResult encryptedDataResult = serializer.deserializeEncryptionDataResult(fileData);
+            // Загружаем параметры из файла
+            EncryptionDataResult encryptedDataResult = tempFileManager.loadEncryptedParams(encryptedFile);
 
-            // Дешифруем данные, передавая peerAddress
-            EncryptionResult result = cryptographicService.decryptData(encryptedDataResult, peerAddress);
-
-            BufferedImage encryptedImage = result.segmentedImage();
-            BufferedImage fractalImage = result.fractalImage();
-            EncryptionParams params = result.params();
+            // Дешифруем изображение
+            BufferedImage encryptedImage = cryptographicService.decryptData(encryptedDataResult, peerAddress);
+            EncryptionParams params = encryptedDataResult.params();
 
             MandelbrotParams mandelbrotParams = params.mandelbrot();
 
+            // Генерируем фрактал по параметрам
             BufferedImage genFractal = mandelbrotService.generateImage(
-                    mandelbrotParams.startMandelbrotWidth(),
-                    mandelbrotParams.startMandelbrotHeight(),
+                    encryptedImage.getWidth(),
+                    encryptedImage.getHeight(),
                     mandelbrotParams.zoom(),
                     mandelbrotParams.offsetX(),
                     mandelbrotParams.offsetY(),
-                    mandelbrotParams.maxIter());
+                    mandelbrotParams.maxIter()
+            );
 
-            if (!compareImages(genFractal, fractalImage)) {
-                throw new CheckingException("Сгенерированный и используемый фракталы отличаются! Возможна подмена!");
-            }
-
+            // Обратный XOR
             BufferedImage segmentedImage = XOR.performXOR(encryptedImage, genFractal);
 
+            // Восстанавливаем сегменты
             SegmentationParams segmentationParams = params.segmentation();
             Map<Integer, Integer> segmentMapping = segmentationParams.segmentMapping();
 

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -19,96 +20,41 @@ import java.util.concurrent.Future;
 
 @Component
 public class EncryptionDataSerializer {
-    private final int processors;
 
-    public EncryptionDataSerializer() {
-        this.processors = Runtime.getRuntime().availableProcessors();
-    }
-
-    public byte[] serialize(EncryptionResult result) throws IOException {
+    // Сериализация для сохранения в файл .bin
+    public byte[] serializeForFile(EncryptionDataResult dataResult) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
 
-        byte[] segmentedImageData = serializeImageParallel(result.segmentedImage());
-        byte[] fractalImageData = serializeImageParallel(result.fractalImage());
+        // 1. Зашифрованное изображение
+        writeByteArray(dos, dataResult.encryptedImageData());
 
-        writeByteArray(dos, segmentedImageData);
-        writeByteArray(dos, fractalImageData);
-        writeEncryptionParams(dos, result.params());
+        // 2. Параметры шифрования
+        writeEncryptionParams(dos, dataResult.params());
+
+        // 3. Криптопараметры
+        writeByteArray(dos, dataResult.iv());
+        writeByteArray(dos, dataResult.salt());
 
         dos.flush();
         return baos.toByteArray();
     }
 
-    private byte[] serializeImageParallel(BufferedImage image) throws IOException {
-        if (image == null) {
-            return new byte[0];
-        }
+    // Десериализация из файла .bin
+    public EncryptionDataResult deserializeFromFile(byte[] fileData) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(fileData);
+        DataInputStream dis = new DataInputStream(bais);
 
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int type = image.getType();
+        byte[] encryptedImageData = readByteArray(dis);
+        EncryptionParams params = readEncryptionParams(dis);
+        byte[] iv = readByteArray(dis);
+        byte[] salt = readByteArray(dis);
 
-        if (width * height < 100000) {
-            return serializeImageSingleThread(image);
-        }
-
-        try (ExecutorService executor = Executors.newFixedThreadPool(processors)) {
-            int chunkHeight = height / processors;
-            List<Future<byte[]>> futures = new ArrayList<>();
-            List<byte[]> results = new ArrayList<>();
-
-            for (int i = 0; i < processors; i++) {
-                int startY = i * chunkHeight;
-                int actualHeight = (i == processors - 1) ? height - startY : chunkHeight;
-
-                futures.add(executor.submit(() ->
-                        serializeImageRegion(image, 0, startY, width, actualHeight)
-                ));
-            }
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-
-            dos.writeInt(width);
-            dos.writeInt(height);
-            dos.writeInt(type);
-
-            for (Future<byte[]> future : futures) {
-                results.add(future.get());
-            }
-
-            for (byte[] chunk : results) {
-                dos.write(chunk);
-            }
-
-            dos.flush();
-            return baos.toByteArray();
-        } catch (Exception e) {
-            throw new IOException("Parallel serialization failed", e);
-        }
+        return new EncryptionDataResult(encryptedImageData, params, iv, salt);
     }
 
-    // Сериализация региона изображения
-    private byte[] serializeImageRegion(BufferedImage image, int startX, int startY, int width, int height)
-            throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-
-        for (int y = startY; y < startY + height; y++) {
-            for (int x = startX; x < startX + width; x++) {
-                dos.writeInt(image.getRGB(x, y));
-            }
-        }
-
-        dos.flush();
-        return baos.toByteArray();
-    }
-
-    // Однопоточная сериализация для маленьких изображений
-    private byte[] serializeImageSingleThread(BufferedImage image) throws IOException {
-        if (image == null) return new byte[0];
-
+    // Сериализация изображения для внутреннего шифрования
+    public byte[] serializeImage(BufferedImage image) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
 
@@ -126,33 +72,8 @@ public class EncryptionDataSerializer {
         return baos.toByteArray();
     }
 
-    public EncryptionDataResult deserializeEncryptionDataResult(byte[] data) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-        DataInputStream dis = new DataInputStream(bais);
-
-        // Читаем в той же последовательности, что и при сериализации
-        byte[] encryptedData = readByteArray(dis);
-        byte[] iv = readByteArray(dis);
-        byte[] salt = readByteArray(dis);
-
-        return new EncryptionDataResult(encryptedData, iv, salt);
-    }
-
-    public EncryptionResult deserialize(byte[] data) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-        DataInputStream dis = new DataInputStream(bais);
-
-        byte[] segmentedImageData = readByteArray(dis);
-        byte[] fractalImageData = readByteArray(dis);
-
-        BufferedImage segmentedImage = deserializeImageSingleThread(segmentedImageData);
-        BufferedImage fractalImage = deserializeImageSingleThread(fractalImageData);
-        EncryptionParams params = readEncryptionParams(dis);
-
-        return new EncryptionResult(segmentedImage, fractalImage, params);
-    }
-
-    private BufferedImage deserializeImageSingleThread(byte[] imageData) throws IOException {
+    // Десериализация изображения
+    public BufferedImage deserializeImage(byte[] imageData) throws IOException {
         ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
         DataInputStream dis = new DataInputStream(bais);
 
@@ -171,6 +92,7 @@ public class EncryptionDataSerializer {
         return image;
     }
 
+    // Вспомогательные методы
     private void writeByteArray(DataOutputStream dos, byte[] data) throws IOException {
         dos.writeInt(data.length);
         if (data.length > 0) {
@@ -181,7 +103,6 @@ public class EncryptionDataSerializer {
     private byte[] readByteArray(DataInputStream dis) throws IOException {
         int length = dis.readInt();
         if (length == 0) return new byte[0];
-
         byte[] data = new byte[length];
         dis.readFully(data);
         return data;
@@ -194,57 +115,52 @@ public class EncryptionDataSerializer {
         }
         dos.writeBoolean(true);
 
-        writeEncryptionArea(dos, params.area());
-        writeSegmentationParams(dos, params.segmentation());
+        // MandelbrotParams
         writeMandelbrotParams(dos, params.mandelbrot());
+
+        // SegmentationParams
+        writeSegmentationParams(dos, params.segmentation());
+
+        // EncryptionArea (может быть null)
+        if (params.area() != null) {
+            dos.writeBoolean(true);
+            writeEncryptionArea(dos, params.area());
+        } else {
+            dos.writeBoolean(false);
+        }
     }
 
     private EncryptionParams readEncryptionParams(DataInputStream dis) throws IOException {
         if (!dis.readBoolean()) return null;
 
-        EncryptionArea area = readEncryptionArea(dis);
-        SegmentationParams segmentation = readSegmentationParams(dis);
         MandelbrotParams mandelbrot = readMandelbrotParams(dis);
+        SegmentationParams segmentation = readSegmentationParams(dis);
+
+        EncryptionArea area = null;
+        if (dis.readBoolean()) {
+            area = readEncryptionArea(dis);
+        }
 
         return new EncryptionParams(area, segmentation, mandelbrot);
     }
 
-    private void writeEncryptionArea(DataOutputStream dos, EncryptionArea area) throws IOException {
-        if (area == null) {
-            dos.writeBoolean(false);
-            return;
-        }
-        dos.writeBoolean(true);
-
-        dos.writeInt(area.startX());
-        dos.writeInt(area.startY());
-        dos.writeInt(area.width());
-        dos.writeInt(area.height());
-        dos.writeBoolean(area.isWhole());
+    private void writeMandelbrotParams(DataOutputStream dos, MandelbrotParams params) throws IOException {
+        dos.writeDouble(params.zoom());
+        dos.writeDouble(params.offsetX());
+        dos.writeDouble(params.offsetY());
+        dos.writeInt(params.maxIter());
     }
 
-    private EncryptionArea readEncryptionArea(DataInputStream dis) throws IOException {
-        if (!dis.readBoolean()) return null;
-
-        int startX = dis.readInt();
-        int startY = dis.readInt();
-        int width = dis.readInt();
-        int height = dis.readInt();
-        boolean isWhole = dis.readBoolean();
-
-        return new EncryptionArea(startX, startY, width, height, isWhole);
+    private MandelbrotParams readMandelbrotParams(DataInputStream dis) throws IOException {
+        double zoom = dis.readDouble();
+        double offsetX = dis.readDouble();
+        double offsetY = dis.readDouble();
+        int maxIter = dis.readInt();
+        return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
     }
 
     private void writeSegmentationParams(DataOutputStream dos, SegmentationParams params) throws IOException {
-        if (params == null) {
-            dos.writeBoolean(false);
-            return;
-        }
-        dos.writeBoolean(true);
-
         dos.writeInt(params.segmentSize());
-        dos.writeInt(params.paddedWidth());
-        dos.writeInt(params.paddedHeight());
 
         Map<Integer, Integer> mapping = params.segmentMapping();
         dos.writeInt(mapping.size());
@@ -255,48 +171,31 @@ public class EncryptionDataSerializer {
     }
 
     private SegmentationParams readSegmentationParams(DataInputStream dis) throws IOException {
-        if (!dis.readBoolean()) return null;
-
         int segmentSize = dis.readInt();
-        int paddedWidth = dis.readInt();
-        int paddedHeight = dis.readInt();
 
         int mapSize = dis.readInt();
-        Map<Integer, Integer> segmentMapping = new java.util.HashMap<>();
+        Map<Integer, Integer> segmentMapping = new HashMap<>();
         for (int i = 0; i < mapSize; i++) {
             int key = dis.readInt();
             int value = dis.readInt();
             segmentMapping.put(key, value);
         }
 
-        return new SegmentationParams(segmentSize, paddedWidth, paddedHeight, segmentMapping);
+        return new SegmentationParams(segmentSize, segmentMapping);
     }
 
-    private void writeMandelbrotParams(DataOutputStream dos, MandelbrotParams params) throws IOException {
-        if (params == null) {
-            dos.writeBoolean(false);
-            return;
-        }
-        dos.writeBoolean(true);
-
-        dos.writeInt(params.startMandelbrotWidth());
-        dos.writeInt(params.startMandelbrotHeight());
-        dos.writeDouble(params.zoom());
-        dos.writeDouble(params.offsetX());
-        dos.writeDouble(params.offsetY());
-        dos.writeInt(params.maxIter());
+    private void writeEncryptionArea(DataOutputStream dos, EncryptionArea area) throws IOException {
+        dos.writeInt(area.startX());
+        dos.writeInt(area.startY());
+        dos.writeInt(area.width());
+        dos.writeInt(area.height());
     }
 
-    private MandelbrotParams readMandelbrotParams(DataInputStream dis) throws IOException {
-        if (!dis.readBoolean()) return null;
-
-        int startWidth = dis.readInt();
-        int startHeight = dis.readInt();
-        double zoom = dis.readDouble();
-        double offsetX = dis.readDouble();
-        double offsetY = dis.readDouble();
-        int maxIter = dis.readInt();
-
-        return new MandelbrotParams(startWidth, startHeight, zoom, offsetX, offsetY, maxIter);
+    private EncryptionArea readEncryptionArea(DataInputStream dis) throws IOException {
+        int startX = dis.readInt();
+        int startY = dis.readInt();
+        int width = dis.readInt();
+        int height = dis.readInt();
+        return new EncryptionArea(startX, startY, width, height);
     }
 }

@@ -39,8 +39,6 @@ public class BinaryFile {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              DataOutputStream dos = new DataOutputStream(baos)) {
 
-            dos.writeInt(params.startMandelbrotWidth());
-            dos.writeInt(params.startMandelbrotHeight());
             dos.writeDouble(params.zoom());
             dos.writeDouble(params.offsetX());
             dos.writeDouble(params.offsetY());
@@ -85,8 +83,6 @@ public class BinaryFile {
 
             try (DataInputStream dataDis = new DataInputStream(new ByteArrayInputStream(decryptedData))) {
                 return new MandelbrotParams(
-                        dataDis.readInt(),    // startMandelbrotWidth
-                        dataDis.readInt(),    // startMandelbrotHeight
                         dataDis.readDouble(), // zoom
                         dataDis.readDouble(), // offsetX
                         dataDis.readDouble(), // offsetY
@@ -160,12 +156,12 @@ public class BinaryFile {
 //            dos.writeInt(params.width());
 //            dos.writeInt(params.height());
 //
-//            byte[] encryptedData = drbg.encryptData(baos.toByteArray());
+//            byte[] encryptedImageData = drbg.encryptData(baos.toByteArray());
 //
 //            // Сохраняем зашифрованные данные
 //            try (DataOutputStream fileDos = new DataOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
-//                fileDos.writeInt(encryptedData.length);
-//                fileDos.write(encryptedData);
+//                fileDos.writeInt(encryptedImageData.length);
+//                fileDos.write(encryptedImageData);
 //            }
 //
 //            logger.info("Зашифрованные параметры с masterSeed сохранены в файл {}", filePath);
@@ -213,10 +209,10 @@ public class BinaryFile {
 //    public Pair<KeyDecoderParams, byte[]> loadKeyDecoderFromBinaryFile(String filePath) {
 //        try (DataInputStream dis = new DataInputStream(Files.newInputStream(Paths.get(filePath)))) {
 //            int dataLength = dis.readInt();
-//            byte[] encryptedData = new byte[dataLength];
-//            dis.readFully(encryptedData);
+//            byte[] encryptedImageData = new byte[dataLength];
+//            dis.readFully(encryptedImageData);
 //
-//            byte[] decryptedData = drbg.decryptData(encryptedData);
+//            byte[] decryptedData = drbg.decryptData(encryptedImageData);
 //
 //            try (DataInputStream dataDis = new DataInputStream(new ByteArrayInputStream(decryptedData))) {
 //                // Читаем masterSeed
@@ -226,7 +222,7 @@ public class BinaryFile {
 //
 //                // Используем настоящий masterSeed для дешифрования параметров
 //                drbg.initialize(masterSeed);
-//                byte[] realDecryptedData = drbg.decryptData(encryptedData);
+//                byte[] realDecryptedData = drbg.decryptData(encryptedImageData);
 //
 //                // Читаем параметры из правильно дешифрованных данных
 //                try (DataInputStream realDataDis = new DataInputStream(new ByteArrayInputStream(realDecryptedData))) {
@@ -288,8 +284,8 @@ public class BinaryFile {
             dos.write(encryptedParams.salt());
 
             // Записываем зашифрованные данные
-            dos.writeInt(encryptedParams.encryptedData().length);
-            dos.write(encryptedParams.encryptedData());
+            dos.writeInt(encryptedParams.encryptedImageData().length);
+            dos.write(encryptedParams.encryptedImageData());
 
             byte[] binaryData = baos.toByteArray();
 

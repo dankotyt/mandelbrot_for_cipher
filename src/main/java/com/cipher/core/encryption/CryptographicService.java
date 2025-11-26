@@ -17,6 +17,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.awt.image.BufferedImage;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -39,7 +40,7 @@ public class CryptographicService {
     private final ConnectionManager connectionManager;
 
     public EncryptionDataResult encryptData(EncryptionResult result) throws Exception {
-        byte[] data = serializer.serialize(result);
+        byte[] imageData = serializer.serializeImage(result.encryptedImage());
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
 
@@ -55,14 +56,14 @@ public class CryptographicService {
         GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
         cipher.init(Cipher.ENCRYPT_MODE, key, parameterSpec);
 
-        byte[] encryptedData = cipher.doFinal(data);
+        byte[] encryptedImageData = cipher.doFinal(imageData);
 
-        return new EncryptionDataResult(encryptedData, iv, salt);
+        return new EncryptionDataResult(encryptedImageData, result.params(), iv, salt);
     }
 
-    public EncryptionResult decryptData(EncryptionDataResult encryptedDataResult, InetAddress peerAddress) throws Exception {
+    public BufferedImage decryptData(EncryptionDataResult encryptedDataResult, InetAddress peerAddress) throws Exception {
         try {
-            byte[] encryptedData = encryptedDataResult.encryptedData();
+            byte[] encryptedImageData  = encryptedDataResult.encryptedImageData();
             byte[] iv = encryptedDataResult.iv();
             byte[] salt = encryptedDataResult.salt();
 
@@ -76,9 +77,10 @@ public class CryptographicService {
             GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
             cipher.init(Cipher.DECRYPT_MODE, key, parameterSpec);
 
-            byte[] decryptedData = cipher.doFinal(encryptedData);
+            byte[] decryptedImageData = cipher.doFinal(encryptedImageData);
 
-            return serializer.deserialize(decryptedData);
+            // Десериализуем изображение из байтов
+            return serializer.deserializeImage(decryptedImageData);
 
         } catch (Exception e) {
             logger.error("Decryption failed for peer {}: {}", peerAddress.getHostAddress(), e.getMessage());

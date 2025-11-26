@@ -210,6 +210,9 @@ public class SceneManager {
         }
     }
 
+    public void showChatPanel() {
+        showScreen("/fxml/network/chat.fxml");
+    }
 
     public void showChatPanel(DeviceDTO device) {
         try {

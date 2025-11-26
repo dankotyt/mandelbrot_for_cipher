@@ -42,29 +42,24 @@ public void encryptWhole(BufferedImage originalImage,
     BufferedImage finalFractal = mandelbrotService
             .generateImage(segmentationUpdateImage.getWidth(), segmentationUpdateImage.getHeight());
 
+    BufferedImage encryptedImage = XOR.performXOR(segmentationUpdateImage, finalFractal);
+
     EncryptionResult result = new EncryptionResult(
-            segmentationUpdateImage,
-            finalFractal,
+            encryptedImage,
             new EncryptionParams(
                     new EncryptionArea(
                             0, 0,
                             segmentationUpdateImage.getWidth(),
-                            segmentationUpdateImage.getHeight(),
-                            true
+                            segmentationUpdateImage.getHeight()
                     ),
                     new SegmentationParams(
                             segmentationResult.segmentSize(),
-                            segmentationResult.paddedWidth(),
-                            segmentationResult.paddedHeight(),
                             segmentationResult.segmentMapping()
                     ),
                     mandelbrotService.getCurrentParams()
             )
     );
-
-    // Передаем peerAddress в cryptographicService
     EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
-    BufferedImage encryptedImage = XOR.performXOR(segmentationUpdateImage, finalFractal);
 
     sceneManager.showEncryptFinalPanel(encryptedImage, cipherDataResult);
 }
@@ -119,19 +114,15 @@ public void encryptWhole(BufferedImage originalImage,
 
         // Создаем EncryptionResult с оригинальными размерами
         EncryptionResult result = new EncryptionResult(
-                finalImage, // Теперь передаем всё изображение
-                finalFractal,
+                finalImage,
                 new EncryptionParams(
                         new EncryptionArea(
                                 startX, startY,
                                 width,
-                                height,
-                                false
+                                height
                         ),
                         new SegmentationParams(
                                 segmentationResult.segmentSize(),
-                                segmentationResult.paddedWidth(),
-                                segmentationResult.paddedHeight(),
                                 segmentationResult.segmentMapping()
                         ),
                         mandelbrotService.getCurrentParams()
@@ -143,15 +134,5 @@ public void encryptWhole(BufferedImage originalImage,
 
         // Передаем полное изображение с зашифрованной областью
         sceneManager.showEncryptFinalPanel(finalImage, cipherDataResult);
-    }
-
-    // Метод для проверки возможности шифрования
-    public boolean canEncryptToPeer(InetAddress peerAddress) {
-        return keyExchangeService.isConnectedTo(peerAddress);
-    }
-
-    // Метод для получения списка доступных пиров
-    public Set<InetAddress> getAvailablePeers() {
-        return keyExchangeService.getActiveConnections().keySet();
     }
 }

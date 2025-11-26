@@ -94,10 +94,9 @@ public class ChatController implements ChatService.ChatListener {
 
             // Автоматически устанавливаем P2P соединение
             new Thread(() -> {
-                try {
-                    Thread.sleep(500); // Даем время на инициализацию UI
+                //Thread.sleep(500); // Даем время на инициализацию UI
 
-                    boolean connected = chatService.connectToPeer(deviceIp);
+                boolean connected = chatService.connectToPeer(deviceIp);
 
                     Platform.runLater(() -> {
                         if (connected) {
@@ -110,9 +109,6 @@ public class ChatController implements ChatService.ChatListener {
                         }
                     });
 
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
             }).start();
         });
     }
@@ -262,7 +258,7 @@ public class ChatController implements ChatService.ChatListener {
                 byte[] fileData = Files.readAllBytes(selectedFile.toPath());
                 chatService.sendFile(fileData, selectedFile.getName());
 
-                displayFileMessage(selectedFile.getName(), fileData.length, true);
+                displayFileMessage(fileData, selectedFile.getName(), fileData.length, true);
                 updateStatus("Файл отправлен");
 
             } catch (IOException e) {
@@ -473,6 +469,12 @@ public class ChatController implements ChatService.ChatListener {
             imageView.setPreserveRatio(true);
             imageView.getStyleClass().add("message-image");
 
+            imageView.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) { // двойной клик
+                    saveImageToDevice(imageData, fileName);
+                }
+            });
+
             Label fileNameLabel = new Label(fileName);
             fileNameLabel.getStyleClass().add("image-file-name");
 
@@ -494,7 +496,7 @@ public class ChatController implements ChatService.ChatListener {
         }
     }
 
-    private void displayFileMessage(String fileName, long fileSize, boolean isOwnMessage) {
+    private void displayFileMessage(byte[] fileData, String fileName, long fileSize, boolean isOwnMessage) {
         hideNoMessagesHint();
 
         HBox messageBox = new HBox();
@@ -530,10 +532,34 @@ public class ChatController implements ChatService.ChatListener {
         fileContent.getStyleClass().add("file-content");
         fileContent.setAlignment(Pos.CENTER_LEFT);
 
+        // Добавляем обработчик клика для сохранения файла
+        fileContent.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                saveFileToDevice(fileData, fileName);
+            }
+        });
+
         messageContent.getChildren().add(fileContent);
         messageBox.getChildren().add(messageContent);
 
         messagesContainer.getChildren().add(messageBox);
+    }
+
+    private void saveFileToDevice(byte[] fileData, String fileName) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить файл");
+        fileChooser.setInitialFileName(fileName);
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+
+        File file = fileChooser.showSaveDialog(messageTextArea.getScene().getWindow());
+        if (file != null) {
+            try {
+                Files.write(file.toPath(), fileData);
+                dialogDisplayer.showSuccessDialog("Файл сохранен: " + file.getAbsolutePath());
+            } catch (IOException e) {
+                dialogDisplayer.showErrorDialog("Не удалось сохранить файл");
+            }
+        }
     }
 
     private String formatFileSize(long bytes) {
@@ -571,6 +597,29 @@ public class ChatController implements ChatService.ChatListener {
             }
         }
     }
+
+    private void saveImageToDevice(byte[] imageData, String fileName) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить изображение");
+        fileChooser.setInitialFileName(fileName);
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PNG", "*.png"),
+                new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg")
+        );
+
+        // Используем любой доступный UI элемент для контекста
+        File file = fileChooser.showSaveDialog(messageTextArea.getScene().getWindow());
+        if (file != null) {
+            try {
+                Files.write(file.toPath(), imageData);
+                dialogDisplayer.showSuccessDialog("Изображение сохранено: " + file.getAbsolutePath());
+            } catch (IOException e) {
+                dialogDisplayer.showErrorDialog("Не удалось сохранить изображение");
+            }
+        }
+    }
+
+
 
     /**
      * Очистка ресурсов при закрытии чата

@@ -7,7 +7,6 @@ import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
 import com.cipher.core.service.network.impl.ECDHKeyExchangeServiceImpl;
-import com.cipher.core.utils.NetworkManager;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
 import org.springframework.context.annotation.Bean;
@@ -42,14 +41,6 @@ public class NetworkConfig {
     @Bean
     public KeyExchangeService keyExchangeService(KeyExchangeClient keyExchangeClient) {
         return new ECDHKeyExchangeServiceImpl(keyExchangeClient);
-    }
-
-    @Bean
-    public NetworkManager networkManager(NetworkDiscoveryService networkDiscoveryService,
-                                         KeyExchangeService keyExchangeService,
-                                         PeerConnector peerConnector,
-                                         ConnectionManager connectionManager) {
-        return new NetworkManager(networkDiscoveryService, keyExchangeService, peerConnector, connectionManager);
     }
 
     @Bean
