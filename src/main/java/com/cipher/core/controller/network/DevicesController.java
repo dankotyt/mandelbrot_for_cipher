@@ -6,7 +6,7 @@ import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkVisibilityService;
 import com.cipher.core.service.network.impl.ConnectionServiceImpl;
-import com.cipher.core.service.network.NetworkService;
+import com.cipher.core.service.network.impl.NetworkServiceImpl;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import javafx.application.Platform;
@@ -27,11 +27,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Controller
 @Scope("prototype")
@@ -51,7 +49,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ConnectionServiceImpl connectionService;
-    private final NetworkService networkService;
+    private final NetworkServiceImpl networkService;
     private final KeyExchangeService keyExchangeService;
     private final DeviceDiscoveryEventListener deviceEventListener;
     private final NetworkVisibilityService networkVisibilityService;
@@ -285,45 +283,61 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
     private void refreshDevices() {
         try {
-            updateStatus("Поиск устройств...");
+            updateStatus("Обновление списка устройств...");
 
-            new Thread(() -> {
+            // НЕ создаем новый поток! Работаем в UI потоке, т.к. метод не блокирующий
+            Platform.runLater(() -> {
                 try {
-                    List<DeviceDTO> discoveredDevices = networkService.discoverLocalDevices();
+                    // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД, а не активное сканирование
+                    List<DeviceDTO> discoveredDevices = networkService.getDiscoveredDevices();
 
+                    // Синхронизируем с deviceMap
                     synchronized (deviceMap) {
+                        // Очищаем старые записи, которые больше не обнаружены
+                        Set<String> currentIps = discoveredDevices.stream()
+                                .map(DeviceDTO::ip)
+                                .collect(Collectors.toSet());
+
+                        // Удаляем устройства, которые больше не обнаружены
+                        List<String> toRemove = new ArrayList<>();
+                        for (String ip : deviceMap.keySet()) {
+                            if (!currentIps.contains(ip) && !isSelfIpAddress(ip)) {
+                                toRemove.add(ip);
+                            }
+                        }
+
+                        for (String ip : toRemove) {
+                            deviceMap.remove(ip);
+                            logger.debug("Удалено устройство (больше не обнаружено): {}", ip);
+                        }
+
+                        // Добавляем новые обнаруженные устройства
                         for (DeviceDTO device : discoveredDevices) {
                             if (!isSelfIpAddress(device.ip())) {
-                                // Добавляем только если еще нет
-                                if (!deviceMap.containsKey(device.ip())) {
-                                    deviceMap.put(device.ip(), device);
-                                    logger.debug("Добавлено новое устройство при refresh: {}",
-                                            device.ip());
-                                }
+                                deviceMap.put(device.ip(), device);
                             }
                         }
                     }
 
                     updateDeviceListUI();
 
-                    Platform.runLater(() -> {
-                        int count = deviceMap.size();
-                        updateStatus("Найдено устройств: " + count);
+                    int count = deviceMap.size();
+                    updateStatus("Доступно устройств: " + count);
 
-                        connectionService.checkIncomingRequests();
-                    });
+                    // Проверяем входящие запросы
+                    connectionService.checkIncomingRequests();
+
+                    logger.info("Список устройств обновлен. Устройств: {}", count);
 
                 } catch (Exception e) {
-                    Platform.runLater(() -> {
-                        logger.error("Ошибка при обновлении устройств: {}", e.getMessage());
-                        updateStatus("Ошибка поиска устройств");
-                    });
+                    logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
+                    updateStatus("Ошибка обновления списка");
                 }
-            }).start();
+            });
 
         } catch (Exception e) {
             logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
-            updateStatus("Ошибка поиска устройств");
+            updateStatus("Ошибка обновления списка");
         }
     }
 

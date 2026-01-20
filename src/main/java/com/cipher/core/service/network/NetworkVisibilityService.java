@@ -75,9 +75,6 @@ public class NetworkVisibilityService {
                 // Останавливаем сервер анонсирования
                 discoveryServer.stop();
 
-                // Останавливаем обнаружение
-                networkDiscoveryService.stopDiscovery();
-
                 log.info("🔇 Устройство стало невидимым в сети");
             } catch (Exception e) {
                 log.error("Ошибка при становлении невидимым: {}", e.getMessage(), e);

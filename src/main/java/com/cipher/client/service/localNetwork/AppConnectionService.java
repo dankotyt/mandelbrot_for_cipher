@@ -5,6 +5,7 @@ import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.service.network.*;
+import com.cipher.core.service.network.impl.NetworkServiceImpl;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import jakarta.annotation.PostConstruct;
@@ -42,7 +43,7 @@ public class AppConnectionService {
 
     private final ConnectionService connectionService;
     private final DialogDisplayer dialogDisplayer;
-    private final NetworkService networkService;
+    private final NetworkServiceImpl networkServiceImpl;
     private final SenderConnectionService senderConnectionService;
     private final KeyExchangeService keyExchangeService;
     private final SceneManager sceneManager;
@@ -210,7 +211,7 @@ public class AppConnectionService {
 
             if (accepted) {
                 // Отправляем подтверждение
-                DeviceDTO currentDevice = networkService.getCurrentDevice();
+                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
                 senderConnectionService.sendAcceptResponse(clientIp, currentDevice);
 
                 ConnectionRequestDTO request = createRequestDTO(remoteDevice,
@@ -249,7 +250,7 @@ public class AppConnectionService {
 
             } else {
                 // Отправляем отклонение
-                DeviceDTO currentDevice = networkService.getCurrentDevice();
+                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
                 senderConnectionService.sendRejectResponse(clientIp, currentDevice);
 
                 ConnectionRequestDTO request = createRequestDTO(remoteDevice,
@@ -312,7 +313,7 @@ public class AppConnectionService {
 
     private ConnectionRequestDTO createRequestDTO(DeviceDTO remoteDevice,
                                                   ConnectionRequestDTO.RequestStatus status) {
-        DeviceDTO currentDevice = networkService.getCurrentDevice();
+        DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
 
         return new ConnectionRequestDTO(
                 currentDevice.name(), currentDevice.ip(),

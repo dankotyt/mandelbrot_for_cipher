@@ -98,36 +98,26 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     @Override
     public void stopDiscovery() {
-        if (initialized.compareAndSet(true, false)) {
-            // Останавливаем сервер анонсирования
-            discoveryServer.stop();
 
-            // Останавливаем scheduler
-            if (scheduler != null && !scheduler.isShutdown()) {
-                try {
-                    scheduler.shutdown();
-                    if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
-                        scheduler.shutdownNow();
-                    }
-                } catch (InterruptedException e) {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            try {
+                scheduler.shutdown();
+                if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
                     scheduler.shutdownNow();
-                    Thread.currentThread().interrupt();
                 }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+                Thread.currentThread().interrupt();
             }
-
-            // Очищаем списки
-            discoveredPeers.clear();
-            connectedPeers.clear();
-
-            log.info("Network discovery completely stopped");
         }
+
+        initialized.set(false);
+        log.info("Network discovery service stopped (still listening for devices)");
     }
 
     @Override
     public void initialize() {
         if (initialized.compareAndSet(false, true) && !wasShutdown) {
-            discoveryServer.start();
-
             if (scheduler == null || scheduler.isShutdown() || scheduler.isTerminated()) {
                 scheduler = Executors.newScheduledThreadPool(2);
                 log.info("Создан новый scheduler для NetworkDiscoveryService");
@@ -301,11 +291,17 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     }
 
     public void permanentShutdown() {
-        stopDiscovery();
-        wasShutdown = true;
         if (scheduler != null) {
             scheduler.shutdownNow();
         }
+
+        discoveredPeers.clear();
+        lastSeenTimes.clear();
+        connectedPeers.clear();
+
+        wasShutdown = true;
+        initialized.set(false);
+
         log.info("Network discovery service permanently shutdown");
     }
 }

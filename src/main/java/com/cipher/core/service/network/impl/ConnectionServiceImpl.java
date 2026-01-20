@@ -3,9 +3,7 @@ package com.cipher.core.service.network.impl;
 import com.cipher.client.service.localNetwork.SenderConnectionService;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
-import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.ConnectionService;
-import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import javafx.application.Platform;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionServiceImpl.class);
 
     private final DialogDisplayer dialogDisplayer;
-    private final NetworkService networkService;
+    private final NetworkServiceImpl networkServiceImpl;
     private final SenderConnectionService senderConnectionService;
 
     private final Map<String, ConnectionRequestDTO> pendingRequests = new ConcurrentHashMap<>();
@@ -55,7 +53,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                     return;
                 }
 
-                DeviceDTO currentDevice = networkService.getCurrentDevice();
+                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
                 boolean sent = senderConnectionService.sendConnectionRequest(toDevice.ip(), currentDevice);
 
                 if (sent) {
@@ -153,7 +151,7 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void checkIncomingRequests() {
-        DeviceDTO currentDevice = networkService.getCurrentDevice();
+        DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
 
         pendingRequests.values().stream()
                 .filter(request -> request.toDeviceIp().equals(currentDevice.ip()))
