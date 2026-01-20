@@ -32,19 +32,27 @@ public class DiscoveryServer implements Runnable {
         try {
             socket = new DatagramSocket();
             socket.setBroadcast(true);
-            InetAddress broadcastAddr = InetAddress.getByName(NetworkConstants.BROADCAST_ADDRESS);
+            InetAddress broadcastAddr = InetAddress.getByName(
+                    NetworkConstants.BROADCAST_ADDRESS);
             byte[] buffer = NetworkConstants.DISCOVERY_MESSAGE.getBytes(StandardCharsets.UTF_8);
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
                     broadcastAddr, NetworkConstants.DISCOVERY_PORT);
 
+            int messageCounter = 0;
+
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
-                    // Отправляем только если сервер включен
                     if (enabled.get()) {
                         socket.send(packet);
-                        log.trace("Broadcast сообщение отправлено");
+                        messageCounter++;
+
+                        if (messageCounter % 10 == 0) {
+                            log.debug("Broadcast сообщение #{}, enabled={}",
+                                    messageCounter, enabled.get());
+                        } else {
+                            log.trace("Broadcast сообщение отправлено");
+                        }
                     } else {
-                        // Если выключен, просто спим
                         log.trace("DiscoveryServer выключен, ожидание...");
                     }
 

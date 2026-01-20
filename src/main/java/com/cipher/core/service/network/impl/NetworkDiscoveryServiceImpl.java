@@ -36,12 +36,10 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final Map<InetAddress, Long> lastSeenTimes = new ConcurrentHashMap<>();
 
-    private static final long PEER_TIMEOUT_MS = 15000;
+    private static final long PEER_TIMEOUT_MS = 20000;
 
     private ScheduledExecutorService scheduler;
     private boolean wasShutdown = false;
-
-    private static final long CLEANUP_INTERVAL_MS = NetworkConstants.PEER_TIMEOUT_MS / 2;
 
     @Override
     public void onPeerDiscovered(InetAddress peerAddress) {
@@ -139,7 +137,7 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
             } catch (Exception e) {
                 log.error("Error in peer cleanup task: {}", e.getMessage());
             }
-        }, PEER_TIMEOUT_MS / 3, PEER_TIMEOUT_MS / 3, TimeUnit.MILLISECONDS);
+        }, 5000, 5000, TimeUnit.MILLISECONDS);
     }
 
     private void startPeerValidationTask() {

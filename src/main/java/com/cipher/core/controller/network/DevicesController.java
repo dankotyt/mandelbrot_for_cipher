@@ -9,6 +9,7 @@ import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.impl.NetworkServiceImpl;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -21,6 +22,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,22 +96,23 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void setupEventHandlers() {
         backButton.setOnAction(e -> {
             try {
-                boolean confirmed = dialogDisplayer.showConfirmationDialog(
-                        "Выход из локальной сети",
-                        "Вы уверены, что хотите выйти из локальной сети?",
-                        "Ваше устройство станет невидимым для других устройств.\n" +
-                                "Все подключения будут разорваны.",
-                        "Выйти",
-                        "Отмена"
-                );
+//                boolean confirmed = dialogDisplayer.showConfirmationDialog(
+//                        "Выход из локальной сети",
+//                        "Вы уверены, что хотите выйти из локальной сети?",
+//                        "Ваше устройство станет невидимым для других устройств.\n" +
+//                                "Все подключения будут разорваны.",
+//                        "Выйти",
+//                        "Отмена"
+//                );
+//
+//                if (confirmed) {
+//
+//                }
+                cleanup();
 
-                if (confirmed) {
-                    cleanup();
+                sceneManager.showStartPanel();
 
-                    sceneManager.showStartPanel();
-
-                    logger.info("Пользователь вышел из локальной сети");
-                }
+                logger.info("Пользователь вышел из локальной сети");
             } catch (Exception ex) {
                 logger.error("Ошибка при выходе из локальной сети: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка выхода: " + ex.getMessage());
@@ -283,57 +286,67 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
     private void refreshDevices() {
         try {
-            updateStatus("Обновление списка устройств...");
+            updateStatus("Поиск устройств...");
+            logger.info("Начато обновление списка устройств");
 
-            // НЕ создаем новый поток! Работаем в UI потоке, т.к. метод не блокирующий
-            Platform.runLater(() -> {
-                try {
-                    // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД, а не активное сканирование
-                    List<DeviceDTO> discoveredDevices = networkService.getDiscoveredDevices();
+            PauseTransition pause = new PauseTransition(Duration.millis(500));
+            pause.setOnFinished(event -> {
+                Platform.runLater(() -> {
+                    try {
+                        List<DeviceDTO> discoveredDevices = networkService.getDiscoveredDevices();
 
-                    // Синхронизируем с deviceMap
-                    synchronized (deviceMap) {
-                        // Очищаем старые записи, которые больше не обнаружены
-                        Set<String> currentIps = discoveredDevices.stream()
-                                .map(DeviceDTO::ip)
-                                .collect(Collectors.toSet());
+                        synchronized (deviceMap) {
+                            // Очищаем старые записи, которые больше не обнаружены
+                            Set<String> currentIps = discoveredDevices.stream()
+                                    .map(DeviceDTO::ip)
+                                    .collect(Collectors.toSet());
 
-                        // Удаляем устройства, которые больше не обнаружены
-                        List<String> toRemove = new ArrayList<>();
-                        for (String ip : deviceMap.keySet()) {
-                            if (!currentIps.contains(ip) && !isSelfIpAddress(ip)) {
-                                toRemove.add(ip);
+                            // Удаляем устройства, которые больше не обнаружены
+                            List<String> toRemove = new ArrayList<>();
+                            for (String ip : deviceMap.keySet()) {
+                                if (!currentIps.contains(ip) && !isSelfIpAddress(ip)) {
+                                    toRemove.add(ip);
+                                }
+                            }
+
+                            for (String ip : toRemove) {
+                                deviceMap.remove(ip);
+                                logger.debug("Удалено устройство (больше не обнаружено): {}", ip);
+                            }
+
+                            // Добавляем новые обнаруженные устройства
+                            for (DeviceDTO device : discoveredDevices) {
+                                if (!isSelfIpAddress(device.ip())) {
+                                    deviceMap.put(device.ip(), device);
+                                }
                             }
                         }
 
-                        for (String ip : toRemove) {
-                            deviceMap.remove(ip);
-                            logger.debug("Удалено устройство (больше не обнаружено): {}", ip);
+                        // Обновляем UI
+                        updateDeviceListUI();
+
+                        // 3. Теперь показываем результат поиска
+                        int count = deviceMap.size();
+                        if (count == 0) {
+                            updateStatus("Устройства не найдены");
+                        } else {
+                            updateStatus("Найдено устройств: " + count);
                         }
 
-                        // Добавляем новые обнаруженные устройства
-                        for (DeviceDTO device : discoveredDevices) {
-                            if (!isSelfIpAddress(device.ip())) {
-                                deviceMap.put(device.ip(), device);
-                            }
-                        }
+                        // Проверяем входящие запросы
+                        connectionService.checkIncomingRequests();
+
+                        logger.info("Список устройств обновлен. Устройств: {}", count);
+
+                    } catch (Exception e) {
+                        logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
+                        updateStatus("Ошибка обновления списка");
                     }
-
-                    updateDeviceListUI();
-
-                    int count = deviceMap.size();
-                    updateStatus("Доступно устройств: " + count);
-
-                    // Проверяем входящие запросы
-                    connectionService.checkIncomingRequests();
-
-                    logger.info("Список устройств обновлен. Устройств: {}", count);
-
-                } catch (Exception e) {
-                    logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
-                    updateStatus("Ошибка обновления списка");
-                }
+                });
             });
+
+            // Запускаем паузу
+            pause.play();
 
         } catch (Exception e) {
             logger.error("Ошибка при обновлении устройств: {}", e.getMessage(), e);
