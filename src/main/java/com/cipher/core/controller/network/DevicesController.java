@@ -96,12 +96,25 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void setupEventHandlers() {
         backButton.setOnAction(e -> {
             try {
-                cleanup();
-                logger.debug("Нажата кнопка 'Назад'");
-                sceneManager.showStartPanel();
+                boolean confirmed = dialogDisplayer.showConfirmationDialog(
+                        "Выход из локальной сети",
+                        "Вы уверены, что хотите выйти из локальной сети?",
+                        "Ваше устройство станет невидимым для других устройств.\n" +
+                                "Все подключения будут разорваны.",
+                        "Выйти",
+                        "Отмена"
+                );
+
+                if (confirmed) {
+                    cleanup();
+
+                    sceneManager.showStartPanel();
+
+                    logger.info("Пользователь вышел из локальной сети");
+                }
             } catch (Exception ex) {
-                logger.error("Ошибка при переходе на стартовую панель: {}", ex.getMessage(), ex);
-                dialogDisplayer.showErrorDialog("Ошибка перехода: " + ex.getMessage());
+                logger.error("Ошибка при выходе из локальной сети: {}", ex.getMessage(), ex);
+                dialogDisplayer.showErrorDialog("Ошибка выхода: " + ex.getMessage());
             }
         });
 
@@ -572,18 +585,36 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     }
 
     public void cleanup() {
-        networkVisibilityService.becomeInvisible();
+        logger.info("Начало очистки DevicesController...");
 
-        connectionService.removeListener(this);
+        try {
+            // 1. Становимся невидимыми
+            networkVisibilityService.becomeInvisible();
+            logger.info("Устройство стало невидимым");
 
-        if (discoverySubscriptionId != null) {
-            deviceEventListener.unsubscribe(discoverySubscriptionId);
+            // 2. Отписываемся от соединений
+            connectionService.removeListener(this);
+            logger.info("Отписались от ConnectionService");
+
+            // 3. Отписываемся от событий обнаружения
+            if (discoverySubscriptionId != null) {
+                deviceEventListener.unsubscribe(discoverySubscriptionId);
+                logger.info("Отписались от событий обнаружения: {}", discoverySubscriptionId);
+            }
+            if (lostSubscriptionId != null) {
+                deviceEventListener.unsubscribe(lostSubscriptionId);
+                logger.info("Отписались от событий потери: {}", lostSubscriptionId);
+            }
+
+            // 4. Очищаем данные
+            deviceMap.clear();
+            availableDevices.clear();
+            logger.info("Данные очищены");
+
+            logger.info("DevicesController полностью очищен");
+
+        } catch (Exception e) {
+            logger.error("Ошибка при очистке DevicesController: {}", e.getMessage(), e);
         }
-        if (lostSubscriptionId != null) {
-            deviceEventListener.unsubscribe(lostSubscriptionId);
-        }
-
-        deviceMap.clear();
-        availableDevices.clear();
     }
 }

@@ -31,8 +31,10 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final Set<InetAddress> connectedPeers = ConcurrentHashMap.newKeySet();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+    private ScheduledExecutorService scheduler;
+    private boolean wasShutdown = false;
 
     private static final long CLEANUP_INTERVAL_MS = NetworkConstants.PEER_TIMEOUT_MS / 2;
 
@@ -88,25 +90,46 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     @Override
     public void stopDiscovery() {
         if (initialized.compareAndSet(true, false)) {
+            // Останавливаем сервер анонсирования
             discoveryServer.stop();
-            scheduler.shutdown();
+
+            // Останавливаем scheduler
+            if (scheduler != null && !scheduler.isShutdown()) {
+                try {
+                    scheduler.shutdown();
+                    if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
+                        scheduler.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    scheduler.shutdownNow();
+                    Thread.currentThread().interrupt();
+                }
+            }
+
+            // Очищаем списки
             discoveredPeers.clear();
             connectedPeers.clear();
+
             log.info("Network discovery completely stopped");
         }
     }
 
     @Override
     public void initialize() {
-        if (initialized.compareAndSet(false, true)) {
-            // Запускаем сервер для анонсирования
+        if (initialized.compareAndSet(false, true) && !wasShutdown) {
             discoveryServer.start();
 
-            // Запускаем периодические задачи
+            if (scheduler == null || scheduler.isShutdown() || scheduler.isTerminated()) {
+                scheduler = Executors.newScheduledThreadPool(2);
+                log.info("Создан новый scheduler для NetworkDiscoveryService");
+            }
+
             startCleanupTask();
             startPeerValidationTask();
 
             log.info("Network discovery service initialized");
+        } else if (wasShutdown) {
+            log.warn("Cannot initialize - service was permanently shutdown");
         }
     }
 
@@ -258,16 +281,12 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
         return initialized.get();
     }
 
-    public void shutdown() {
+    public void permanentShutdown() {
         stopDiscovery();
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow();
-            }
-        } catch (InterruptedException e) {
+        wasShutdown = true;
+        if (scheduler != null) {
             scheduler.shutdownNow();
-            Thread.currentThread().interrupt();
         }
-        log.info("Network discovery service shutdown complete");
+        log.info("Network discovery service permanently shutdown");
     }
 }

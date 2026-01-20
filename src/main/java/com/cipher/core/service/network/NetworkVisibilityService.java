@@ -2,6 +2,7 @@ package com.cipher.core.service.network;
 
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
+import com.cipher.core.service.network.impl.NetworkDiscoveryServiceImpl;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,11 @@ public class NetworkVisibilityService {
     public void becomeVisible() {
         if (isVisible.compareAndSet(false, true)) {
             try {
+                if (!isInitialized.get()) {
+                    log.warn("Сервис не инициализирован, выполняется init...");
+                    init();
+                }
+
                 // Запускаем сервер для анонсирования
                 discoveryServer.start();
 
@@ -51,9 +57,12 @@ public class NetworkVisibilityService {
 
                 log.info("✅ Устройство стало видимым в сети");
             } catch (Exception e) {
-                log.error("Ошибка при становлении видимым: {}", e.getMessage());
+                log.error("Ошибка при становлении видимым: {}", e.getMessage(), e);
                 isVisible.set(false);
+                throw new RuntimeException("Не удалось стать видимым", e);
             }
+        } else {
+            log.debug("Устройство уже видимо");
         }
     }
 
@@ -71,8 +80,10 @@ public class NetworkVisibilityService {
 
                 log.info("🔇 Устройство стало невидимым в сети");
             } catch (Exception e) {
-                log.error("Ошибка при становлении невидимым: {}", e.getMessage());
+                log.error("Ошибка при становлении невидимым: {}", e.getMessage(), e);
             }
+        } else {
+            log.debug("Устройство уже невидимо");
         }
     }
 
@@ -109,6 +120,10 @@ public class NetworkVisibilityService {
     public void shutdown() {
         becomeInvisible();
         try {
+            // Полное завершение работы
+            if (networkDiscoveryService instanceof NetworkDiscoveryServiceImpl) {
+                ((NetworkDiscoveryServiceImpl) networkDiscoveryService).permanentShutdown();
+            }
             discoveryClient.stop();
         } catch (Exception e) {
             log.warn("Ошибка остановки клиента: {}", e.getMessage());
