@@ -16,10 +16,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DiscoveryServer implements Runnable {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean enabled = new AtomicBoolean(false);
     private Thread broadcasterThread;
 
     public DiscoveryServer() {
         log.info("Discovery server initialized");
+    }
+
+    /**
+     * Включить/выключить сервер
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled.set(enabled);
+        log.info("DiscoveryServer {}",
+                enabled ? "включен (устройство видимо)" : "выключен (устройство невидимо)");
     }
 
     @Override
@@ -36,8 +46,11 @@ public class DiscoveryServer implements Runnable {
 
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
-                    socket.send(packet);
-                    log.debug("Broadcast discovery message sent");
+                    // Отправляем только если сервер включен
+                    if (enabled.get()) {
+                        socket.send(packet);
+                        log.debug("Broadcast сообщение отправлено (видимость: ON)");
+                    }
 
                     Thread.sleep(NetworkConstants.ANNOUNCE_INTERVAL_MS);
 
@@ -45,7 +58,9 @@ public class DiscoveryServer implements Runnable {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (IOException e) {
-                    log.error("Error sending broadcast message: {}", e.getMessage());
+                    if (enabled.get()) { // Логируем только если должны были отправлять
+                        log.error("Ошибка отправки broadcast сообщения: {}", e.getMessage());
+                    }
                 }
             }
         } catch (IOException e) {
@@ -57,6 +72,7 @@ public class DiscoveryServer implements Runnable {
 
     public void start() {
         if (broadcasterThread == null || !broadcasterThread.isAlive()) {
+            setEnabled(true); // Включаем сервер
             broadcasterThread = new Thread(this, "Discovery-Server");
             broadcasterThread.setDaemon(true);
             broadcasterThread.start();
@@ -64,6 +80,7 @@ public class DiscoveryServer implements Runnable {
     }
 
     public void stop() {
+        setEnabled(false); // Выключаем сервер
         running.set(false);
         if (broadcasterThread != null) {
             broadcasterThread.interrupt();

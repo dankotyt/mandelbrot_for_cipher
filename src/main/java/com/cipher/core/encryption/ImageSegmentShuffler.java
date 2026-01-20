@@ -20,8 +20,6 @@ public class ImageSegmentShuffler {
 
     private byte[] masterSeed;
 
-    private int[] pixels;
-
     public void initializeWithSeed(byte[] seed) {
         this.masterSeed = seed.clone();
     }

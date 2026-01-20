@@ -2,12 +2,13 @@ package com.cipher.core.controller.network;
 
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.NetworkVisibilityService;
 import com.cipher.core.service.network.impl.ConnectionServiceImpl;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.client.service.localNetwork.AppConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -26,7 +27,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 @Scope("prototype")
@@ -48,9 +53,15 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private final ConnectionServiceImpl connectionService;
     private final NetworkService networkService;
     private final KeyExchangeService keyExchangeService;
+    private final DeviceDiscoveryEventListener deviceEventListener;
+    private final NetworkVisibilityService networkVisibilityService;
 
     private List<DeviceDTO> availableDevices;
     private DeviceDTO currentDevice;
+    private String discoverySubscriptionId;
+    private String lostSubscriptionId;
+
+    private final Map<String, DeviceDTO> deviceMap = new ConcurrentHashMap<>();
 
     private volatile long lastRequestTime = 0;
     private static final long REQUEST_COOLDOWN_MS = 60000;
@@ -60,11 +71,18 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         try {
             logger.info("Инициализация DevicesController");
 
+            // СТАНОВИМСЯ ВИДИМЫМИ В СЕТИ
+            networkVisibilityService.becomeVisible();
+
             currentDevice = networkService.getCurrentDevice();
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
 
             setupEventHandlers();
             connectionService.addListener(this);
+
+            subscribeToDeviceEvents();
+
+            // Первоначальная загрузка устройств
             refreshDevices();
 
             logger.info("DevicesController инициализирован успешно");
@@ -78,7 +96,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void setupEventHandlers() {
         backButton.setOnAction(e -> {
             try {
-                connectionService.removeListener(this);
+                cleanup();
                 logger.debug("Нажата кнопка 'Назад'");
                 sceneManager.showStartPanel();
             } catch (Exception ex) {
@@ -89,6 +107,56 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
         refreshButton.setOnAction(e -> refreshDevices());
         manualIpField.setOnAction(e -> handleManualConnection());
+    }
+
+    private void subscribeToDeviceEvents() {
+        // Подписка на обнаружение устройств
+        discoverySubscriptionId = deviceEventListener.subscribeToDiscovery(device -> {
+            logger.info("🔄 Получено новое устройство (event): {}", device);
+
+            // Проверяем, не наше ли это устройство
+            if (isSelfIpAddress(device.ip())) {
+                logger.debug("Пропускаем собственное устройство: {}", device.ip());
+                return;
+            }
+
+            // Добавляем в карту и обновляем UI
+            deviceMap.put(device.ip(), device);
+            updateDeviceListUI();
+
+            // Показываем уведомление (опционально)
+            Platform.runLater(() -> {
+                updateStatus("Найдено новое устройство: " + device.name());
+            });
+        });
+
+        // Подписка на потерю устройств
+        lostSubscriptionId = deviceEventListener.subscribeToLost(address -> {
+            logger.info("🔴 Устройство потеряно: {}", address.getHostAddress());
+
+            // Удаляем из карты
+            deviceMap.remove(address.getHostAddress());
+            updateDeviceListUI();
+
+            Platform.runLater(() -> {
+                updateStatus("Устройство отключено: " + address.getHostAddress());
+            });
+        });
+    }
+
+    private void updateDeviceListUI() {
+        Platform.runLater(() -> {
+            // Обновляем availableDevices из карты
+            availableDevices = new ArrayList<>(deviceMap.values());
+
+            // Сортируем по имени
+            availableDevices.sort(Comparator.comparing(DeviceDTO::name));
+
+            // Перерисовываем список
+            loadDevices();
+
+            logger.debug("UI обновлен, устройств: {}", availableDevices.size());
+        });
     }
 
     @FXML
@@ -210,13 +278,27 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
 
             new Thread(() -> {
                 try {
-                    availableDevices = networkService.discoverLocalDevices();
+                    List<DeviceDTO> discoveredDevices = networkService.discoverLocalDevices();
+
+                    // Синхронизируем с картой
+                    synchronized (deviceMap) {
+                        // Очищаем старые записи
+                        deviceMap.clear();
+
+                        // Добавляем все обнаруженные устройства (кроме своего)
+                        for (DeviceDTO device : discoveredDevices) {
+                            if (!isSelfIpAddress(device.ip())) {
+                                deviceMap.put(device.ip(), device);
+                            }
+                        }
+                    }
+
+                    // Обновляем UI
+                    updateDeviceListUI();
 
                     Platform.runLater(() -> {
-                        loadDevices();
-                        int displayedDevicesCount = countDisplayedDevices();
-
-                        updateStatus("Найдено устройств: " + displayedDevicesCount);
+                        int count = availableDevices != null ? availableDevices.size() : 0;
+                        updateStatus("Найдено устройств: " + count);
 
                         connectionService.checkIncomingRequests();
                     });
@@ -295,16 +377,42 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                 return;
             }
 
-            logger.info("Отправка запроса на подключение и открытие чата с: {}", device);
-            updateStatus("Отправка запроса...");
+            // ПРОВЕРЯЕМ ДОСТУПНОСТЬ УСТРОЙСТВА ПЕРЕД ОТПРАВКОЙ
+            updateStatus("Проверка доступности устройства...");
 
-            // Сразу открываем чат (ожидающий подключения)
-            sceneManager.showChatPanel(device);
+            new Thread(() -> {
+                boolean isReachable = networkService.isAppRunning(device.ip());
 
-            // Отправляем запрос на подключение
-            connectionService.sendConnectionRequest(device);
+                Platform.runLater(() -> {
+                    if (!isReachable) {
+                        updateStatus("Устройство недоступно");
+                        dialogDisplayer.showTimedErrorAlert("Ошибка",
+                                "Устройство недоступно:\n" +
+                                        device.name() + " (" + device.ip() + ")\n\n" +
+                                        "Убедитесь, что программа запущена на удаленном устройстве",
+                                5
+                        );
 
-            updateStatus("Запрос отправлен");
+                        // Удаляем устройство из списка
+                        deviceMap.remove(device.ip());
+                        updateDeviceListUI();
+
+                        return;
+                    }
+
+                    // Устройство доступно - продолжаем
+                    logger.info("Отправка запроса на подключение и открытие чата с: {}", device);
+                    updateStatus("Отправка запроса...");
+
+                    // Сразу открываем чат (ожидающий подключения)
+                    sceneManager.showChatPanel(device);
+
+                    // Отправляем запрос на подключение
+                    connectionService.sendConnectionRequest(device);
+
+                    updateStatus("Запрос отправлен");
+                });
+            }).start();
 
         } catch (Exception e) {
             logger.error("Ошибка при открытии чата: {}", e.getMessage(), e);
@@ -461,5 +569,21 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void hideNoDevicesMessage() {
         noDevicesPane.setVisible(false);
         devicesContainer.setVisible(true);
+    }
+
+    public void cleanup() {
+        networkVisibilityService.becomeInvisible();
+
+        connectionService.removeListener(this);
+
+        if (discoverySubscriptionId != null) {
+            deviceEventListener.unsubscribe(discoverySubscriptionId);
+        }
+        if (lostSubscriptionId != null) {
+            deviceEventListener.unsubscribe(lostSubscriptionId);
+        }
+
+        deviceMap.clear();
+        availableDevices.clear();
     }
 }

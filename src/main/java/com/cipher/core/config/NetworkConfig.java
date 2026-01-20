@@ -2,7 +2,6 @@ package com.cipher.core.config;
 
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.KeyExchangeClient;
-import com.cipher.client.utils.PeerConnector;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
@@ -23,12 +22,6 @@ public class NetworkConfig {
     @Bean
     public DiscoveryClient discoveryClient(NetworkDiscoveryService discoveryService) {
         return new DiscoveryClient(discoveryService);
-    }
-
-    @Bean
-    public PeerConnector peerConnector(KeyExchangeService keyExchangeService,
-                                       KeyExchangeClient keyExchangeClient) {
-        return new PeerConnector(keyExchangeService, keyExchangeClient);
     }
 
 

@@ -1,13 +1,16 @@
 package com.cipher.core.service.network.impl;
 
-import com.cipher.client.utils.PeerConnector;
 import com.cipher.common.utils.NetworkConstants;
+import com.cipher.core.event.DeviceDiscoveredEvent;
+import com.cipher.core.event.DeviceLostEvent;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkDiscoveryService;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -22,8 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     private final DiscoveryServer discoveryServer;
-    private final PeerConnector peerConnector;
+    private final KeyExchangeService keyExchangeService;
     private final ConnectionManager connectionManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final Set<InetAddress> connectedPeers = ConcurrentHashMap.newKeySet();
@@ -34,15 +38,16 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     @Override
     public void onPeerDiscovered(InetAddress peerAddress) {
-        if (discoveredPeers.add(peerAddress)) {
-            log.info("New peer discovered: {}", peerAddress.getHostAddress());
+        // Проверяем, не наше ли это устройство
+        if (isOwnAddress(peerAddress)) {
+            return;
+        }
 
-            peerConnector.connectToPeer(peerAddress)
-                    .thenAccept(success -> {
-                        if (success) {
-                            onPeerConnected(peerAddress);
-                        }
-                    });
+        // Проверяем, не дублируется ли
+        if (discoveredPeers.add(peerAddress)) {
+            log.info("✅ Устройство обнаружено: {}", peerAddress.getHostAddress());
+
+            publishDeviceDiscoveredEvent(peerAddress);
 
             printDiscoveredPeers();
         }
@@ -105,21 +110,6 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
         }
     }
 
-    public CompletableFuture<Boolean> connectToDiscoveredPeer(InetAddress peerAddress) {
-        return peerConnector.connectToPeer(peerAddress)
-                .thenApply(success -> {
-                    if (success) {
-                        onPeerConnected(peerAddress);
-                    }
-                    return success;
-                });
-    }
-
-    public void disconnectFromPeer(InetAddress peerAddress) {
-        peerConnector.disconnectFromPeer(peerAddress);
-        onPeerDisconnected(peerAddress);
-    }
-
     private void startCleanupTask() {
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -137,7 +127,7 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
             } catch (Exception e) {
                 log.error("Error in peer validation task: {}", e.getMessage());
             }
-        }, 30, 30, TimeUnit.SECONDS);
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
     private void cleanupExpiredPeers() {
@@ -158,7 +148,7 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     private void validateConnectedPeers() {
         connectedPeers.forEach(peer -> {
-            if (!peerConnector.isConnectedTo(peer)) {
+            if (!keyExchangeService.isConnectedTo(peer)) {
                 log.warn("Peer {} is in connected list but connection is lost", peer.getHostAddress());
                 connectedPeers.remove(peer);
                 onPeerDisconnected(peer);
@@ -202,6 +192,66 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
             log.info("Manually removed peer: {}", peerAddress.getHostAddress());
             printDiscoveredPeers();
         }
+    }
+
+    private boolean isOwnAddress(InetAddress address) {
+        try {
+            return address.isAnyLocalAddress() ||
+                    address.isLoopbackAddress() ||
+                    java.net.NetworkInterface.getByInetAddress(address) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void publishDeviceDiscoveredEvent(InetAddress peerAddress) {
+        try {
+            // Пытаемся получить имя устройства
+            String deviceName = resolveDeviceName(peerAddress);
+
+            // Публикуем событие
+            DeviceDiscoveredEvent event = new DeviceDiscoveredEvent(this, peerAddress, deviceName);
+            eventPublisher.publishEvent(event);
+
+            log.debug("Событие об обнаружении устройства опубликовано: {} ({})",
+                    deviceName, peerAddress.getHostAddress());
+
+        } catch (Exception e) {
+            log.warn("Ошибка публикации события: {}", e.getMessage());
+            // Все равно публикуем с базовой информацией
+            DeviceDiscoveredEvent event = new DeviceDiscoveredEvent(
+                    this, peerAddress, peerAddress.getHostAddress());
+            eventPublisher.publishEvent(event);
+        }
+    }
+
+    private String resolveDeviceName(InetAddress address) {
+        try {
+            // Пробуем получить имя хоста
+            String hostName = address.getHostName();
+
+            // Если это IP, а не имя, возвращаем IP
+            if (hostName.equals(address.getHostAddress())) {
+                return "Устройство " + address.getHostAddress();
+            }
+
+            // Очищаем имя от домена (если есть)
+            if (hostName.contains(".")) {
+                return hostName.substring(0, hostName.indexOf('.'));
+            }
+
+            return hostName;
+
+        } catch (Exception e) {
+            return "Устройство " + address.getHostAddress();
+        }
+    }
+
+    private void publishDeviceLostEvent(InetAddress peerAddress) {
+        DeviceLostEvent event = new DeviceLostEvent(this, peerAddress);
+        eventPublisher.publishEvent(event);
+        log.debug("Событие о потере устройства опубликовано: {}",
+                peerAddress.getHostAddress());
     }
 
     public boolean isInitialized() {

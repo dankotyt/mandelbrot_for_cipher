@@ -15,7 +15,7 @@
         <BorderPane styleClass="chat-top-container">
             <left>
                 <HBox style="-fx-padding: 20 0 0 20;">
-                    <Button fx:id="backButton" styleClass="icon-back-button" text="Назад" />
+                    <Button fx:id="backButton" styleClass="icon-back-button" />
                 </HBox>
             </left>
             <center>

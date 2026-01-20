@@ -1,15 +1,10 @@
 package com.cipher.client.service.localNetwork;
 
-import com.cipher.client.service.chat.impl.P2PChatServiceImpl;
-import com.cipher.client.utils.PeerConnector;
 import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.model.ECDHKeyExchange;
-import com.cipher.core.service.network.ConnectionManager;
-import com.cipher.core.service.network.ConnectionService;
-import com.cipher.core.service.network.KeyExchangeService;
-import com.cipher.core.service.network.NetworkService;
+import com.cipher.core.service.network.*;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import jakarta.annotation.PostConstruct;
@@ -49,16 +44,20 @@ public class AppConnectionService {
     private final DialogDisplayer dialogDisplayer;
     private final NetworkService networkService;
     private final SenderConnectionService senderConnectionService;
-    private final PeerConnector peerConnector;
     private final KeyExchangeService keyExchangeService;
-    private final P2PChatServiceImpl chatService;
     private final SceneManager sceneManager;
     private final ConnectionManager connectionManager;
 
     @PostConstruct
     public void startServer() {
+        // ЗАПУСКАЕМ ВСЕГДА (для обработки входящих подключений)
         new Thread(this::runAppServer).start();
         new Thread(this::runKeyExchangeServer).start();
+
+        // НЕ запускаем discovery сервер здесь!
+        // Он запустится только при входе в раздел устройств
+
+        log.info("Серверы приложения запущены (невидимы в сети)");
     }
 
     private void runAppServer() {

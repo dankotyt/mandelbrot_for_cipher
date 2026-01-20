@@ -145,6 +145,7 @@ public class MandelbrotService extends JPanel {
 
         // Получаем мастер-сид из DH обмена
         byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+        drbg.initialize(masterSeed);
 
         // Инициализируем сервисы мастер-сидом
         imageSegmentShuffler.initializeWithSeed(masterSeed);

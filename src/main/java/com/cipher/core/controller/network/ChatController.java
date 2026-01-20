@@ -619,8 +619,6 @@ public class ChatController implements ChatService.ChatListener {
         }
     }
 
-
-
     /**
      * Очистка ресурсов при закрытии чата
      */
