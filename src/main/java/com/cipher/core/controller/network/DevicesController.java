@@ -125,30 +125,28 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     private void subscribeToDeviceEvents() {
         // Подписка на обнаружение устройств
         discoverySubscriptionId = deviceEventListener.subscribeToDiscovery(device -> {
-            logger.info("🔄 Получено новое устройство (event): {}", device);
+            logger.info("🔄 Получено новое устройство: {}", device);
 
-            // Проверяем, не наше ли это устройство
             if (isSelfIpAddress(device.ip())) {
-                logger.debug("Пропускаем собственное устройство: {}", device.ip());
                 return;
             }
 
-            // Добавляем в карту и обновляем UI
+            // Просто добавляем устройство
             deviceMap.put(device.ip(), device);
             updateDeviceListUI();
 
-            // Показываем уведомление (опционально)
             Platform.runLater(() -> {
-                updateStatus("Найдено новое устройство: " + device.name());
+                updateStatus("Найдено устройство: " + device.name());
             });
         });
 
         // Подписка на потерю устройств
         lostSubscriptionId = deviceEventListener.subscribeToLost(address -> {
-            logger.info("🔴 Устройство потеряно: {}", address.getHostAddress());
+            logger.info("🔴 Устройство потеряно (goodbye или таймаут): {}",
+                    address.getHostAddress());
 
-            // Удаляем из карты
-            deviceMap.remove(address.getHostAddress());
+            String ip = address.getHostAddress();
+            deviceMap.remove(ip);
             updateDeviceListUI();
 
             Platform.runLater(() -> {
@@ -293,24 +291,23 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                 try {
                     List<DeviceDTO> discoveredDevices = networkService.discoverLocalDevices();
 
-                    // Синхронизируем с картой
                     synchronized (deviceMap) {
-                        // Очищаем старые записи
-                        deviceMap.clear();
-
-                        // Добавляем все обнаруженные устройства (кроме своего)
                         for (DeviceDTO device : discoveredDevices) {
                             if (!isSelfIpAddress(device.ip())) {
-                                deviceMap.put(device.ip(), device);
+                                // Добавляем только если еще нет
+                                if (!deviceMap.containsKey(device.ip())) {
+                                    deviceMap.put(device.ip(), device);
+                                    logger.debug("Добавлено новое устройство при refresh: {}",
+                                            device.ip());
+                                }
                             }
                         }
                     }
 
-                    // Обновляем UI
                     updateDeviceListUI();
 
                     Platform.runLater(() -> {
-                        int count = availableDevices != null ? availableDevices.size() : 0;
+                        int count = deviceMap.size();
                         updateStatus("Найдено устройств: " + count);
 
                         connectionService.checkIncomingRequests();
@@ -377,6 +374,17 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         try {
             if (isSelfDevice(device)) {
                 dialogDisplayer.showAlert("Информация", "Нельзя открыть чат с самим собой");
+                return;
+            }
+
+            if (!deviceMap.containsKey(device.ip())) {
+                updateStatus("Устройство больше не доступно");
+                dialogDisplayer.showTimedErrorAlert("Ошибка",
+                        "Устройство больше не доступно:\n" +
+                                device.name() + " (" + device.ip() + ")\n\n" +
+                                "Устройство вышло из локальной сети",
+                        5
+                );
                 return;
             }
 

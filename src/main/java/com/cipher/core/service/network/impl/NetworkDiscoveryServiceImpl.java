@@ -14,6 +14,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -32,6 +34,9 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final Set<InetAddress> connectedPeers = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final Map<InetAddress, Long> lastSeenTimes = new ConcurrentHashMap<>();
+
+    private static final long PEER_TIMEOUT_MS = 15000;
 
     private ScheduledExecutorService scheduler;
     private boolean wasShutdown = false;
@@ -40,18 +45,22 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
 
     @Override
     public void onPeerDiscovered(InetAddress peerAddress) {
-        // Проверяем, не наше ли это устройство
         if (isOwnAddress(peerAddress)) {
             return;
         }
 
-        // Проверяем, не дублируется ли
+        long currentTime = System.currentTimeMillis();
+        lastSeenTimes.put(peerAddress, currentTime);
+
         if (discoveredPeers.add(peerAddress)) {
             log.info("✅ Устройство обнаружено: {}", peerAddress.getHostAddress());
 
             publishDeviceDiscoveredEvent(peerAddress);
 
             printDiscoveredPeers();
+        } else {
+            log.debug("Обновлено время активности устройства: {}",
+                    peerAddress.getHostAddress());
         }
     }
 
@@ -140,7 +149,7 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
             } catch (Exception e) {
                 log.error("Error in peer cleanup task: {}", e.getMessage());
             }
-        }, CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS, TimeUnit.MILLISECONDS);
+        }, PEER_TIMEOUT_MS / 3, PEER_TIMEOUT_MS / 3, TimeUnit.MILLISECONDS);
     }
 
     private void startPeerValidationTask() {
@@ -154,18 +163,28 @@ public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
     }
 
     private void cleanupExpiredPeers() {
-        try {
-            // Используем ConnectionManager для очистки устаревших пиров
-            connectionManager.cleanupExpiredPeers(NetworkConstants.PEER_TIMEOUT_MS);
+        long now = System.currentTimeMillis();
+        List<InetAddress> toRemove = new ArrayList<>();
 
-            // Синхронизируем наш локальный список с ConnectionManager
-            Map<InetAddress, PeerInfo> currentConnected = connectionManager.getConnectedPeers();
+        for (Map.Entry<InetAddress, Long> entry : lastSeenTimes.entrySet()) {
+            InetAddress peer = entry.getKey();
+            long lastSeen = entry.getValue();
 
-            // Обновляем connectedPeers
-            connectedPeers.clear();
-            connectedPeers.addAll(currentConnected.keySet());
-        } catch (Exception e) {
-            log.error("Error in cleanupExpiredPeers: {}", e.getMessage());
+            if (now - lastSeen > PEER_TIMEOUT_MS) {
+                toRemove.add(peer);
+                log.info("🚫 Устройство превысило таймаут ({} мс): {}",
+                        now - lastSeen, peer.getHostAddress());
+            }
+        }
+
+        for (InetAddress peer : toRemove) {
+            discoveredPeers.remove(peer);
+            lastSeenTimes.remove(peer);
+
+            // Публикуем событие о потере устройства
+            publishDeviceLostEvent(peer);
+
+            log.info("Устройство удалено (таймаут): {}", peer.getHostAddress());
         }
     }
 

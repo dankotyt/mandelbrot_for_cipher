@@ -92,9 +92,44 @@ public class DiscoveryServer implements Runnable {
         }
     }
 
+    /**
+     * Отправить сообщение "прощания" при выходе
+     */
+    public void sendGoodbyePacket() {
+        new Thread(() -> {
+            try {
+                // Ждем немного, чтобы убедиться, что все потоки завершились
+                Thread.sleep(NetworkConstants.GOODBYE_DELAY_MS);
+
+                try (DatagramSocket goodbyeSocket = new DatagramSocket()) {
+                    goodbyeSocket.setBroadcast(true);
+                    InetAddress broadcastAddr = InetAddress.getByName(
+                            NetworkConstants.BROADCAST_ADDRESS);
+                    byte[] buffer = NetworkConstants.GOODBYE_MESSAGE
+                            .getBytes(StandardCharsets.UTF_8);
+                    DatagramPacket packet = new DatagramPacket(
+                            buffer, buffer.length, broadcastAddr,
+                            NetworkConstants.DISCOVERY_PORT);
+
+                    // Отправляем 3 goodbye-пакета для гарантии
+                    for (int i = 0; i < 3; i++) {
+                        goodbyeSocket.send(packet);
+                        log.debug("Goodbye packet #{}/3 sent", i + 1);
+                        if (i < 2) Thread.sleep(100);
+                    }
+
+                    log.info("Goodbye packets sent - device is now invisible");
+                }
+            } catch (Exception e) {
+                log.warn("Error sending goodbye packet: {}", e.getMessage());
+            }
+        }, "Goodbye-Sender").start();
+    }
+
     public void stop() {
         setEnabled(false); // Выключаем отправку сообщений
         running.set(false); // Останавливаем цикл
+        sendGoodbyePacket();
 
         if (broadcasterThread != null) {
             broadcasterThread.interrupt();

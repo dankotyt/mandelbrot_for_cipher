@@ -1,6 +1,8 @@
 package com.cipher.client.service.localNetwork;
 
 import com.cipher.common.utils.NetworkConstants;
+import com.cipher.core.event.DeviceLostEvent;
+import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.NetworkDiscoveryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -22,10 +24,13 @@ public class DiscoveryClient implements Runnable {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
     private final NetworkDiscoveryService discoveryService;
+    private final DeviceDiscoveryEventListener deviceEventListener;
     private Thread listenerThread;
 
-    public DiscoveryClient(NetworkDiscoveryService discoveryService) {
+    public DiscoveryClient(NetworkDiscoveryService discoveryService,
+                           DeviceDiscoveryEventListener deviceEventListener) {
         this.discoveryService = discoveryService;
+        this.deviceEventListener = deviceEventListener;
     }
 
     @Override
@@ -45,13 +50,24 @@ public class DiscoveryClient implements Runnable {
                     String message = new String(packet.getData(), 0, packet.getLength(),
                             StandardCharsets.UTF_8).trim();
 
+                    InetAddress senderAddress = packet.getAddress();
+
+                    if (isOwnAddress(senderAddress)) {
+                        continue;
+                    }
+
                     if (NetworkConstants.DISCOVERY_MESSAGE.equals(message)) {
-                        InetAddress senderAddress = packet.getAddress();
-                        if (!isOwnAddress(senderAddress) && discoveredPeers.add(senderAddress)) {
+                        // Обнаружено новое устройство
+                        if (discoveredPeers.add(senderAddress)) {
                             log.info("Discovered new peer: {}", senderAddress.getHostAddress());
                             discoveryService.onPeerDiscovered(senderAddress);
                         }
                     }
+                    else if (NetworkConstants.GOODBYE_MESSAGE.equals(message)) {
+                        // Устройство вышло из сети
+                        handleGoodbyeMessage(senderAddress);
+                    }
+
                 } catch (SocketTimeoutException e) {
                     // continue
                 } catch (IOException e) {
@@ -65,6 +81,23 @@ public class DiscoveryClient implements Runnable {
         }
 
         log.info("Discovery client stopped");
+    }
+
+    private void handleGoodbyeMessage(InetAddress senderAddress) {
+        if (discoveredPeers.remove(senderAddress)) {
+            log.info("Peer left the network: {}", senderAddress.getHostAddress());
+
+            // Уведомляем DeviceDiscoveryEventListener
+            if (deviceEventListener != null) {
+                // Создаем событие DeviceLostEvent через Spring
+                DeviceLostEvent event = new DeviceLostEvent(this, senderAddress);
+                // Вызываем метод обработки события
+                deviceEventListener.handleDeviceLost(event);
+            }
+
+            // Также уведомляем NetworkDiscoveryService
+            discoveryService.onPeerDisconnected(senderAddress);
+        }
     }
 
     private boolean isOwnAddress(InetAddress address) {
