@@ -3,6 +3,7 @@ package com.cipher.core.controller.network;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
+import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkVisibilityService;
 import com.cipher.core.service.network.impl.ConnectionServiceImpl;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
-public class DevicesController implements ConnectionServiceImpl.ConnectionListener {
+public class DevicesController implements ConnectionService.ConnectionListener {
     private static final Logger logger = LoggerFactory.getLogger(DevicesController.class);
 
     @FXML private Button backButton;
@@ -46,13 +47,11 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     @FXML private Label statusLabel;
     @FXML private Label currentDeviceLabel;
     @FXML private TextField manualIpField;
-    @FXML private Button manualConnectButton;
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ConnectionServiceImpl connectionService;
+    private final ConnectionService connectionService;
     private final NetworkServiceImpl networkService;
-    private final KeyExchangeService keyExchangeService;
     private final DeviceDiscoveryEventListener deviceEventListener;
     private final NetworkVisibilityService networkVisibilityService;
 
@@ -217,7 +216,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                         updateStatus("Устройство добавлено");
 
                         try {
-                            connectionService.sendConnectionRequest(manualDevice);
+                            connectionService.initiateConnection(manualDevice);
                             dialogDisplayer.showTimedAlert("Успех",
                                     "Запрос на подключение отправлен устройству:\n" + ip, 5);
                         } catch (Exception e) {
@@ -332,9 +331,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                         } else {
                             updateStatus("Найдено устройств: " + count);
                         }
-
-                        // Проверяем входящие запросы
-                        connectionService.checkIncomingRequests();
 
                         logger.info("Список устройств обновлен. Устройств: {}", count);
 
@@ -456,7 +452,7 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
                     sceneManager.showChatPanel(device);
 
                     // Отправляем запрос на подключение
-                    connectionService.sendConnectionRequest(device);
+                    connectionService.initiateConnection(device);
 
                     updateStatus("Запрос отправлен");
                 });
@@ -500,38 +496,6 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
         return containerButton;
     }
 
-    private void handleDeviceSelection(DeviceDTO device) {
-        try {
-            if (isSelfDevice(device)) {
-                dialogDisplayer.showAlert("Информация","Нельзя отправить запрос самому себе");
-                updateStatus("Ошибка: запрос самому себе");
-                return;
-            }
-
-            if (isOnCooldown()) {
-                long remainingSeconds = getRemainingCooldownSeconds();
-                dialogDisplayer.showTimedErrorAlert("Ошибка",
-                        "Слишком частые запросы\nПопробуйте через " + remainingSeconds + " сек.",
-                        3
-                );
-                updateStatus("Подождите перед следующим запросом");
-                return;
-            }
-
-            logger.debug("Отправка запроса на подключение к устройству: {}", device);
-
-            updateStatus("Отправка запроса...");
-
-            connectionService.sendConnectionRequest(device);
-
-            dialogDisplayer.showTimedAlert("Информация","Запрос отправлен устройству: " + device, 5);
-        } catch (Exception e) {
-            logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
-            dialogDisplayer.showErrorDialog("Ошибка при отправке запроса: " + e.getMessage());
-            updateStatus("Ошибка отправки");
-        }
-    }
-
     private boolean isSelfDevice(DeviceDTO device) {
         return device.ip().equals(currentDevice.ip());
     }
@@ -562,28 +526,47 @@ public class DevicesController implements ConnectionServiceImpl.ConnectionListen
     }
 
     @Override
-    public void onRequestReceived(ConnectionRequestDTO request) {
+    public void onConnectionRequested(ConnectionRequestDTO request) {
         // Для Алисы - не используется, так как она только отправляет запросы
+        // Этот метод вызывается, когда наш запрос отправлен
+        logger.debug("Запрос на подключение отправлен: {}", request);
     }
 
     @Override
-    public void onRequestAccepted(ConnectionRequestDTO request) {
+    public void onConnectionAccepted(ConnectionRequestDTO request) {
         logger.info("Запрос принят! Подключение установлено с: {}", request.toDeviceIp());
-
         updateStatus("Подключение установлено!");
 
-        dialogDisplayer.showAlert("Успех!","Подключение установлено!\n" +
+        dialogDisplayer.showAlert("Успех!", "Подключение установлено!\n" +
                 "IP удаленного устройства: " + request.toDeviceIp() +
                 "\nВаш IP: " + request.fromDeviceIp());
     }
 
     @Override
-    public void onRequestRejected(ConnectionRequestDTO request) {
+    public void onConnectionRejected(ConnectionRequestDTO request) {
         logger.info("Запрос отклонен устройством: {}", request.toDeviceIp());
-
         updateStatus("Запрос отклонен");
 
-        dialogDisplayer.showAlert("Информация","Запрос на подключение отклонен устройством:\n" + request.toDeviceName());
+        dialogDisplayer.showAlert("Информация", "Запрос на подключение отклонен устройством:\n" + request.toDeviceName());
+    }
+
+    @Override
+    public void onConnectionEstablished(ConnectionRequestDTO request) {
+        // Дополнительное уведомление об установленном соединении
+        logger.debug("Соединение окончательно установлено с: {}", request.toDeviceIp());
+    }
+
+    @Override
+    public void onConnectionDisconnected(String deviceIp) {
+        // Уведомление о разрыве соединения
+        logger.info("Соединение разорвано с: {}", deviceIp);
+        updateStatus("Соединение разорвано");
+
+        // Можно показать уведомление, если нужно
+        Platform.runLater(() -> {
+            dialogDisplayer.showTimedAlert("Информация",
+                    "Соединение с устройством " + deviceIp + " разорвано", 3);
+        });
     }
 
     private void updateStatus(String status) {

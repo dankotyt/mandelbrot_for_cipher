@@ -1,12 +1,9 @@
 package com.cipher.core.service.network;
 
-import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.model.PeerInfo;
 import com.cipher.client.handler.ClientConnectionHandler;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +21,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ConnectionManager {
     private final KeyExchangeService keyExchangeService;
-    private final KeyExchangeClient keyExchangeClient;
     private final ClientConnectionHandlerFactory handlerFactory;
 
     private final Map<InetAddress, PeerInfo> connectedPeers = new ConcurrentHashMap<>();
@@ -112,7 +108,7 @@ public class ConnectionManager {
 
             Map<InetAddress, PeerInfo> peersToClose = new ConcurrentHashMap<>(connectedPeers);
 
-            peersToClose.keySet().forEach(keyExchangeClient::sendKeyInvalidation);
+            peersToClose.keySet().forEach(keyExchangeService::sendKeyInvalidation);
 
             peersToClose.keySet().forEach(peer -> {
                 connectedPeers.remove(peer);
@@ -121,29 +117,6 @@ public class ConnectionManager {
 
             log.info("All connections closed");
         }
-    }
-
-    public void sendKeyInvalidation(InetAddress peerAddress) {
-        if (connectedPeers.containsKey(peerAddress)) {
-            keyExchangeClient.sendKeyInvalidation(peerAddress);
-        }
-    }
-
-    public Map<InetAddress, PeerInfo> getConnectedPeers() {
-        return new ConcurrentHashMap<>(connectedPeers);
-    }
-
-    public void cleanupExpiredPeers(long timeoutMs) {
-        connectedPeers.entrySet().removeIf(entry -> {
-            PeerInfo info = entry.getValue();
-            boolean expired = info.isExpired(timeoutMs);
-            if (expired) {
-                log.info("Removed expired peer: {}", entry.getKey().getHostAddress());
-                keyExchangeService.closeConnection(entry.getKey());
-                keyExchangeClient.sendKeyInvalidation(entry.getKey());
-            }
-            return expired;
-        });
     }
 
     private void startKeyExchangeServer() {

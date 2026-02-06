@@ -13,11 +13,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static com.cipher.core.service.encryption.EncryptionService.getTempPath;
-
 @Component
 @RequiredArgsConstructor
 public class BinaryFile {
+    private static String getProjectRootPath() {
+        return new File("").getAbsolutePath() + File.separator;
+    }
+    public static String getTempPath() {
+        return getProjectRootPath() + "temp" + File.separator;
+    }
     private static final Logger logger = LoggerFactory.getLogger(BinaryFile.class);
     private final DeterministicRandomGenerator drbg;
 

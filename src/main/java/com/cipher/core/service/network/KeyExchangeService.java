@@ -32,5 +32,5 @@ public interface KeyExchangeService {
     ECDHKeyExchange getPeerKeys(String peerIp);
     boolean hasKeysForPeer(String peerIp);
     void removePeerKeys(String peerIp);
-
+    void sendKeyInvalidation(InetAddress peerAddress);
 }

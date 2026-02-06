@@ -1,7 +1,6 @@
 package com.cipher;
 
 import com.cipher.client.handler.ClientGlobalExceptionHandler;
-import com.cipher.core.config.AppConfig;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -16,7 +15,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.context.ConfigurableApplicationContext;
 
 import java.io.InputStream;
 
@@ -51,7 +49,7 @@ public class Launcher implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         logger.info("Spring context initialized, starting JavaFX...");
 
         // Запускаем JavaFX в правильном потоке

@@ -1,7 +1,6 @@
 package com.cipher.core.config;
 
 import com.cipher.client.service.localNetwork.DiscoveryClient;
-import com.cipher.client.service.localNetwork.KeyExchangeClient;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
@@ -26,21 +25,21 @@ public class NetworkConfig {
         return new DiscoveryClient(discoveryService, deviceDiscoveryEventListener);
     }
 
-
     @Bean
     public ConnectionManager connectionManager(KeyExchangeService keyExchangeService,
-                                               KeyExchangeClient keyExchangeClient, ClientConnectionHandlerFactory handlerFactory) {
-        return new ConnectionManager(keyExchangeService, keyExchangeClient, handlerFactory);
-    }
-
-    @Bean
-    public KeyExchangeService keyExchangeService(KeyExchangeClient keyExchangeClient) {
-        return new ECDHKeyExchangeServiceImpl(keyExchangeClient);
+                                               ClientConnectionHandlerFactory handlerFactory) {
+        return new ConnectionManager(keyExchangeService, handlerFactory);
     }
 
     @Bean
     public ClientConnectionHandlerFactory clientConnectionHandlerFactory(
             KeyExchangeService keyExchangeService) {
         return new ClientConnectionHandlerFactory(keyExchangeService);
+    }
+
+    @Deprecated
+    @Bean
+    public KeyExchangeService keyExchangeService() {
+        return new ECDHKeyExchangeServiceImpl();
     }
 }

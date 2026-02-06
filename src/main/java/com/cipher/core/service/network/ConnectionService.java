@@ -3,21 +3,38 @@ package com.cipher.core.service.network;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 
-import java.net.InetAddress;
-
 public interface ConnectionService {
 
+    // Управление слушателями
     void addListener(ConnectionListener listener);
     void removeListener(ConnectionListener listener);
-    void sendConnectionRequest(DeviceDTO toDevice);
-    void acceptConnectionRequest(ConnectionRequestDTO request);
-    void rejectConnectionRequest(ConnectionRequestDTO request);
-    void checkIncomingRequests();
+
+    // Инициация подключения (клиентская сторона)
+    void initiateConnection(DeviceDTO toDevice);
+
+    // Обработка входящих запросов (серверная сторона)
+    void processIncomingRequest(ConnectionRequestDTO request);
+    void processIncomingAccept(DeviceDTO remoteDevice, String clientIp);
+    void processIncomingReject(DeviceDTO remoteDevice, String clientIp);
+
+    // Управление статусом подключений
+    void acceptConnection(ConnectionRequestDTO request);
+    void rejectConnection(ConnectionRequestDTO request);
+    void disconnect(String deviceIp);
+
+    // Проверки статуса
+    boolean isConnectionPending(String deviceIp);
     boolean isConnectionEstablished(String deviceIp);
+    ConnectionRequestDTO getConnectionStatus(String deviceIp);
+
+    // Утилиты
+    ConnectionRequestDTO createConnectionRequest(DeviceDTO remoteDevice, ConnectionRequestDTO.RequestStatus status);
 
     interface ConnectionListener {
-        void onRequestReceived(ConnectionRequestDTO request);
-        void onRequestAccepted(ConnectionRequestDTO request);
-        void onRequestRejected(ConnectionRequestDTO request);
+        void onConnectionRequested(ConnectionRequestDTO request);
+        void onConnectionAccepted(ConnectionRequestDTO request);
+        void onConnectionRejected(ConnectionRequestDTO request);
+        void onConnectionEstablished(ConnectionRequestDTO request);
+        void onConnectionDisconnected(String deviceIp);
     }
 }
