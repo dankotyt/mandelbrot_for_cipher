@@ -1,11 +1,12 @@
 package com.cipher.core.service.network.impl;
 
 import com.cipher.client.service.localNetwork.SenderConnectionService;
-import com.cipher.common.utils.NetworkConstants;
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import jakarta.annotation.PostConstruct;
@@ -36,7 +37,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionServiceImpl.class);
 
     private final DialogDisplayer dialogDisplayer;
-    private final NetworkServiceImpl networkServiceImpl;
+    private final NetworkService networkService;
     private final SenderConnectionService senderConnectionService;
     private final KeyExchangeService keyExchangeService;
     private final SceneManager sceneManager;
@@ -157,7 +158,7 @@ public class ConnectionServiceImpl implements ConnectionService {
 
             if (accepted) {
                 // Отправляем подтверждение
-                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
+                DeviceDTO currentDevice = networkService.getCurrentDevice();
                 senderConnectionService.sendAcceptResponse(request.fromDeviceIp(), currentDevice);
 
                 // Принимаем соединение
@@ -167,7 +168,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 initiateKeyExchangeAndOpenChat(request);
             } else {
                 // Отправляем отклонение
-                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
+                DeviceDTO currentDevice = networkService.getCurrentDevice();
                 senderConnectionService.sendRejectResponse(request.fromDeviceIp(), currentDevice);
 
                 // Отклоняем соединение
@@ -217,7 +218,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 }
 
                 // Отправляем запрос через сеть
-                DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
+                DeviceDTO currentDevice = networkService.getCurrentDevice();
                 boolean sent = senderConnectionService.sendConnectionRequest(toDevice.ip(), currentDevice);
 
                 if (sent) {
@@ -364,7 +365,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     @Override
     public ConnectionRequestDTO createConnectionRequest(DeviceDTO remoteDevice,
                                                         ConnectionRequestDTO.RequestStatus status) {
-        DeviceDTO currentDevice = networkServiceImpl.getCurrentDevice();
+        DeviceDTO currentDevice = networkService.getCurrentDevice();
 
         return new ConnectionRequestDTO(
                 currentDevice.name(), currentDevice.ip(),

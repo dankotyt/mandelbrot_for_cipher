@@ -2,7 +2,7 @@ package com.cipher.core.service.network;
 
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
-import com.cipher.core.service.network.impl.NetworkDiscoveryServiceImpl;
+import com.cipher.core.service.network.impl.UDPPeerDiscoveryService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ public class NetworkVisibilityService {
 
     private final DiscoveryServer discoveryServer;
     private final DiscoveryClient discoveryClient;
-    private final NetworkDiscoveryService networkDiscoveryService;
+    private final PeerDiscoveryService peerDiscoveryService;
 
     private final AtomicBoolean isVisible = new AtomicBoolean(false);
     private final AtomicBoolean isInitialized = new AtomicBoolean(false);
@@ -50,7 +50,7 @@ public class NetworkVisibilityService {
                 discoveryServer.start();
 
                 // Инициализируем сервис обнаружения
-                networkDiscoveryService.initialize();
+                peerDiscoveryService.initialize();
 
                 // Немедленная рассылка
                 broadcastImmediatePresence();
@@ -91,12 +91,12 @@ public class NetworkVisibilityService {
         new Thread(() -> {
             try {
                 Thread.sleep(500); // Даем время на инициализацию
-                networkDiscoveryService.broadcastPresence();
+                peerDiscoveryService.broadcastPresence();
 
                 // Дополнительные 2 рассылки для гарантии
                 for (int i = 0; i < 2; i++) {
                     Thread.sleep(100);
-                    networkDiscoveryService.broadcastPresence();
+                    peerDiscoveryService.broadcastPresence();
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -118,8 +118,8 @@ public class NetworkVisibilityService {
         becomeInvisible();
         try {
             // Полное завершение работы
-            if (networkDiscoveryService instanceof NetworkDiscoveryServiceImpl) {
-                ((NetworkDiscoveryServiceImpl) networkDiscoveryService).permanentShutdown();
+            if (peerDiscoveryService instanceof UDPPeerDiscoveryService) {
+                ((UDPPeerDiscoveryService) peerDiscoveryService).permanentShutdown();
             }
             discoveryClient.stop();
         } catch (Exception e) {

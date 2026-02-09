@@ -3,7 +3,7 @@ package com.cipher.core.service.network;
 import java.net.InetAddress;
 import java.util.Set;
 
-public interface NetworkDiscoveryService {
+public interface PeerDiscoveryService {
 
     /**
      * Вызывается при обнаружении нового пира в сети

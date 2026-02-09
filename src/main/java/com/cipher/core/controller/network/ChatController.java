@@ -2,7 +2,6 @@ package com.cipher.core.controller.network;
 
 import com.cipher.client.service.chat.ChatService;
 import com.cipher.common.dto.chat.ChatMessageDTO;
-import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -31,8 +30,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
-import static com.cipher.common.utils.NetworkConstants.CHAT_PORT;
 
 @Controller
 @Scope("prototype")

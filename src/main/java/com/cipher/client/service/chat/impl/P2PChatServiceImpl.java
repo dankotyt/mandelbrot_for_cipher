@@ -4,7 +4,7 @@ import com.cipher.client.service.chat.ChatService;
 import com.cipher.client.service.chat.P2PConnectionManager;
 import com.cipher.client.utils.ChatEncryptionUtil;
 import com.cipher.common.dto.chat.ChatMessageDTO;
-import com.cipher.common.utils.NetworkConstants;
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.service.network.ConnectionManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;

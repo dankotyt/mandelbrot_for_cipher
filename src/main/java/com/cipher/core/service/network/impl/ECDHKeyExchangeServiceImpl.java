@@ -1,6 +1,6 @@
 package com.cipher.core.service.network.impl;
 
-import com.cipher.common.utils.NetworkConstants;
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.model.PeerInfo;

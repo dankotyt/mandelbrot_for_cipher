@@ -1,6 +1,6 @@
 package com.cipher.client.handler;
 
-import com.cipher.common.utils.NetworkConstants;
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.model.ECDHKeyExchange;
 import com.cipher.core.service.network.KeyExchangeService;
 import lombok.extern.slf4j.Slf4j;

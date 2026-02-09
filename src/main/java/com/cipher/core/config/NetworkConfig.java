@@ -4,7 +4,7 @@ import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
-import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.PeerDiscoveryService;
 import com.cipher.core.service.network.impl.ECDHKeyExchangeServiceImpl;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import com.cipher.client.handler.ClientConnectionHandlerFactory;
@@ -20,7 +20,7 @@ public class NetworkConfig {
     }
 
     @Bean
-    public DiscoveryClient discoveryClient(NetworkDiscoveryService discoveryService,
+    public DiscoveryClient discoveryClient(PeerDiscoveryService discoveryService,
                                            DeviceDiscoveryEventListener deviceDiscoveryEventListener) {
         return new DiscoveryClient(discoveryService, deviceDiscoveryEventListener);
     }

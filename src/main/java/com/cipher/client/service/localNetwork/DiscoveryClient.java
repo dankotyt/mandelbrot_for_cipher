@@ -1,9 +1,9 @@
 package com.cipher.client.service.localNetwork;
 
-import com.cipher.common.utils.NetworkConstants;
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.event.DeviceLostEvent;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
-import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.PeerDiscoveryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -23,11 +23,11 @@ public class DiscoveryClient implements Runnable {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
-    private final NetworkDiscoveryService discoveryService;
+    private final PeerDiscoveryService discoveryService;
     private final DeviceDiscoveryEventListener deviceEventListener;
     private Thread listenerThread;
 
-    public DiscoveryClient(NetworkDiscoveryService discoveryService,
+    public DiscoveryClient(PeerDiscoveryService discoveryService,
                            DeviceDiscoveryEventListener deviceEventListener) {
         this.discoveryService = discoveryService;
         this.deviceEventListener = deviceEventListener;

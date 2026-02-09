@@ -1,4 +1,4 @@
-package com.cipher.common.utils;
+package com.cipher.client.utils;
 
 import java.math.BigInteger;
 

@@ -1,4 +1,4 @@
-package com.cipher.common.utils;
+package com.cipher.client.utils;
 
 public class NetworkConstants {
     public static final String BROADCAST_ADDRESS = "255.255.255.255";

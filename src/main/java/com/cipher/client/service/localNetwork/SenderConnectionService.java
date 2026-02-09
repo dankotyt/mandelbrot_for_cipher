@@ -12,7 +12,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-import static com.cipher.common.utils.NetworkConstants.CONNECTION_PORT;
+import static com.cipher.client.utils.NetworkConstants.CONNECTION_PORT;
 
 /**Отправляет запрос, его подтверждение и отклонение**/
 @Service

@@ -1,12 +1,10 @@
 package com.cipher.core.service.network.impl;
 
-import com.cipher.common.utils.NetworkConstants;
 import com.cipher.core.event.DeviceDiscoveredEvent;
 import com.cipher.core.event.DeviceLostEvent;
-import com.cipher.core.model.PeerInfo;
 import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
-import com.cipher.core.service.network.NetworkDiscoveryService;
+import com.cipher.core.service.network.PeerDiscoveryService;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NetworkDiscoveryServiceImpl implements NetworkDiscoveryService {
+public class UDPPeerDiscoveryService implements PeerDiscoveryService {
 
     private final DiscoveryServer discoveryServer;
     private final KeyExchangeService keyExchangeService;

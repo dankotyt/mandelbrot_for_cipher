@@ -1,6 +1,6 @@
 package com.cipher.core.model;
 
-import com.cipher.common.utils.ECDHCryptoParams;
+import com.cipher.client.utils.ECDHCryptoParams;
 import lombok.Getter;
 
 import java.math.BigInteger;

@@ -4,10 +4,8 @@ import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.ConnectionService;
-import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkVisibilityService;
-import com.cipher.core.service.network.impl.ConnectionServiceImpl;
-import com.cipher.core.service.network.impl.NetworkServiceImpl;
+import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import javafx.animation.PauseTransition;
@@ -51,7 +49,7 @@ public class DevicesController implements ConnectionService.ConnectionListener {
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ConnectionService connectionService;
-    private final NetworkServiceImpl networkService;
+    private final NetworkService networkService;
     private final DeviceDiscoveryEventListener deviceEventListener;
     private final NetworkVisibilityService networkVisibilityService;
 
