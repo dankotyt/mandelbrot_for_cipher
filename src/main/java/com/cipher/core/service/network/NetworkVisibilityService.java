@@ -49,12 +49,6 @@ public class NetworkVisibilityService {
                 // Запускаем сервер для анонсирования
                 discoveryServer.start();
 
-                // Инициализируем сервис обнаружения
-                peerDiscoveryService.initialize();
-
-                // Немедленная рассылка
-                broadcastImmediatePresence();
-
                 log.info("✅ Устройство стало видимым в сети");
             } catch (Exception e) {
                 log.error("Ошибка при становлении видимым: {}", e.getMessage(), e);
@@ -74,6 +68,7 @@ public class NetworkVisibilityService {
             try {
                 // Останавливаем сервер анонсирования
                 discoveryServer.stop();
+                peerDiscoveryService.clear();
 
                 log.info("🔇 Устройство стало невидимым в сети");
             } catch (Exception e) {
@@ -82,28 +77,6 @@ public class NetworkVisibilityService {
         } else {
             log.debug("Устройство уже невидимо");
         }
-    }
-
-    /**
-     * Немедленная рассылка присутствия
-     */
-    private void broadcastImmediatePresence() {
-        new Thread(() -> {
-            try {
-                Thread.sleep(500); // Даем время на инициализацию
-                peerDiscoveryService.broadcastPresence();
-
-                // Дополнительные 2 рассылки для гарантии
-                for (int i = 0; i < 2; i++) {
-                    Thread.sleep(100);
-                    peerDiscoveryService.broadcastPresence();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                log.warn("Ошибка немедленной рассылки: {}", e.getMessage());
-            }
-        }).start();
     }
 
     /**
@@ -117,10 +90,6 @@ public class NetworkVisibilityService {
     public void shutdown() {
         becomeInvisible();
         try {
-            // Полное завершение работы
-            if (peerDiscoveryService instanceof UDPPeerDiscoveryService) {
-                ((UDPPeerDiscoveryService) peerDiscoveryService).permanentShutdown();
-            }
             discoveryClient.stop();
         } catch (Exception e) {
             log.warn("Ошибка остановки клиента: {}", e.getMessage());

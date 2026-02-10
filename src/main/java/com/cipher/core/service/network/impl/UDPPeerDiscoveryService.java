@@ -2,42 +2,30 @@ package com.cipher.core.service.network.impl;
 
 import com.cipher.core.event.DeviceDiscoveredEvent;
 import com.cipher.core.event.DeviceLostEvent;
-import com.cipher.core.service.network.ConnectionManager;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.PeerDiscoveryService;
-import com.cipher.client.service.localNetwork.DiscoveryServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.net.UnknownHostException;
+import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UDPPeerDiscoveryService implements PeerDiscoveryService {
 
-    private final DiscoveryServer discoveryServer;
-    private final KeyExchangeService keyExchangeService;
-    private final ConnectionManager connectionManager;
-    private final ApplicationEventPublisher eventPublisher;
+    private enum PeerStatus {
+        ONLINE,       // В сети (получаем DISCOVERY_MESSAGE)
+        OFFLINE       // Вышел (получили GOODBYE_MESSAGE)
+    }
 
-    private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
-    private final Set<InetAddress> connectedPeers = ConcurrentHashMap.newKeySet();
-    private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private final Map<InetAddress, Long> lastSeenTimes = new ConcurrentHashMap<>();
-
-    private static final long PEER_TIMEOUT_MS = 20000;
-
-    private ScheduledExecutorService scheduler;
-    private boolean wasShutdown = false;
+    private final ConcurrentHashMap<String, PeerStatus> peerStatus = new ConcurrentHashMap<>();
+    private final DeviceDiscoveryEventListener deviceEventListener;
 
     @Override
     public void onPeerDiscovered(InetAddress peerAddress) {
@@ -45,180 +33,96 @@ public class UDPPeerDiscoveryService implements PeerDiscoveryService {
             return;
         }
 
-        long currentTime = System.currentTimeMillis();
-        lastSeenTimes.put(peerAddress, currentTime);
+        String ip = peerAddress.getHostAddress();
 
-        if (discoveredPeers.add(peerAddress)) {
-            log.info("✅ Устройство обнаружено: {}", peerAddress.getHostAddress());
+        PeerStatus previousStatus = peerStatus.put(ip, PeerStatus.ONLINE);
 
+        if (previousStatus == null) {
+            log.info("✅ Устройство обнаружено: {}", ip);
+            publishDeviceDiscoveredEvent(peerAddress);
+        } else if (previousStatus.equals(PeerStatus.OFFLINE)) {
+            log.info("🔄 Устройство вернулось в сеть: {}", ip);
             publishDeviceDiscoveredEvent(peerAddress);
 
-            printDiscoveredPeers();
+            printOnlinePeers();
         } else {
-            log.debug("Обновлено время активности устройства: {}",
-                    peerAddress.getHostAddress());
-        }
-    }
-
-    @Override
-    public void onPeerConnected(InetAddress peerAddress) {
-        if (connectedPeers.add(peerAddress)) {
-            log.info("Peer connected: {}", peerAddress.getHostAddress());
-            printConnectedPeers();
+            log.debug("Устройство все еще в сети: {}", ip);
         }
     }
 
     @Override
     public void onPeerDisconnected(InetAddress peerAddress) {
-        if (connectedPeers.remove(peerAddress)) {
-            log.info("Peer disconnected: {}", peerAddress.getHostAddress());
-            printConnectedPeers();
+        String ip = peerAddress.getHostAddress();
+        PeerStatus previousStatus = peerStatus.put(ip, PeerStatus.OFFLINE);
+
+        if (previousStatus == PeerStatus.ONLINE) {
+            log.info("👋 Peer gracefully disconnected: {}", ip);
+            publishDeviceLostEvent(peerAddress);
+            printOnlinePeers();
         }
     }
 
     @Override
     public Set<InetAddress> getDiscoveredPeers() {
-        return Set.copyOf(discoveredPeers);
+        return peerStatus.entrySet().stream()
+                .filter(entry -> entry.getValue() == PeerStatus.ONLINE)
+                .map(entry -> {
+                    try {
+                        return InetAddress.getByName(entry.getKey());
+                    } catch (Exception e) {
+                        log.warn("Cannot convert IP to InetAddress: {}", entry.getKey());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     @Override
-    public Set<InetAddress> getConnectedPeers() {
-        return Set.copyOf(connectedPeers);
+    public void manuallyAddPeer(String peerAddress) {
+        try {
+            InetAddress inetAddress = InetAddress.getByName(peerAddress);
+
+            if (isOwnAddress(inetAddress)) {
+                log.warn("Вы ввели свой ip-адрес.");
+                return;
+            }
+
+            if (peerStatus.get(peerAddress) == PeerStatus.ONLINE) {
+                log.info("✅ Устройство {} добавлено вручную.", peerAddress);
+
+                publishDeviceDiscoveredEvent(inetAddress);
+
+                printOnlinePeers();
+            } else {
+                log.info("Устройство не в сети!");
+            }
+        } catch (UnknownHostException e) {
+            log.warn("Введён несуществующий или невалидный ip. " +
+                    "Проверьте правильность ввода и попробуйте ещё раз. " +
+                    "Ошибка: {}", e.getMessage());
+        }
     }
 
     @Override
-    public void broadcastPresence() {
-        // DiscoveryServer уже постоянно рассылает сообщения
-        log.debug("Presence broadcasting is active");
+    public void clear() {
+        peerStatus.clear();
+        log.info("✅ UDPPeerDiscoveryService данные очищены");
     }
 
-    @Override
-    public void stopDiscovery() {
+    private void printOnlinePeers() {
+        long onlineCount = peerStatus.values().stream()
+                .filter(status -> status == PeerStatus.ONLINE)
+                .count();
 
-        if (scheduler != null && !scheduler.isShutdown()) {
-            try {
-                scheduler.shutdown();
-                if (!scheduler.awaitTermination(3, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        initialized.set(false);
-        log.info("Network discovery service stopped (still listening for devices)");
-    }
-
-    @Override
-    public void initialize() {
-        if (initialized.compareAndSet(false, true) && !wasShutdown) {
-            if (scheduler == null || scheduler.isShutdown() || scheduler.isTerminated()) {
-                scheduler = Executors.newScheduledThreadPool(2);
-                log.info("Создан новый scheduler для NetworkDiscoveryService");
-            }
-
-            startCleanupTask();
-            startPeerValidationTask();
-
-            log.info("Network discovery service initialized");
-        } else if (wasShutdown) {
-            log.warn("Cannot initialize - service was permanently shutdown");
-        }
-    }
-
-    private void startCleanupTask() {
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                cleanupExpiredPeers();
-            } catch (Exception e) {
-                log.error("Error in peer cleanup task: {}", e.getMessage());
-            }
-        }, 5000, 5000, TimeUnit.MILLISECONDS);
-    }
-
-    private void startPeerValidationTask() {
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                validateConnectedPeers();
-            } catch (Exception e) {
-                log.error("Error in peer validation task: {}", e.getMessage());
-            }
-        }, 10, 10, TimeUnit.SECONDS);
-    }
-
-    private void cleanupExpiredPeers() {
-        long now = System.currentTimeMillis();
-        List<InetAddress> toRemove = new ArrayList<>();
-
-        for (Map.Entry<InetAddress, Long> entry : lastSeenTimes.entrySet()) {
-            InetAddress peer = entry.getKey();
-            long lastSeen = entry.getValue();
-
-            if (now - lastSeen > PEER_TIMEOUT_MS) {
-                toRemove.add(peer);
-                log.info("🚫 Устройство превысило таймаут ({} мс): {}",
-                        now - lastSeen, peer.getHostAddress());
-            }
-        }
-
-        for (InetAddress peer : toRemove) {
-            discoveredPeers.remove(peer);
-            lastSeenTimes.remove(peer);
-
-            // Публикуем событие о потере устройства
-            publishDeviceLostEvent(peer);
-
-            log.info("Устройство удалено (таймаут): {}", peer.getHostAddress());
-        }
-    }
-
-    private void validateConnectedPeers() {
-        connectedPeers.forEach(peer -> {
-            if (!keyExchangeService.isConnectedTo(peer)) {
-                log.warn("Peer {} is in connected list but connection is lost", peer.getHostAddress());
-                connectedPeers.remove(peer);
-                onPeerDisconnected(peer);
-            }
-        });
-    }
-
-    private void printDiscoveredPeers() {
-        if (discoveredPeers.isEmpty()) {
-            log.info("Discovered peers: none");
+        if (onlineCount == 0) {
+            log.info("📱 Online peers: none");
         } else {
-            StringBuilder sb = new StringBuilder("Discovered peers: ");
-            discoveredPeers.forEach(addr -> {
-                String status = connectedPeers.contains(addr) ? "[connected]" : "[available]";
-                sb.append(addr.getHostAddress()).append(status).append(" ");
-            });
-            log.info(sb.toString());
-        }
-    }
-
-    private void printConnectedPeers() {
-        if (connectedPeers.isEmpty()) {
-            log.info("Connected peers: none");
-        } else {
-            StringBuilder sb = new StringBuilder("Connected peers: ");
-            connectedPeers.forEach(addr ->
-                    sb.append(addr.getHostAddress()).append(" "));
-            log.info(sb.toString());
-        }
-    }
-
-    public void manuallyAddPeer(InetAddress peerAddress) {
-        if (discoveredPeers.add(peerAddress)) {
-            log.info("Manually added peer: {}", peerAddress.getHostAddress());
-            printDiscoveredPeers();
-        }
-    }
-
-    public void manuallyRemovePeer(InetAddress peerAddress) {
-        if (discoveredPeers.remove(peerAddress)) {
-            log.info("Manually removed peer: {}", peerAddress.getHostAddress());
-            printDiscoveredPeers();
+            log.info("📱 Online peers ({}): {}", onlineCount,
+                    peerStatus.entrySet().stream()
+                            .filter(entry -> entry.getValue() == PeerStatus.ONLINE)
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.joining(" ")));
         }
     }
 
@@ -239,7 +143,7 @@ public class UDPPeerDiscoveryService implements PeerDiscoveryService {
 
             // Публикуем событие
             DeviceDiscoveredEvent event = new DeviceDiscoveredEvent(this, peerAddress, deviceName);
-            eventPublisher.publishEvent(event);
+            deviceEventListener.handleDeviceDiscovered(event);
 
             log.debug("Событие об обнаружении устройства опубликовано: {} ({})",
                     deviceName, peerAddress.getHostAddress());
@@ -249,8 +153,15 @@ public class UDPPeerDiscoveryService implements PeerDiscoveryService {
             // Все равно публикуем с базовой информацией
             DeviceDiscoveredEvent event = new DeviceDiscoveredEvent(
                     this, peerAddress, peerAddress.getHostAddress());
-            eventPublisher.publishEvent(event);
+            deviceEventListener.handleDeviceDiscovered(event);
         }
+    }
+
+    private void publishDeviceLostEvent(InetAddress peerAddress) {
+        DeviceLostEvent event = new DeviceLostEvent(this, peerAddress);
+        deviceEventListener.handleDeviceLost(event);
+        log.debug("Событие о потере устройства опубликовано: {}",
+                peerAddress.getHostAddress());
     }
 
     private String resolveDeviceName(InetAddress address) {
@@ -273,31 +184,5 @@ public class UDPPeerDiscoveryService implements PeerDiscoveryService {
         } catch (Exception e) {
             return "Устройство " + address.getHostAddress();
         }
-    }
-
-    private void publishDeviceLostEvent(InetAddress peerAddress) {
-        DeviceLostEvent event = new DeviceLostEvent(this, peerAddress);
-        eventPublisher.publishEvent(event);
-        log.debug("Событие о потере устройства опубликовано: {}",
-                peerAddress.getHostAddress());
-    }
-
-    public boolean isInitialized() {
-        return initialized.get();
-    }
-
-    public void permanentShutdown() {
-        if (scheduler != null) {
-            scheduler.shutdownNow();
-        }
-
-        discoveredPeers.clear();
-        lastSeenTimes.clear();
-        connectedPeers.clear();
-
-        wasShutdown = true;
-        initialized.set(false);
-
-        log.info("Network discovery service permanently shutdown");
     }
 }

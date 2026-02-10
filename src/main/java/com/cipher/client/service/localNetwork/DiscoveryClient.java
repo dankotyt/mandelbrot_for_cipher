@@ -4,6 +4,7 @@ import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.event.DeviceLostEvent;
 import com.cipher.core.listener.DeviceDiscoveryEventListener;
 import com.cipher.core.service.network.PeerDiscoveryService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -19,19 +20,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DiscoveryClient implements Runnable {
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Set<InetAddress> discoveredPeers = ConcurrentHashMap.newKeySet();
-    private final PeerDiscoveryService discoveryService;
-    private final DeviceDiscoveryEventListener deviceEventListener;
     private Thread listenerThread;
 
-    public DiscoveryClient(PeerDiscoveryService discoveryService,
-                           DeviceDiscoveryEventListener deviceEventListener) {
-        this.discoveryService = discoveryService;
-        this.deviceEventListener = deviceEventListener;
-    }
+    private final PeerDiscoveryService discoveryService;
+    private final DeviceDiscoveryEventListener deviceEventListener;
 
     @Override
     public void run() {
@@ -65,6 +62,7 @@ public class DiscoveryClient implements Runnable {
                     }
                     else if (NetworkConstants.GOODBYE_MESSAGE.equals(message)) {
                         // Устройство вышло из сети
+                        discoveryService.onPeerDisconnected(senderAddress);
                         handleGoodbyeMessage(senderAddress);
                     }
 
@@ -130,9 +128,4 @@ public class DiscoveryClient implements Runnable {
         }
         discoveredPeers.clear();
     }
-
-    public Set<InetAddress> getDiscoveredPeers() {
-        return Set.copyOf(discoveredPeers);
-    }
-
 }

@@ -1,9 +1,11 @@
 package com.cipher.core.event;
 
+import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 import java.net.InetAddress;
 
+@Getter
 public class DeviceDiscoveredEvent extends ApplicationEvent {
     private final InetAddress deviceAddress;
     private final String deviceName;
@@ -12,13 +14,5 @@ public class DeviceDiscoveredEvent extends ApplicationEvent {
         super(source);
         this.deviceAddress = deviceAddress;
         this.deviceName = deviceName;
-    }
-
-    public InetAddress getDeviceAddress() {
-        return deviceAddress;
-    }
-
-    public String getDeviceName() {
-        return deviceName;
     }
 }

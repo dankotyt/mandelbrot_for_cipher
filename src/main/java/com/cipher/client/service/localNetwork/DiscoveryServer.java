@@ -135,8 +135,6 @@ public class DiscoveryServer implements Runnable {
     }
 
     public void stop() {
-        setEnabled(false); // Выключаем отправку сообщений
-        running.set(false); // Останавливаем цикл
         sendGoodbyePacket();
 
         if (broadcasterThread != null) {
@@ -152,6 +150,8 @@ public class DiscoveryServer implements Runnable {
             broadcasterThread = null;
         }
 
+        setEnabled(false); // Выключаем отправку сообщений
+        running.set(false); // Останавливаем цикл
         closeSocket(); // Закрываем сокет
         log.info("DiscoveryServer полностью остановлен");
     }

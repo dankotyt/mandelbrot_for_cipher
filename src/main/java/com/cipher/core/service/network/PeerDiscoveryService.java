@@ -11,11 +11,6 @@ public interface PeerDiscoveryService {
     void onPeerDiscovered(InetAddress peerAddress);
 
     /**
-     * Вызывается при успешном установлении соединения с пиром
-     */
-    void onPeerConnected(InetAddress peerAddress);
-
-    /**
      * Вызывается при отключении пира
      */
     void onPeerDisconnected(InetAddress peerAddress);
@@ -26,19 +21,12 @@ public interface PeerDiscoveryService {
     Set<InetAddress> getDiscoveredPeers();
 
     /**
-     * Возвращает список подключенных пиров
-     */
-    Set<InetAddress> getConnectedPeers();
-
-    /**
-     * Начать широковещательное оповещение о себе
-     */
-    void broadcastPresence();
+     * Позволяет вручную найти пир по ip-адресу
+     * */
+    void manuallyAddPeer(String peerAddress);
 
     /**
      * Остановить обнаружение
      */
-    void stopDiscovery();
-
-    void initialize();
+    void clear();
 }
