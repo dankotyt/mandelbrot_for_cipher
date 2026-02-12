@@ -34,9 +34,7 @@ public class P2PChatServiceImpl implements ChatService {
     private ObjectInputStream inputStream;
     private ServerSocket serverSocket;
 
-    private volatile boolean connected = false;
-    private volatile String connectedPeerIp;
-
+    private volatile boolean active = true;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final List<ChatListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -53,27 +51,52 @@ public class P2PChatServiceImpl implements ChatService {
 
     @PreDestroy
     public void cleanup() {
-        executor.shutdownNow();
+        active = false;
         disconnect();
+        executor.shutdownNow();
+    }
+
+    @Override
+    public boolean isConnected() {
+        InetAddress peer = keyExchangeService.getConnectedPeer();
+        return peer != null &&
+                socket != null &&
+                socket.isConnected() &&
+                !socket.isClosed();
+    }
+
+    @Override
+    public String getConnectedPeer() {
+        InetAddress peer = keyExchangeService.getConnectedPeer();
+        return peer != null ? peer.getHostAddress() : null;
     }
 
     @Override
     public boolean connectToPeer(String peerIp) {
-        if (isConnected() && peerIp.equals(connectedPeerIp)) {
+        if (!active) {
+            log.warn("Chat service is not active");
+            return false;
+        }
+
+        InetAddress peerAddress = toInetAddress(peerIp);
+
+        if (isConnected() && peerAddress.equals(keyExchangeService.getConnectedPeer())) {
+            log.info("Already connected to {}", peerIp);
             return true;
         }
 
         disconnect();
 
-        // Детерминированный выбор роли
-        boolean asClient = isClientRole(peerIp);
-        log.info("Connecting to {} as {}", peerIp, asClient ? "CLIENT" : "SERVER");
+        keyExchangeService.setConnectedPeer(peerAddress);
 
+        boolean asClient = isClientRole(peerIp);
         boolean success = asClient ? connectAsClient(peerIp) : waitForConnection(peerIp);
 
         if (success) {
-            keyExchangeService.setConnectedPeer(toInetAddress(peerIp));
             notifyConnectionStatusChanged(true, "Connected to " + peerIp);
+        } else {
+            // Не удалось подключиться - сбрасываем пир
+            keyExchangeService.setConnectedPeer(null);
         }
 
         return success;
@@ -100,11 +123,11 @@ public class P2PChatServiceImpl implements ChatService {
     }
 
     private boolean waitForConnection(String expectedPeerIp) {
-        long deadline = System.currentTimeMillis() + 10000;
-        while (System.currentTimeMillis() < deadline && !connected) {
+        long deadline = System.currentTimeMillis() + 5000;
+        while (active && System.currentTimeMillis() < deadline && !isConnected()) {
             try {
                 Thread.sleep(500);
-                if (connected && expectedPeerIp.equals(connectedPeerIp)) {
+                if (isConnected() && expectedPeerIp.equals(getConnectedPeer())) {
                     return true;
                 }
             } catch (InterruptedException e) {
@@ -112,7 +135,7 @@ public class P2PChatServiceImpl implements ChatService {
                 break;
             }
         }
-        return false;
+        return isConnected() && expectedPeerIp.equals(getConnectedPeer());
     }
 
     private void acceptConnections() {
@@ -121,7 +144,7 @@ public class P2PChatServiceImpl implements ChatService {
                 Socket client = serverSocket.accept();
                 String peerIp = client.getInetAddress().getHostAddress();
 
-                if (!connected) {
+                if (!isConnected()) {
                     initConnection(client, peerIp);
                     notifyIncomingConnection(peerIp);
                 } else {
@@ -135,20 +158,23 @@ public class P2PChatServiceImpl implements ChatService {
 
     private void initConnection(Socket s, String peerIp) throws IOException {
         this.socket = s;
-        this.connectedPeerIp = peerIp;
         this.outputStream = new ObjectOutputStream(s.getOutputStream());
         this.inputStream = new ObjectInputStream(s.getInputStream());
-        this.connected = true;
+
+        keyExchangeService.setConnectedPeer(toInetAddress(peerIp));
 
         executor.submit(this::receiveMessages);
     }
 
     private void receiveMessages() {
+        InetAddress currentPeer = keyExchangeService.getConnectedPeer();
+        String peerIp = currentPeer != null ? currentPeer.getHostAddress() : null;
+
         while (isConnected()) {
             try {
                 Object obj = inputStream.readObject();
                 if (obj instanceof ChatMessageDTO encrypted) {
-                    ChatMessageDTO decrypted = encryptionUtil.decryptMessage(encrypted, connectedPeerIp);
+                    ChatMessageDTO decrypted = encryptionUtil.decryptMessage(encrypted, peerIp);
 
                     if (decrypted.isText()) {
                         listeners.forEach(l -> l.onMessageReceived(decrypted));
@@ -212,7 +238,9 @@ public class P2PChatServiceImpl implements ChatService {
         }
 
         try {
-            outputStream.writeObject(encryptionUtil.encryptMessage(msg, connectedPeerIp));
+            String peerIp = getConnectedPeer();
+            ChatMessageDTO encrypted = encryptionUtil.encryptMessage(msg, peerIp);
+            outputStream.writeObject(encrypted);
             outputStream.flush();
             outputStream.reset();
         } catch (IOException e) {
@@ -222,18 +250,15 @@ public class P2PChatServiceImpl implements ChatService {
     }
 
     @Override
-    public boolean isConnected() {
-        return connected && socket != null && socket.isConnected() && !socket.isClosed();
-    }
-
-    @Override
     public void disconnect() {
-        connected = false;
-        connectedPeerIp = null;
-
         closeQuietly(outputStream);
         closeQuietly(inputStream);
         closeQuietly(socket);
+
+        socket = null;
+        outputStream = null;
+        inputStream = null;
+        keyExchangeService.setConnectedPeer(null);
 
         notifyConnectionStatusChanged(false, "Disconnected");
     }
@@ -250,6 +275,11 @@ public class P2PChatServiceImpl implements ChatService {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean isActive() {
+        return active;
     }
 
     @Override public void addListener(ChatListener l) { listeners.add(l); }

@@ -87,26 +87,17 @@ public class ChatController implements ChatService.ChatListener {
         Platform.runLater(() -> {
             chatTitleLabel.setText("Чат с " + deviceName);
             connectionInfoLabel.setText("IP: " + deviceIp);
+
+            if (chatService.isConnected()) {
+                String currentPeer = chatService.getConnectedPeer();
+                if (deviceIp.equals(currentPeer)) {
+                    updateStatus("P2P соединение уже установлено ✓");
+                    encryptionStatusLabel.setText("Шифрование: Активно");
+                    return;
+                }
+            }
+
             updateStatus("Установка P2P соединения...");
-
-            // Автоматически устанавливаем P2P соединение
-            new Thread(() -> {
-                //Thread.sleep(500); // Даем время на инициализацию UI
-
-                boolean connected = chatService.connectToPeer(deviceIp);
-
-                    Platform.runLater(() -> {
-                        if (connected) {
-                            updateStatus("P2P соединение установлено ✓");
-                            encryptionStatusLabel.setText("Шифрование: Активно");
-                        } else {
-                            updateStatus("Ожидание P2P соединения...");
-                            // Автоповтор через 3 секунды
-                            attemptAutoReconnection();
-                        }
-                    });
-
-            }).start();
         });
     }
 

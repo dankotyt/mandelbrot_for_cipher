@@ -9,8 +9,11 @@ public interface ChatService {
     void sendImage(byte[] imageData, String fileName);
     void sendFile(byte[] fileData, String fileName);
 
+    String getConnectedPeer();
     boolean isConnected();
     void disconnect();
+
+    boolean isActive();
 
     void addListener(ChatListener listener);
     void removeListener(ChatListener listener);
