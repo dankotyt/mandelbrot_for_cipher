@@ -10,11 +10,7 @@ public interface ChatService {
     void sendFile(byte[] fileData, String fileName);
 
     boolean isConnected();
-    String getConnectedPeer();
     void disconnect();
-
-    void startListening(int port);
-    void stopListening();
 
     void addListener(ChatListener listener);
     void removeListener(ChatListener listener);

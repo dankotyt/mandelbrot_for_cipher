@@ -1,502 +1,269 @@
 package com.cipher.client.service.chat.impl;
 
 import com.cipher.client.service.chat.ChatService;
-import com.cipher.client.service.chat.P2PConnectionManager;
 import com.cipher.client.utils.ChatEncryptionUtil;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.service.network.KeyExchangeService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.net.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Slf4j
 @Service
+@Slf4j
+@RequiredArgsConstructor
 @Scope("singleton")
 public class P2PChatServiceImpl implements ChatService {
 
-    private Socket connectedSocket;
-    private ServerSocket serverSocket;
-    private ObjectOutputStream outputStream;
-    private ObjectInputStream inputStream;
-
-    private ExecutorService messageListener;
-    private ExecutorService connectionListener;
-    private final List<ChatListener> listeners = new ArrayList<>();
     private final ChatEncryptionUtil encryptionUtil;
-    private final P2PConnectionManager p2pConnectionManager;
     private final KeyExchangeService keyExchangeService;
 
-    private volatile boolean connected = false;
-    private volatile boolean listening = false;
-    private String connectedPeerIp;
-    private int chatPort = NetworkConstants.CHAT_PORT;
+    private Socket socket;
+    private ObjectOutputStream outputStream;
+    private ObjectInputStream inputStream;
+    private ServerSocket serverSocket;
 
-    public P2PChatServiceImpl(ChatEncryptionUtil encryptionUtil, KeyExchangeService keyExchangeService) {
-        this.encryptionUtil = encryptionUtil;
-        this.keyExchangeService = keyExchangeService;
-        this.messageListener = Executors.newSingleThreadExecutor();
-        this.connectionListener = Executors.newSingleThreadExecutor();
-        this.p2pConnectionManager = new P2PConnectionManager();
-    }
+    private volatile boolean connected = false;
+    private volatile String connectedPeerIp;
+
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final List<ChatListener> listeners = new CopyOnWriteArrayList<>();
 
     @PostConstruct
     public void init() {
-        startListening(NetworkConstants.CHAT_PORT);
+        try {
+            serverSocket = new ServerSocket(NetworkConstants.CHAT_PORT);
+            executor.submit(this::acceptConnections);
+            log.info("Chat server started on port {}", NetworkConstants.CHAT_PORT);
+        } catch (IOException e) {
+            log.error("Failed to start chat server", e);
+        }
     }
 
     @PreDestroy
     public void cleanup() {
+        executor.shutdownNow();
         disconnect();
-        if (messageListener != null) {
-            messageListener.shutdownNow();
-        }
-        if (connectionListener != null) {
-            connectionListener.shutdownNow();
-        }
     }
 
     @Override
     public boolean connectToPeer(String peerIp) {
-        log.info("🔄 Установка P2P соединения с: {}", peerIp);
-
-        // Проверяем, не подключены ли уже
-        if (connected && peerIp.equals(connectedPeerIp)) {
-            log.info("Уже подключены к: {}", peerIp);
+        if (isConnected() && peerIp.equals(connectedPeerIp)) {
             return true;
         }
 
-        // Простая детерминированная логика по IP
-        boolean shouldConnectAsClient = p2pConnectionManager.shouldConnectAsClient(peerIp);
+        disconnect();
 
-        boolean success;
-        if (shouldConnectAsClient) {
-            log.info("🎯 Роль: КЛИЕНТ - инициируем подключение к {}", peerIp);
-            success = connectAsClient(peerIp);
-        } else {
-            log.info("🎯 Роль: СЕРВЕР - ожидаем подключения от {}", peerIp);
-            success = waitForIncomingConnection(peerIp, 10000);
-        }
+        // Детерминированный выбор роли
+        boolean asClient = isClientRole(peerIp);
+        log.info("Connecting to {} as {}", peerIp, asClient ? "CLIENT" : "SERVER");
 
-        // СОХРАНЯЕМ ПИРА В CONNECTION MANAGER ПРИ УСПЕШНОМ ПОДКЛЮЧЕНИИ
-        if (success && connectedPeerIp != null) {
-            try {
-                InetAddress peerAddress = InetAddress.getByName(connectedPeerIp);
-                keyExchangeService.setConnectedPeer(peerAddress);
-                log.info("💾 Сохранен пир в ConnectionManager: {}", connectedPeerIp);
-            } catch (Exception e) {
-                log.error("Ошибка сохранения пира в ConnectionManager: {}", e.getMessage());
-            }
+        boolean success = asClient ? connectAsClient(peerIp) : waitForConnection(peerIp);
+
+        if (success) {
+            keyExchangeService.setConnectedPeer(toInetAddress(peerIp));
+            notifyConnectionStatusChanged(true, "Connected to " + peerIp);
         }
 
         return success;
     }
 
-    private boolean smartConnect(String peerIp) {
-        // Сначала пробуем по детерминированной логике
-        boolean shouldConnectAsClient = p2pConnectionManager.shouldConnectAsClient(peerIp);
-
-        if (shouldConnectAsClient) {
-            // Пробуем как клиент
-            if (connectAsClient(peerIp)) {
-                return true;
-            }
-            // Если не удалось как клиент - пробуем как сервер
-            log.info("🔄 Fallback: не удалось как клиент, пробуем как сервер");
-            return waitForIncomingConnection(peerIp, 8000);
-        } else {
-            // Пробуем как сервер
-            if (waitForIncomingConnection(peerIp, 8000)) {
-                return true;
-            }
-            // Если не удалось как сервер - пробуем как клиент
-            log.info("🔄 Fallback: не удалось как сервер, пробуем как клиент");
-            return connectAsClient(peerIp);
+    private boolean isClientRole(String peerIp) {
+        try {
+            return InetAddress.getLocalHost().getHostAddress().compareTo(peerIp) < 0;
+        } catch (UnknownHostException e) {
+            return true;
         }
     }
 
     private boolean connectAsClient(String peerIp) {
         try {
-            if (connected) {
-                disconnect();
-            }
-
-            log.info("Подключение к пиру {}:{}", peerIp, chatPort);
-
-            Socket socket = new Socket();
-            socket.connect(new InetSocketAddress(peerIp, chatPort), 10000);
-            socket.setSoTimeout(0);
-            connectedSocket = socket;
-
-            setupStreams(connectedSocket);
-
-            connected = true;
-            connectedPeerIp = peerIp;
-
-            startMessageListening();
-            notifyConnectionStatusChanged(true, "Подключен к " + peerIp);
-
-            log.info("✅ Успешно подключились как клиент к: {}", peerIp);
+            Socket s = new Socket();
+            s.connect(new InetSocketAddress(peerIp, NetworkConstants.CHAT_PORT), 10000);
+            initConnection(s, peerIp);
             return true;
-
         } catch (IOException e) {
-            log.warn("❌ Не удалось подключиться как клиент к {}: {}", peerIp, e.getMessage());
-            // При неудаче пробуем подождать входящего подключения
-            return waitForIncomingConnection(peerIp, 10000);
+            log.warn("Client connection failed: {}", e.getMessage());
+            return false;
         }
     }
 
-    /**
-     * Ожидание входящего подключения как сервер
-     */
-    private boolean waitForIncomingConnection(String expectedPeerIp, long timeoutMs) {
-        log.info("⏳ Ожидаем входящего подключения от: {} (таймаут: {} мс)", expectedPeerIp, timeoutMs);
-
-        final long startTime = System.currentTimeMillis();
-
-        while (System.currentTimeMillis() - startTime < timeoutMs && !connected) {
-            if (connected && expectedPeerIp.equals(connectedPeerIp)) {
-                log.info("✅ Получено входящее подключение от: {}", expectedPeerIp);
-                return true;
-            }
+    private boolean waitForConnection(String expectedPeerIp) {
+        long deadline = System.currentTimeMillis() + 10000;
+        while (System.currentTimeMillis() < deadline && !connected) {
             try {
                 Thread.sleep(500);
+                if (connected && expectedPeerIp.equals(connectedPeerIp)) {
+                    return true;
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             }
         }
-
-        boolean success = connected && expectedPeerIp.equals(connectedPeerIp);
-        if (!success) {
-            log.warn("⏰ Таймаут ожидания подключения от: {}", expectedPeerIp);
-            p2pConnectionManager.resetAttempts(expectedPeerIp);
-        }
-        return success;
-    }
-
-    private boolean isLocalAddress(String ip) {
-        try {
-            String localIp = InetAddress.getLocalHost().getHostAddress();
-            return ip.equals(localIp) ||
-                    ip.equals("127.0.0.1") ||
-                    ip.equals("localhost") ||
-                    NetworkInterface.getByInetAddress(InetAddress.getByName(ip)) != null;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    @Override
-    public void startListening(int port) {
-        try {
-            this.chatPort = port;
-            if (listening && serverSocket != null && !serverSocket.isClosed()) {
-                log.info("Уже прослушиваем порт {}", port);
-                return;
-            }
-
-            serverSocket = new ServerSocket(port);
-            listening = true;
-
-            if (connectionListener.isShutdown()) {
-                log.warn("ConnectionListener pool shutdown, recreating...");
-                connectionListener = Executors.newSingleThreadExecutor();
-            }
-
-            connectionListener.execute(this::acceptConnections);
-            log.info("Прослушивание входящих подключений на порту {}", port);
-
-        } catch (IOException e) {
-            log.error("Ошибка запуска прослушивания на порту {}: {}", port, e.getMessage());
-            notifyError("Ошибка запуска сервера: " + e.getMessage());
-        }
+        return false;
     }
 
     private void acceptConnections() {
-        while (listening && !Thread.currentThread().isInterrupted()) {
+        while (!Thread.currentThread().isInterrupted()) {
             try {
-                Socket incomingSocket = serverSocket.accept();
-                String peerIp = incomingSocket.getInetAddress().getHostAddress();
+                Socket client = serverSocket.accept();
+                String peerIp = client.getInetAddress().getHostAddress();
 
-                log.info("Входящее подключение от: {}", peerIp);
-                notifyIncomingConnection(peerIp);
-
-                handleIncomingConnection(incomingSocket, peerIp);
-
+                if (!connected) {
+                    initConnection(client, peerIp);
+                    notifyIncomingConnection(peerIp);
+                } else {
+                    client.close();
+                }
             } catch (IOException e) {
-                if (listening) {
-                    log.error("Ошибка принятия подключения: {}", e.getMessage());
+                log.error("Accept failed", e);
+            }
+        }
+    }
+
+    private void initConnection(Socket s, String peerIp) throws IOException {
+        this.socket = s;
+        this.connectedPeerIp = peerIp;
+        this.outputStream = new ObjectOutputStream(s.getOutputStream());
+        this.inputStream = new ObjectInputStream(s.getInputStream());
+        this.connected = true;
+
+        executor.submit(this::receiveMessages);
+    }
+
+    private void receiveMessages() {
+        while (isConnected()) {
+            try {
+                Object obj = inputStream.readObject();
+                if (obj instanceof ChatMessageDTO encrypted) {
+                    ChatMessageDTO decrypted = encryptionUtil.decryptMessage(encrypted, connectedPeerIp);
+
+                    if (decrypted.isText()) {
+                        listeners.forEach(l -> l.onMessageReceived(decrypted));
+                    } else if (decrypted.isImage()) {
+                        listeners.forEach(l -> l.onImageReceived(decrypted));
+                    }
+                }
+            } catch (EOFException e) {
+                break;
+            } catch (Exception e) {
+                if (isConnected()) {
+                    log.error("Receive error", e);
                 }
                 break;
             }
         }
-    }
-
-    private void handleIncomingConnection(Socket socket, String peerIp) {
-        try {
-            connectedSocket = socket;
-            setupStreams(connectedSocket);
-
-            connected = true;
-            connectedPeerIp = peerIp;
-
-            startMessageListening();
-            notifyConnectionStatusChanged(true, "Подключен к " + peerIp);
-
-            // СОХРАНЯЕМ ПИРА В CONNECTION MANAGER
-            try {
-                InetAddress peerAddress = InetAddress.getByName(peerIp);
-                keyExchangeService.setConnectedPeer(peerAddress);
-                log.info("💾 Сохранен пир (входящее подключение) в ConnectionManager: {}", peerIp);
-            } catch (Exception e) {
-                log.error("Ошибка сохранения пира в ConnectionManager: {}", e.getMessage());
-            }
-
-            log.info("✅ Принято входящее подключение от: {}", peerIp);
-            notifyIncomingChatConnection(peerIp);
-
-        } catch (IOException e) {
-            log.error("Ошибка обработки входящего подключения: {}", e.getMessage());
-            notifyError("Ошибка входящего подключения");
-        }
-    }
-
-    private void notifyIncomingChatConnection(String peerIp) {
-        for (ChatListener listener : listeners) {
-            // Используем рефлексию для вызова метода, если он существует
-            try {
-                Method method = listener.getClass().getMethod("onIncomingChatConnection", String.class);
-                method.invoke(listener, peerIp);
-            } catch (NoSuchMethodException e) {
-                // Метод не существует - игнорируем
-            } catch (Exception e) {
-                log.error("Ошибка уведомления о входящем чате: {}", e.getMessage());
-            }
-        }
-    }
-
-    private void setupStreams(Socket socket) throws IOException {
-        outputStream = new ObjectOutputStream(socket.getOutputStream());
-        inputStream = new ObjectInputStream(socket.getInputStream());
-    }
-
-    private void startMessageListening() {
-        if (messageListener.isShutdown()) {
-            messageListener = Executors.newSingleThreadExecutor();
-        }
-        messageListener.execute(() -> {
-            try {
-                while (connected && !connectedSocket.isClosed()) {
-                    Object receivedObject = inputStream.readObject();
-
-                    if (receivedObject instanceof ChatMessageDTO encryptedMessage) {
-                        try {
-                            ChatMessageDTO decryptedMessage = encryptionUtil.decryptMessage(encryptedMessage, connectedPeerIp);
-                            handleReceivedMessage(decryptedMessage);
-                        } catch (Exception e) {
-                            log.error("Ошибка дешифрования сообщения от {}: {}", connectedPeerIp, e.getMessage());
-                            notifyError("Ошибка дешифрования сообщения");
-                        }
-                    } else {
-                        log.warn("Получен неизвестный объект: {}", receivedObject.getClass().getName());
-                    }
-                }
-            } catch (IOException e) {
-                if (connected) {
-                    log.error("Ошибка чтения сообщения: {}", e.getMessage());
-                    notifyError("Ошибка соединения");
-                    disconnect();
-                }
-            } catch (ClassNotFoundException e) {
-                log.error("Ошибка десериализации сообщения: {}", e.getMessage());
-                notifyError("Ошибка формата сообщения");
-            } catch (Exception e) {
-                log.error("Неожиданная ошибка при чтении сообщения: {}", e.getMessage());
-                notifyError("Неожиданная ошибка");
-                disconnect();
-            }
-        });
-    }
-
-    private void handleReceivedMessage(ChatMessageDTO message) {
-        if (message.isImage()) {
-            notifyImageReceived(message);
-            log.info("Получено изображение: {} ({} bytes)",
-                    message.getFileName(), message.getFileData().length);
-        } else if (message.isText()) {
-            notifyMessageReceived(message);
-            log.debug("Получено сообщение: {}", message.getContent());
-        }
+        disconnect();
     }
 
     @Override
     public void sendMessage(String message) {
-        sendChatMessage(ChatMessageDTO.builder()
+        send(ChatMessageDTO.builder()
                 .content(message)
                 .type(ChatMessageDTO.MessageType.TEXT)
                 .timestamp(LocalDateTime.now())
-                .sender(getLocalPeerName())
+                .sender(System.getProperty("user.name"))
                 .encrypted(true)
                 .build());
     }
 
     @Override
-    public void sendImage(byte[] imageData, String fileName) {
-        sendChatMessage(ChatMessageDTO.builder()
+    public void sendImage(byte[] data, String fileName) {
+        send(ChatMessageDTO.builder()
                 .type(ChatMessageDTO.MessageType.IMAGE)
                 .fileName(fileName)
-                .fileData(imageData)
-                .fileSize(imageData.length)
+                .fileData(data)
+                .fileSize(data.length)
                 .timestamp(LocalDateTime.now())
-                .sender(getLocalPeerName())
+                .sender(System.getProperty("user.name"))
                 .encrypted(true)
                 .build());
     }
 
     @Override
     public void sendFile(byte[] fileData, String fileName) {
-        sendChatMessage(ChatMessageDTO.builder()
+        send(ChatMessageDTO.builder()
                 .type(ChatMessageDTO.MessageType.FILE)
                 .fileName(fileName)
                 .fileData(fileData)
                 .fileSize(fileData.length)
                 .timestamp(LocalDateTime.now())
-                .sender(getLocalPeerName())
+                .sender(System.getProperty("user.name"))
                 .encrypted(true)
                 .build());
     }
 
-    private void sendChatMessage(ChatMessageDTO message) {
-        if (!connected || outputStream == null) {
-            notifyError("Соединение не установлено");
+    private void send(ChatMessageDTO msg) {
+        if (!isConnected()) {
+            notifyError("Not connected");
             return;
         }
 
         try {
-            // Подготавливаем сообщение для передачи
-            ChatMessageDTO preparedMessage = encryptionUtil.encryptMessage(message, connectedPeerIp);
-            outputStream.writeObject(preparedMessage);
+            outputStream.writeObject(encryptionUtil.encryptMessage(msg, connectedPeerIp));
             outputStream.flush();
-
-            log.debug("Сообщение отправлено: {}", message.getType());
-
+            outputStream.reset();
         } catch (IOException e) {
-            log.error("Ошибка отправки сообщения: {}", e.getMessage());
-            notifyError("Ошибка отправки сообщения");
-            disconnect();
-        } catch (Exception e) {
-            log.error("Неожиданная ошибка при отправке сообщения: {}", e.getMessage());
-            notifyError("Неожиданная ошибка при отправке");
+            log.error("Send failed", e);
             disconnect();
         }
     }
 
     @Override
     public boolean isConnected() {
-        return connected && connectedSocket != null && !connectedSocket.isClosed();
-    }
-
-    @Override
-    public String getConnectedPeer() {
-        return connectedPeerIp;
+        return connected && socket != null && socket.isConnected() && !socket.isClosed();
     }
 
     @Override
     public void disconnect() {
         connected = false;
-        listening = false;
-
-        try {
-            if (outputStream != null) {
-                outputStream.close();
-                outputStream = null;
-            }
-            if (inputStream != null) {
-                inputStream.close();
-                inputStream = null;
-            }
-            if (connectedSocket != null) {
-                connectedSocket.close();
-                connectedSocket = null;
-            }
-            if (serverSocket != null) {
-                serverSocket.close();
-                serverSocket = null;
-            }
-        } catch (IOException e) {
-            log.error("Ошибка при закрытии соединения: {}", e.getMessage());
-        }
-
         connectedPeerIp = null;
-        notifyConnectionStatusChanged(false, "Отключено");
-        log.info("P2P чат отключен");
+
+        closeQuietly(outputStream);
+        closeQuietly(inputStream);
+        closeQuietly(socket);
+
+        notifyConnectionStatusChanged(false, "Disconnected");
     }
 
-    @Override
-    public void stopListening() {
-        listening = false;
+    private void closeQuietly(AutoCloseable closeable) {
         try {
-            if (serverSocket != null) serverSocket.close();
-        } catch (IOException e) {
-            log.error("Ошибка остановки прослушивания: {}", e.getMessage());
+            if (closeable != null) closeable.close();
+        } catch (Exception ignored) {}
+    }
+
+    private InetAddress toInetAddress(String ip) {
+        try {
+            return InetAddress.getByName(ip);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    // Методы уведомления слушателей
-    private void notifyMessageReceived(ChatMessageDTO message) {
-        for (ChatListener listener : listeners) {
-            listener.onMessageReceived(message);
-        }
-    }
+    @Override public void addListener(ChatListener l) { listeners.add(l); }
+    @Override public void removeListener(ChatListener l) { listeners.remove(l); }
 
-    private void notifyImageReceived(ChatMessageDTO imageMessage) {
-        for (ChatListener listener : listeners) {
-            listener.onImageReceived(imageMessage);
-        }
-    }
-
-    private void notifyConnectionStatusChanged(boolean connected, String peerInfo) {
-        for (ChatListener listener : listeners) {
-            listener.onConnectionStatusChanged(connected, peerInfo);
-        }
-    }
-
-    private void notifyError(String errorMessage) {
-        for (ChatListener listener : listeners) {
-            listener.onError(errorMessage);
-        }
+    private void notifyConnectionStatusChanged(boolean connected, String info) {
+        listeners.forEach(l -> l.onConnectionStatusChanged(connected, info));
     }
 
     private void notifyIncomingConnection(String peerIp) {
-        for (ChatListener listener : listeners) {
-            listener.onIncomingConnection(peerIp);
-        }
+        listeners.forEach(l -> l.onIncomingConnection(peerIp));
     }
 
-    @Override
-    public void addListener(ChatListener listener) {
-        listeners.add(listener);
-    }
-
-    @Override
-    public void removeListener(ChatListener listener) {
-        listeners.remove(listener);
-    }
-
-    private String getLocalPeerName() {
-        // Можно получить имя устройства или оставить константу
-        return System.getProperty("user.name", "Peer");
+    private void notifyError(String error) {
+        listeners.forEach(l -> l.onError(error));
     }
 }

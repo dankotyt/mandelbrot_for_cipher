@@ -621,7 +621,6 @@ public class ChatController implements ChatService.ChatListener {
      */
     public void cleanup() {
         chatService.removeListener(this);
-        chatService.stopListening();
         chatService.disconnect();
         logger.info("ChatController очищен");
     }
