@@ -163,9 +163,6 @@ public class ConnectionServiceImpl implements ConnectionService {
 
                 // Принимаем соединение
                 acceptConnection(request);
-
-                // Запускаем обмен ключами и открываем чат
-                initiateKeyExchangeAndOpenChat(request);
             } else {
                 // Отправляем отклонение
                 DeviceDTO currentDevice = networkService.getCurrentDevice();
@@ -186,7 +183,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         acceptConnection(request);
 
         // Запускаем обмен ключами
-        initiateBackgroundKeyExchange(clientIp);
+        initiateKeyExchangeAndOpenChat(request);
     }
 
     @Override
@@ -200,7 +197,8 @@ public class ConnectionServiceImpl implements ConnectionService {
         // Показываем уведомление пользователю
         Platform.runLater(() ->
                 dialogDisplayer.showErrorDialog(
-                        String.format("Устройство %s отклонило ваш запрос на подключение", remoteDevice.name())));
+                        String.format("Устройство %s отклонило ваш запрос на " +
+                                "подключение", remoteDevice.name())));
     }
 
     // ==================== Клиентская часть ====================
@@ -390,84 +388,33 @@ public class ConnectionServiceImpl implements ConnectionService {
      * Инициирует обмен ключами и открывает чат после успеха
      */
     private void initiateKeyExchangeAndOpenChat(ConnectionRequestDTO request) {
-        initiateKeyExchangeAsServer(request); // Принимающая сторона
-    }
-
-    /**
-     * Запускает обмен ключами в фоновом режиме
-     */
-    private void initiateBackgroundKeyExchange(String clientIp) {
-        initiateKeyExchangeAsClient(clientIp); // Инициатор
-    }
-
-    /**
-     * Инициирует обмен ключами со стороны ПРИНИМАЮЩЕГО устройство
-     * (когда мы отвечаем ACCEPT на входящий запрос)
-     */
-    private void initiateKeyExchangeAsServer(ConnectionRequestDTO request) {
         new Thread(() -> {
             try {
-                logger.info("🔄 [SERVER] Запускаем ECDH сервер для приема ключей от: {}", request.fromDeviceIp());
-                Thread.sleep(1000); // Даем время на установку соединения
+                logger.info("🔄 [ПК1-ОТПРАВИТЕЛЬ] Инициируем обмен ключами с: {}", request.fromDeviceIp());
 
                 InetAddress peerAddress = InetAddress.getByName(request.fromDeviceIp());
 
-                // ВАЖНО: Для принимающей стороны мы НЕ вызываем performKeyExchange!
-                // Мы просто ждем, пока клиент сам инициирует соединение
-                // ECDHKeyExchangeServiceImpl сам обработает входящее соединение через handleKeyExchangeConnection
-
-                // Устанавливаем connected peer для UI
                 keyExchangeService.setConnectedPeer(peerAddress);
 
-                // Проверяем, что соединение установлено (ждем до 30 секунд)
-                for (int i = 0; i < 30; i++) {
-                    if (keyExchangeService.isConnectedTo(peerAddress)) {
-                        logger.info("✅ [SERVER] ECDH соединение установлено с: {}", request.fromDeviceIp());
-
-                        Platform.runLater(() -> {
-                            DeviceDTO remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
-                            sceneManager.showChatPanel(remoteDevice);
-                        });
-                        return;
-                    }
-                    Thread.sleep(1000);
-                }
-
-                logger.error("❌ [SERVER] ECDH соединение не установлено с: {}", request.fromDeviceIp());
-                Platform.runLater(() ->
-                        dialogDisplayer.showErrorDialog("Ошибка подключения. Не удалось установить безопасное соединение"));
-
-            } catch (Exception e) {
-                logger.error("❌ [SERVER] Ошибка при ожидании ECDH соединения: {}", e.getMessage());
-            }
-        }).start();
-    }
-
-    /**
-     * Инициирует обмен ключами со стороны КЛИЕНТА (инициатора)
-     * (когда мы получаем ACCEPT_RESPONSE на наш запрос)
-     */
-    private void initiateKeyExchangeAsClient(String clientIp) {
-        new Thread(() -> {
-            try {
-                logger.info("🔄 [CLIENT] Инициируем ECDH обмен ключами с: {}", clientIp);
-
-                InetAddress peerAddress = InetAddress.getByName(clientIp);
-
-                // Устанавливаем connected peer
-                keyExchangeService.setConnectedPeer(peerAddress);
-
-                // ТОЛЬКО клиент вызывает performKeyExchange
                 boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
 
                 if (keyExchangeSuccess) {
-                    logger.info("✅ [CLIENT] Обмен ключами успешно завершен с: {}", clientIp);
-                } else {
-                    logger.error("❌ [CLIENT] Обмен ключами не удался с: {}", clientIp);
-                }
+                    logger.info("✅ [ПК1-ОТПРАВИТЕЛЬ] Обмен ключами успешно завершен с: {}", request.fromDeviceIp());
 
+                    // Открываем чат
+                    Platform.runLater(() -> {
+                        DeviceDTO remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
+                        sceneManager.showChatPanel(remoteDevice);
+                        logger.info("✅ [ПК1-ОТПРАВИТЕЛЬ] Чат открыт с: {}", request.fromDeviceIp());
+                    });
+                } else {
+                    logger.error("❌ [ПК1-ОТПРАВИТЕЛЬ] Обмен ключами не удался с: {}", request.fromDeviceIp());
+                    Platform.runLater(() ->
+                            dialogDisplayer.showErrorDialog(
+                                    "Ошибка подключения. Не удалось установить безопасное соединение"));
+                }
             } catch (Exception e) {
-                logger.error("❌ [CLIENT] Ошибка при обмене ключами: {}", e.getMessage());
+                logger.error("❌ [ПК1-ОТПРАВИТЕЛЬ] Ошибка при обмене ключами: {}", e.getMessage(), e);
             }
         }).start();
     }

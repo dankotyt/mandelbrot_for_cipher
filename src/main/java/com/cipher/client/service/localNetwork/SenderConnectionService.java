@@ -53,6 +53,7 @@ public class SenderConnectionService {
 
             String response = "ACCEPT_RESPONSE:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(response);
+            writer.flush();
 
             log.info("Подтверждение отправлено к: {}", targetIp);
         } catch (IOException e) {
@@ -67,6 +68,7 @@ public class SenderConnectionService {
 
             String response = "REJECT_RESPONSE:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(response);
+            writer.flush();
 
             log.info("Отклонение отправлено к: {}", targetIp);
         } catch (IOException e) {
