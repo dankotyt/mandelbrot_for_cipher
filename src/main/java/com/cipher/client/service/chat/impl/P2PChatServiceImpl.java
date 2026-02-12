@@ -5,7 +5,7 @@ import com.cipher.client.service.chat.P2PConnectionManager;
 import com.cipher.client.utils.ChatEncryptionUtil;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.client.utils.NetworkConstants;
-import com.cipher.core.service.network.ConnectionManager;
+import com.cipher.core.service.network.KeyExchangeService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -36,16 +36,16 @@ public class P2PChatServiceImpl implements ChatService {
     private final List<ChatListener> listeners = new ArrayList<>();
     private final ChatEncryptionUtil encryptionUtil;
     private final P2PConnectionManager p2pConnectionManager;
-    private final ConnectionManager connectionManager;
+    private final KeyExchangeService keyExchangeService;
 
     private volatile boolean connected = false;
     private volatile boolean listening = false;
     private String connectedPeerIp;
     private int chatPort = NetworkConstants.CHAT_PORT;
 
-    public P2PChatServiceImpl(ChatEncryptionUtil encryptionUtil, ConnectionManager connectionManager) {
+    public P2PChatServiceImpl(ChatEncryptionUtil encryptionUtil, KeyExchangeService keyExchangeService) {
         this.encryptionUtil = encryptionUtil;
-        this.connectionManager = connectionManager;
+        this.keyExchangeService = keyExchangeService;
         this.messageListener = Executors.newSingleThreadExecutor();
         this.connectionListener = Executors.newSingleThreadExecutor();
         this.p2pConnectionManager = new P2PConnectionManager();
@@ -93,7 +93,7 @@ public class P2PChatServiceImpl implements ChatService {
         if (success && connectedPeerIp != null) {
             try {
                 InetAddress peerAddress = InetAddress.getByName(connectedPeerIp);
-                connectionManager.setConnectedPeer(peerAddress);
+                keyExchangeService.setConnectedPeer(peerAddress);
                 log.info("💾 Сохранен пир в ConnectionManager: {}", connectedPeerIp);
             } catch (Exception e) {
                 log.error("Ошибка сохранения пира в ConnectionManager: {}", e.getMessage());
@@ -258,7 +258,7 @@ public class P2PChatServiceImpl implements ChatService {
             // СОХРАНЯЕМ ПИРА В CONNECTION MANAGER
             try {
                 InetAddress peerAddress = InetAddress.getByName(peerIp);
-                connectionManager.setConnectedPeer(peerAddress);
+                keyExchangeService.setConnectedPeer(peerAddress);
                 log.info("💾 Сохранен пир (входящее подключение) в ConnectionManager: {}", peerIp);
             } catch (Exception e) {
                 log.error("Ошибка сохранения пира в ConnectionManager: {}", e.getMessage());

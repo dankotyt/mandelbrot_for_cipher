@@ -446,13 +446,23 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         return result;
     }
 
+    /**
+     * Устанавливает текущего активного пира.
+     *
+     * @param peerAddress IP-адрес пира, или null для сброса
+     */
     @Override
-    public void setCurrentPeer(InetAddress peerAddress) {
+    public void setConnectedPeer(InetAddress peerAddress) {
         this.currentPeer = peerAddress;
     }
 
+    /**
+     * Возвращает текущего активного пира.
+     *
+     * @return InetAddress активного пира или null
+     */
     @Override
-    public InetAddress getCurrentPeer() {
+    public InetAddress getConnectedPeer() {
         return currentPeer;
     }
 
@@ -466,11 +476,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     public String getConnectionStatus(InetAddress peerAddress) {
         PeerInfo info = activeConnections.get(peerAddress);
         return info != null ? info.getStatus().name() : "DISCONNECTED";
-    }
-
-    @Override
-    public void processIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey) {
-        updatePeerConnection(peerAddress);
     }
 
     @Override

@@ -4,7 +4,6 @@ import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
@@ -50,7 +49,6 @@ public class MandelbrotService extends JPanel {
     private final ImageUtils imageUtils;
     private final CryptographicService cryptographicService;
     private final KeyExchangeService keyExchangeService;
-    private final ConnectionManager connectionManager;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -127,12 +125,12 @@ public class MandelbrotService extends JPanel {
      * @see #checkImageDiversity(BufferedImage)
      */
     public BufferedImage generateImage() {
-        InetAddress peerAddress = connectionManager.getConnectedPeer();
+        InetAddress peerAddress = keyExchangeService.getConnectedPeer();
         if (peerAddress == null) {
             Map<InetAddress, String> activeConnections = keyExchangeService.getActiveConnections();
             if (!activeConnections.isEmpty()) {
                 peerAddress = activeConnections.keySet().iterator().next();
-                connectionManager.setConnectedPeer(peerAddress);
+                keyExchangeService.setConnectedPeer(peerAddress);
             } else {
                 throw new IllegalStateException("No connected peer found. Please establish connection first.");
             }

@@ -20,13 +20,10 @@ public interface KeyExchangeService {
     Map<InetAddress, String> getActiveConnections();
 
     // Статус и информация
-    void setCurrentPeer(InetAddress peerAddress);
-    InetAddress getCurrentPeer();
+    void setConnectedPeer(InetAddress peerAddress);
+    InetAddress getConnectedPeer();
     boolean isConnectedTo(InetAddress peerAddress);
     String getConnectionStatus(InetAddress peerAddress);
-
-    // Обработка входящих ключей
-    void processIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey);
 
     ECDHKeyExchange getPeerKeys(String peerIp);
     boolean hasKeysForPeer(String peerIp);
