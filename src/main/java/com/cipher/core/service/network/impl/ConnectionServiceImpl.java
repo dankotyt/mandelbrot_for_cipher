@@ -117,9 +117,11 @@ public class ConnectionServiceImpl implements ConnectionService {
      * Парсит и обрабатывает входящее сообщение
      */
     private void parseAndHandleMessage(String message, String clientIp) {
+        logger.info("📨 ПОЛУЧЕНО СООБЩЕНИЕ от {}: '{}'", clientIp, message);
+
         String[] parts = message.split(":", 3);
         if (parts.length < 3) {
-            logger.warn("Некорректный формат сообщения от {}: {}", clientIp, message);
+            logger.warn("❌ Некорректный формат сообщения от {}: {}", clientIp, message);
             return;
         }
 
@@ -127,6 +129,9 @@ public class ConnectionServiceImpl implements ConnectionService {
         String deviceName = parts[1];
         String deviceIp = parts[2];
         DeviceDTO remoteDevice = new DeviceDTO(deviceName, deviceIp);
+
+        logger.info("🔍 Тип сообщения: {}, от устройства: {} ({})",
+                messageType, deviceName, deviceIp);
 
         switch (messageType) {
             case "CONNECT_REQUEST":
@@ -139,7 +144,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 processIncomingReject(remoteDevice, clientIp);
                 break;
             default:
-                logger.warn("Неизвестный тип сообщения: {}", messageType);
+                logger.warn("❓ Неизвестный тип сообщения: {}", messageType);
         }
     }
 
@@ -176,8 +181,9 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void processIncomingAccept(DeviceDTO remoteDevice, String clientIp) {
+        DeviceDTO actualRemoteDevice = new DeviceDTO(remoteDevice.name(), clientIp);
         // Создаем запрос со статусом ACCEPTED
-        ConnectionRequestDTO request = createConnectionRequest(remoteDevice, ConnectionRequestDTO.RequestStatus.ACCEPTED);
+        ConnectionRequestDTO request = createConnectionRequest(actualRemoteDevice, ConnectionRequestDTO.RequestStatus.ACCEPTED);
 
         // Обновляем статус соединения
         acceptConnection(request);
@@ -188,8 +194,9 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void processIncomingReject(DeviceDTO remoteDevice, String clientIp) {
+        DeviceDTO actualRemoteDevice = new DeviceDTO(remoteDevice.name(), clientIp);
         // Создаем запрос со статусом REJECTED
-        ConnectionRequestDTO request = createConnectionRequest(remoteDevice, ConnectionRequestDTO.RequestStatus.REJECTED);
+        ConnectionRequestDTO request = createConnectionRequest(actualRemoteDevice, ConnectionRequestDTO.RequestStatus.REJECTED);
 
         // Обновляем статус соединения
         rejectConnection(request);
@@ -390,25 +397,37 @@ public class ConnectionServiceImpl implements ConnectionService {
     private void initiateKeyExchangeAndOpenChat(ConnectionRequestDTO request) {
         new Thread(() -> {
             try {
-                logger.info("🔄 [ПК1-ОТПРАВИТЕЛЬ] Инициируем обмен ключами с: {}", request.fromDeviceIp());
+                String targetIp;
+                DeviceDTO remoteDevice;
 
-                InetAddress peerAddress = InetAddress.getByName(request.fromDeviceIp());
+                DeviceDTO currentDevice = networkService.getCurrentDevice();
+                boolean isIncomingConnection = request.toDeviceIp().equals(currentDevice.ip());
 
+                if (isIncomingConnection) {
+                    // Входящее подключение: обмениваемся с отправителем
+                    targetIp = request.fromDeviceIp();
+                    remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
+                } else {
+                    // Исходящее подключение: обмениваемся с получателем
+                    targetIp = request.toDeviceIp();
+                    remoteDevice = new DeviceDTO(request.toDeviceName(), request.toDeviceIp());
+                }
+
+                logger.info("🔄 Обмен ключами с: {}", targetIp);
+                InetAddress peerAddress = InetAddress.getByName(targetIp);
                 keyExchangeService.setConnectedPeer(peerAddress);
-
                 boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
 
                 if (keyExchangeSuccess) {
-                    logger.info("✅ [ПК1-ОТПРАВИТЕЛЬ] Обмен ключами успешно завершен с: {}", request.fromDeviceIp());
+                    logger.info("✅ Обмен ключами успешно завершен с: {}", targetIp);
 
                     // Открываем чат
                     Platform.runLater(() -> {
-                        DeviceDTO remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
                         sceneManager.showChatPanel(remoteDevice);
-                        logger.info("✅ [ПК1-ОТПРАВИТЕЛЬ] Чат открыт с: {}", request.fromDeviceIp());
+                        logger.info("✅ Чат открыт с: {}", targetIp);
                     });
                 } else {
-                    logger.error("❌ [ПК1-ОТПРАВИТЕЛЬ] Обмен ключами не удался с: {}", request.fromDeviceIp());
+                    logger.error("❌ Обмен ключами не удался с: {}", targetIp);
                     Platform.runLater(() ->
                             dialogDisplayer.showErrorDialog(
                                     "Ошибка подключения. Не удалось установить безопасное соединение"));

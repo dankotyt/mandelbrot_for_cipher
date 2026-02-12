@@ -44,22 +44,25 @@ public class DiscoveryClient implements Runnable {
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                     socket.receive(packet);
 
-                    byte messageType = packet.getData()[0];
+                    byte[] data = packet.getData();
+                    if (data.length < 1) continue;
+
+                    byte messageType = data[0];
                     InetAddress senderAddress = packet.getAddress();
 
                     if (isOwnAddress(senderAddress)) {
                         continue;
                     }
 
-                    if (messageType == NetworkConstants.MSG_DISCOVERY) {
-                        if (discoveredPeers.add(senderAddress)) {
-                            log.info("Discovered new peer: {}", senderAddress.getHostAddress());
-                            discoveryService.onPeerDiscovered(senderAddress);
-                        }
-                    }
-                    else if (messageType == NetworkConstants.MSG_GOODBYE) {
-                        discoveryService.onPeerDisconnected(senderAddress);
-                        handleGoodbyeMessage(senderAddress);
+                    switch (messageType) {
+                        case NetworkConstants.MSG_DISCOVERY:
+                            handleDiscoveryMessage(senderAddress);
+                            break;
+                        case NetworkConstants.MSG_GOODBYE:
+                            handleGoodbyeMessage(senderAddress);
+                            break;
+                        default:
+                            log.trace("Unknown message type: {}", messageType);
                     }
 
                 } catch (SocketTimeoutException e) {
@@ -77,20 +80,51 @@ public class DiscoveryClient implements Runnable {
         log.info("Discovery client stopped");
     }
 
+    private void handleDiscoveryMessage(InetAddress senderAddress) {
+        String senderIp = senderAddress.getHostAddress();
+
+        if (discoveredPeers.add(senderAddress)) {
+            log.info("✅ Обнаружен новый пир: {}", senderIp);
+            discoveryService.onPeerDiscovered(senderAddress);
+        } else {
+            log.debug("Получен повторный announcement от {}, отвечаем", senderIp);
+        }
+
+        respondWithAnnouncement(senderAddress);
+    }
+
+    /**
+     * ОТПРАВЛЯЕМ ANNOUNCEMENT ОБРАТНО ОТПРАВИТЕЛЮ
+     */
+    private void respondWithAnnouncement(InetAddress targetAddress) {
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setBroadcast(false);
+
+            byte[] buffer = new byte[1];
+            buffer[0] = NetworkConstants.MSG_DISCOVERY;
+
+            DatagramPacket packet = new DatagramPacket(
+                    buffer, buffer.length,
+                    targetAddress,
+                    NetworkConstants.DISCOVERY_PORT
+            );
+
+            socket.send(packet);
+            log.debug("📢 Ответный announcement отправлен для {}", targetAddress.getHostAddress());
+
+        } catch (IOException e) {
+            log.warn("Ошибка отправки ответного announcement: {}", e.getMessage());
+        }
+    }
+
     private void handleGoodbyeMessage(InetAddress senderAddress) {
         if (discoveredPeers.remove(senderAddress)) {
-            log.info("Peer left the network: {}", senderAddress.getHostAddress());
+            log.info("👋 Пир покинул сеть: {}", senderAddress.getHostAddress());
 
-            // Уведомляем DeviceDiscoveryEventListener
-            if (deviceEventListener != null) {
-                // Создаем событие DeviceLostEvent через Spring
-                DeviceLostEvent event = new DeviceLostEvent(this, senderAddress);
-                // Вызываем метод обработки события
-                deviceEventListener.handleDeviceLost(event);
-            }
-
-            // Также уведомляем NetworkDiscoveryService
             discoveryService.onPeerDisconnected(senderAddress);
+
+            DeviceLostEvent event = new DeviceLostEvent(this, senderAddress);
+            deviceEventListener.handleDeviceLost(event);
         }
     }
 

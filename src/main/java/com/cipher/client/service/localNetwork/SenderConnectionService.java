@@ -30,6 +30,7 @@ public class SenderConnectionService {
 
             String request = "CONNECT_REQUEST:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(request);
+            writer.flush();
 
             log.info("Запрос на подключение отправлен к: {}", targetIp);
             return true;
