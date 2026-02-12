@@ -3,7 +3,8 @@ package com.cipher.client.utils;
 public class NetworkConstants {
     public static final String BROADCAST_ADDRESS = "255.255.255.255";
     public static final int DISCOVERY_PORT = 8888;
-    public static final int KEY_EXCHANGE_PORT = 8889;
+    public static final int KEY_EXCHANGE_PORT = 8889;    // Только бинарный обмен ключами
+    public static final int KEY_INVALIDATION_PORT = 8890; // Только инвалидация
     public static final String DISCOVERY_MESSAGE = "DISCOVER_MODULE_INSTANCE";
     public static final String GOODBYE_MESSAGE = "GOODBYE";
     public static final String KEY_INVALIDATION_MESSAGE = "KEY_INVALIDATION";

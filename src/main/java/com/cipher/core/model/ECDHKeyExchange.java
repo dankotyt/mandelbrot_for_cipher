@@ -14,7 +14,6 @@ public class ECDHKeyExchange {
     private final BigInteger[] publicKey; // [x, y]
     private BigInteger[] sharedSecret; // [x, y]
     private final Instant creationTime;
-    private volatile boolean valid = true;
     private byte[] sharedSecretBytes;
 
     public ECDHKeyExchange() {
@@ -56,7 +55,6 @@ public class ECDHKeyExchange {
     }
 
     public void invalidate() {
-        this.valid = false;
         if (sharedSecretBytes != null) {
             Arrays.fill(sharedSecretBytes, (byte) 0);
         }

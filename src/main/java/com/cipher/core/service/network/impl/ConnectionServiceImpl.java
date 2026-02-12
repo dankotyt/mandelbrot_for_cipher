@@ -4,6 +4,7 @@ import com.cipher.client.service.localNetwork.SenderConnectionService;
 import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.service.network.ConnectionManager;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.KeyExchangeService;
 import com.cipher.core.service.network.NetworkService;
@@ -41,6 +42,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final SenderConnectionService senderConnectionService;
     private final KeyExchangeService keyExchangeService;
     private final SceneManager sceneManager;
+    private final ConnectionManager connectionManager;
 
     private ServerSocket appServerSocket;
     private boolean serverRunning = false;
@@ -390,54 +392,84 @@ public class ConnectionServiceImpl implements ConnectionService {
      * Инициирует обмен ключами и открывает чат после успеха
      */
     private void initiateKeyExchangeAndOpenChat(ConnectionRequestDTO request) {
-        new Thread(() -> {
-            try {
-                logger.info("🔄 Инициируем обмен ключами с: {}", request.fromDeviceIp());
-                Thread.sleep(1000);
-
-                InetAddress peerAddress = InetAddress.getByName(request.fromDeviceIp());
-                boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
-
-                if (keyExchangeSuccess) {
-                    logger.info("✅ Обмен ключами успешно завершен с: {}", request.fromDeviceIp());
-
-                    Platform.runLater(() -> {
-                        DeviceDTO remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
-                        sceneManager.showChatPanel(remoteDevice);
-                        logger.info("✅ Чат автоматически открыт с: {}", request.fromDeviceIp());
-                    });
-                } else {
-                    logger.error("❌ Обмен ключами не удался с: {}", request.fromDeviceIp());
-                    Platform.runLater(() ->
-                            dialogDisplayer.showErrorDialog(
-                                    "Ошибка подключения. Не удалось установить безопасное соединение"));
-                }
-            } catch (Exception e) {
-                logger.error("❌ Ошибка при обмене ключами: {}", e.getMessage());
-            }
-        }).start();
+        initiateKeyExchangeAsServer(request); // Принимающая сторона
     }
 
     /**
      * Запускает обмен ключами в фоновом режиме
      */
     private void initiateBackgroundKeyExchange(String clientIp) {
+        initiateKeyExchangeAsClient(clientIp); // Инициатор
+    }
+
+    /**
+     * Инициирует обмен ключами со стороны ПРИНИМАЮЩЕГО устройство
+     * (когда мы отвечаем ACCEPT на входящий запрос)
+     */
+    private void initiateKeyExchangeAsServer(ConnectionRequestDTO request) {
         new Thread(() -> {
             try {
+                logger.info("🔄 [SERVER] Запускаем ECDH сервер для приема ключей от: {}", request.fromDeviceIp());
+                Thread.sleep(1000); // Даем время на установку соединения
+
+                InetAddress peerAddress = InetAddress.getByName(request.fromDeviceIp());
+
+                // ВАЖНО: Для принимающей стороны мы НЕ вызываем performKeyExchange!
+                // Мы просто ждем, пока клиент сам инициирует соединение
+                // ECDHKeyExchangeServiceImpl сам обработает входящее соединение через handleKeyExchangeConnection
+
+                // Устанавливаем connected peer для UI
+                connectionManager.setConnectedPeer(peerAddress);
+
+                // Проверяем, что соединение установлено (ждем до 30 секунд)
+                for (int i = 0; i < 30; i++) {
+                    if (keyExchangeService.isConnectedTo(peerAddress)) {
+                        logger.info("✅ [SERVER] ECDH соединение установлено с: {}", request.fromDeviceIp());
+
+                        Platform.runLater(() -> {
+                            DeviceDTO remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
+                            sceneManager.showChatPanel(remoteDevice);
+                        });
+                        return;
+                    }
+                    Thread.sleep(1000);
+                }
+
+                logger.error("❌ [SERVER] ECDH соединение не установлено с: {}", request.fromDeviceIp());
+                Platform.runLater(() ->
+                        dialogDisplayer.showErrorDialog("Ошибка подключения. Не удалось установить безопасное соединение"));
+
+            } catch (Exception e) {
+                logger.error("❌ [SERVER] Ошибка при ожидании ECDH соединения: {}", e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * Инициирует обмен ключами со стороны КЛИЕНТА (инициатора)
+     * (когда мы получаем ACCEPT_RESPONSE на наш запрос)
+     */
+    private void initiateKeyExchangeAsClient(String clientIp) {
+        new Thread(() -> {
+            try {
+                logger.info("🔄 [CLIENT] Инициируем ECDH обмен ключами с: {}", clientIp);
+
                 InetAddress peerAddress = InetAddress.getByName(clientIp);
+
+                // Устанавливаем connected peer
+                connectionManager.setConnectedPeer(peerAddress);
+
+                // ТОЛЬКО клиент вызывает performKeyExchange
                 boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
 
                 if (keyExchangeSuccess) {
-                    logger.info("✅ Обмен ключами успешно завершен с: {}", clientIp);
-
-                    if (keyExchangeService.hasKeysForPeer(clientIp)) {
-                        logger.info("✅ Ключи успешно сохранены для: {}", clientIp);
-                    }
+                    logger.info("✅ [CLIENT] Обмен ключами успешно завершен с: {}", clientIp);
                 } else {
-                    logger.error("❌ Обмен ключами не удался с: {}", clientIp);
+                    logger.error("❌ [CLIENT] Обмен ключами не удался с: {}", clientIp);
                 }
+
             } catch (Exception e) {
-                logger.error("❌ Ошибка при установке соединения: {}", e.getMessage());
+                logger.error("❌ [CLIENT] Ошибка при обмене ключами: {}", e.getMessage());
             }
         }).start();
     }

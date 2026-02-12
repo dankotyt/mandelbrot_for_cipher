@@ -4,14 +4,12 @@ import com.cipher.core.model.ECDHKeyExchange;
 
 import java.net.InetAddress;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public interface KeyExchangeService {
 
     // Основные методы для использования в ImageEncrypt/ImageDecrypt
     byte[] getMasterSeedFromDH(InetAddress peerAddress);
     boolean performKeyExchange(InetAddress peerAddress);
-    CompletableFuture<Boolean> performKeyExchangeAsync(InetAddress peerAddress);
     void generateNewKeys();
     ECDHKeyExchange getCurrentKeys();
 
@@ -22,13 +20,14 @@ public interface KeyExchangeService {
     Map<InetAddress, String> getActiveConnections();
 
     // Статус и информация
+    void setCurrentPeer(InetAddress peerAddress);
+    InetAddress getCurrentPeer();
     boolean isConnectedTo(InetAddress peerAddress);
     String getConnectionStatus(InetAddress peerAddress);
 
     // Обработка входящих ключей
     void processIncomingKeyExchange(InetAddress peerAddress, byte[] publicKey);
 
-    void savePeerKeys(String peerIp, ECDHKeyExchange keys);
     ECDHKeyExchange getPeerKeys(String peerIp);
     boolean hasKeysForPeer(String peerIp);
     void removePeerKeys(String peerIp);

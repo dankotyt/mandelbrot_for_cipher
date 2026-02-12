@@ -12,9 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -32,8 +30,10 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     private final Map<String, Object> peerLocks = new ConcurrentHashMap<>();
 
     private ServerSocket keyExchangeServerSocket;
+    private ServerSocket keyInvalidationServerSocket;
     private boolean serverRunning = false;
     private final ExecutorService connectionPool = Executors.newCachedThreadPool();
+    private volatile InetAddress currentPeer;
 
     public ECDHKeyExchangeServiceImpl() {
         generateNewKeys();
@@ -45,6 +45,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         peerKeys.clear();
         connectionInProgress.clear();
         startKeyExchangeServer();
+        startKeyInvalidationServer();
     }
 
     @PreDestroy
@@ -55,19 +56,34 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         peerKeys.clear();
         connectionInProgress.clear();
 
-        if (keyExchangeServerSocket != null) {
-            try {
-                keyExchangeServerSocket.close();
-            } catch (IOException e) {
-                log.warn("Ошибка закрытия сервера обмена ключами: {}", e.getMessage());
-            }
-        }
+        closeServerSocket(keyExchangeServerSocket, "обмена ключами");
+        closeServerSocket(keyInvalidationServerSocket, "инвалидации ключей");
 
         connectionPool.shutdown();
+        try {
+            if (!connectionPool.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+                connectionPool.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            connectionPool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void closeServerSocket(ServerSocket socket, String serverName) {
+        if (socket != null) {
+            try {
+                socket.close();
+                log.info("✅ Сервер {} остановлен", serverName);
+            } catch (IOException e) {
+                log.warn("❌ Ошибка закрытия сервера {}: {}", serverName, e.getMessage());
+            }
+        }
     }
 
     /**
      * Запускает сервер для обработки входящих соединений обмена ключами
+     * Использует бинарный протокол: [int длина][byte[] ключ]
      */
     private void startKeyExchangeServer() {
         new Thread(() -> {
@@ -92,6 +108,55 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     }
 
     /**
+     * Запускает сервер для обработки сообщений об инвалидации ключей
+     * Использует текстовый протокол: [UTF строка]
+     */
+    private void startKeyInvalidationServer() {
+        new Thread(() -> {
+            try {
+                keyInvalidationServerSocket = new ServerSocket(NetworkConstants.KEY_INVALIDATION_PORT);
+                log.info("✅ Сервер инвалидации ключей запущен на порту {}", NetworkConstants.KEY_INVALIDATION_PORT);
+
+                while (serverRunning) {
+                    Socket clientSocket = keyInvalidationServerSocket.accept();
+                    handleKeyInvalidationConnection(clientSocket);
+                }
+            } catch (IOException e) {
+                if (serverRunning) {
+                    log.error("❌ Ошибка сервера инвалидации ключей: {}", e.getMessage());
+                }
+            }
+        }, "KeyInvalidation-Server").start();
+    }
+
+    /**
+     * Обрабатывает входящее соединение для инвалидации ключей
+     */
+    private void handleKeyInvalidationConnection(Socket clientSocket) {
+        connectionPool.execute(() -> {
+            String clientIp = clientSocket.getInetAddress().getHostAddress();
+
+            try (DataInputStream in = new DataInputStream(clientSocket.getInputStream())) {
+                String message = in.readUTF();
+
+                if (NetworkConstants.KEY_INVALIDATION_MESSAGE.equals(message)) {
+                    log.info("🔴 Получена инвалидация ключей от: {}", clientIp);
+                    removePeerKeys(clientIp);
+                    closeConnection(clientSocket.getInetAddress());
+                }
+            } catch (IOException e) {
+                log.warn("Ошибка обработки инвалидации от {}: {}", clientIp, e.getMessage());
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    log.warn("Ошибка закрытия сокета инвалидации: {}", e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
      * Обрабатывает входящее соединение для обмена ключами.
      * Логика: получаем -> отправляем.
      * @param clientSocket сокет клиента
@@ -99,25 +164,10 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     private void handleKeyExchangeConnection(Socket clientSocket) {
         connectionPool.execute(() -> {
             String clientIp = clientSocket.getInetAddress().getHostAddress();
-            log.info("Входящее соединение для обмена ключами от: {}", clientIp);
+            log.info("🔄 Входящее соединение для обмена ключами от: {}", clientIp);
 
             try (DataInputStream in = new DataInputStream(clientSocket.getInputStream());
                  DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
-
-                // Проверяем, не является ли это сообщением об инвалидации ключей
-                try {
-                    String message = in.readUTF();
-                    if (NetworkConstants.KEY_INVALIDATION_MESSAGE.equals(message)) {
-                        log.info("Получена инвалидация ключей от: {}", clientIp);
-                        removePeerKeys(clientIp);
-                        closeConnection(clientSocket.getInetAddress());
-                        return;
-                    }
-                } catch (Exception e) {
-                    // Не UTF сообщение, продолжаем как обычный обмен ключами
-                    // Возвращаемся к началу потока
-                    clientSocket.getInputStream().reset();
-                }
 
                 // Получаем публичный ключ клиента
                 int keyLength = in.readInt();
@@ -141,10 +191,10 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 // Сохраняем соединение
                 addConnection(clientSocket.getInetAddress(), ourKeys);
 
-                log.info("Обмен ключами завершен с: {}", clientIp);
+                log.info("✅ Обмен ключами завершен с: {}", clientIp);
 
             } catch (IOException e) {
-                log.error("Ошибка обмена ключами с {}: {}", clientIp, e.getMessage());
+                log.error("❌ Ошибка обмена ключами с {}: {}", clientIp, e.getMessage());
             } finally {
                 try {
                     clientSocket.close();
@@ -274,20 +324,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         }
     }
 
-    @Override
-    public CompletableFuture<Boolean> performKeyExchangeAsync(InetAddress peerAddress) {
-        return CompletableFuture.supplyAsync(() -> performKeyExchange(peerAddress))
-                .orTimeout(30, TimeUnit.SECONDS)
-                .exceptionally(throwable -> {
-                    log.error("Асинхронный ECDH обмен ключами не удался с {}: {}",
-                            peerAddress.getHostAddress(), throwable.getMessage());
-                    connectionInProgress.remove(peerAddress);
-                    return false;
-                });
-    }
-
-    @Override
-    public void savePeerKeys(String peerIp, ECDHKeyExchange keys) {
+    private void savePeerKeys(String peerIp, ECDHKeyExchange keys) {
         peerKeys.put(peerIp, keys);
         logger.info("Сохранены ключи для пира: {}", peerIp);
     }
@@ -324,7 +361,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             peerInfo.setEcdhKeys(currentKeys);
             peerInfo.setStatus(ConnectionStatus.CONNECTED);
             peerInfo.updateLastSeen();
-            peerInfo.updateKeyExchangeTime();
 
             log.info("ECDH информация о пире обновлена: {}", peerAddress.getHostAddress());
 
@@ -367,7 +403,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             peerInfo.setEcdhKeys(keys);
             peerInfo.setStatus(ConnectionStatus.CONNECTED);
             peerInfo.updateLastSeen();
-            peerInfo.updateKeyExchangeTime();
 
             activeConnections.put(peerAddress, peerInfo);
             log.info("Добавлено ECDH соединение с: {}", peerAddress.getHostAddress());
@@ -412,6 +447,16 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     }
 
     @Override
+    public void setCurrentPeer(InetAddress peerAddress) {
+        this.currentPeer = peerAddress;
+    }
+
+    @Override
+    public InetAddress getCurrentPeer() {
+        return currentPeer;
+    }
+
+    @Override
     public boolean isConnectedTo(InetAddress peerAddress) {
         return activeConnections.containsKey(peerAddress) &&
                 activeConnections.get(peerAddress).getStatus() == ConnectionStatus.CONNECTED;
@@ -430,23 +475,22 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public void sendKeyInvalidation(InetAddress peerAddress) {
-        new Thread(() -> {
-            log.info("Sending key invalidation to {}", peerAddress.getHostAddress());
+        CompletableFuture.runAsync(() -> {
+            log.info("📤 Отправка инвалидации ключей для: {}", peerAddress.getHostAddress());
 
             try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(peerAddress, NetworkConstants.KEY_EXCHANGE_PORT), 5000);
+                socket.connect(new InetSocketAddress(peerAddress, NetworkConstants.KEY_INVALIDATION_PORT), 5000);
                 socket.setSoTimeout(5000);
 
                 try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
                     out.writeUTF(NetworkConstants.KEY_INVALIDATION_MESSAGE);
                     out.flush();
-                    log.info("Key invalidation sent to {}", peerAddress.getHostAddress());
+                    log.info("✅ Инвалидация ключей отправлена для: {}", peerAddress.getHostAddress());
                 }
-
             } catch (IOException e) {
-                log.warn("Failed to send key invalidation to {}: {}",
+                log.warn("⚠️ Не удалось отправить инвалидацию ключей для {}: {}",
                         peerAddress.getHostAddress(), e.getMessage());
             }
-        }, "Key-Invalidation-Sender").start();
+        }, connectionPool);
     }
 }
