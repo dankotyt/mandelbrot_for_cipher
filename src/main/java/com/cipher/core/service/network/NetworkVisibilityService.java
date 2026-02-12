@@ -2,7 +2,6 @@ package com.cipher.core.service.network;
 
 import com.cipher.client.service.localNetwork.DiscoveryClient;
 import com.cipher.client.service.localNetwork.DiscoveryServer;
-import com.cipher.core.service.network.impl.UDPPeerDiscoveryService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ public class NetworkVisibilityService {
 
     @PostConstruct
     public void init() {
-        // Инициализируем клиент, но не запускаем сервер
         try {
             discoveryClient.start();
             isInitialized.set(true);
@@ -56,6 +54,7 @@ public class NetworkVisibilityService {
                 throw new RuntimeException("Не удалось стать видимым", e);
             }
         } else {
+            discoveryServer.sendAnnouncement();
             log.debug("Устройство уже видимо");
         }
     }
@@ -77,13 +76,6 @@ public class NetworkVisibilityService {
         } else {
             log.debug("Устройство уже невидимо");
         }
-    }
-
-    /**
-     * Проверить, видимо ли устройство
-     */
-    public boolean isVisible() {
-        return isVisible.get();
     }
 
     @PreDestroy

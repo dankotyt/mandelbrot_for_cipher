@@ -18,7 +18,6 @@ public class DiscoveryServer implements Runnable {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean enabled = new AtomicBoolean(false);
     private Thread broadcasterThread;
-    private DatagramSocket socket;
 
     public DiscoveryServer() {
         log.info("Discovery server initialized");
@@ -27,106 +26,115 @@ public class DiscoveryServer implements Runnable {
     @Override
     public void run() {
         running.set(true);
-        log.info("DiscoveryServer поток запущен (enabled={})", enabled.get());
+        log.info("DiscoveryServer поток запущен");
 
-        try {
-            socket = new DatagramSocket();
+        try (DatagramSocket socket = new DatagramSocket()) {
             socket.setBroadcast(true);
             InetAddress broadcastAddr = InetAddress.getByName(
                     NetworkConstants.BROADCAST_ADDRESS);
-            byte[] buffer = NetworkConstants.DISCOVERY_MESSAGE.getBytes(StandardCharsets.UTF_8);
+            byte[] buffer = new byte[1];
+            buffer[0] = NetworkConstants.MSG_DISCOVERY;
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
                     broadcastAddr, NetworkConstants.DISCOVERY_PORT);
-
-            int messageCounter = 0;
 
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     if (enabled.get()) {
                         socket.send(packet);
-                        messageCounter++;
-
-                        if (messageCounter % 10 == 0) {
-                            log.debug("Broadcast сообщение #{}, enabled={}",
-                                    messageCounter, enabled.get());
-                        } else {
-                            log.trace("Broadcast сообщение отправлено");
-                        }
-                    } else {
-                        log.trace("DiscoveryServer выключен, ожидание...");
                     }
-
                     Thread.sleep(NetworkConstants.ANNOUNCE_INTERVAL_MS);
-
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (IOException e) {
                     if (enabled.get()) {
-                        log.error("Ошибка отправки broadcast сообщения: {}", e.getMessage());
+                        log.error("Ошибка отправки broadcast: {}", e.getMessage());
                     }
                 }
             }
         } catch (IOException e) {
             log.error("Ошибка создания сокета: {}", e.getMessage());
-        } finally {
-            closeSocket();
-            log.info("DiscoveryServer поток остановлен");
-        }
-    }
-
-    private void closeSocket() {
-        if (socket != null && !socket.isClosed()) {
-            try {
-                socket.close();
-                log.debug("Сокет DiscoveryServer закрыт");
-            } catch (Exception e) {
-                log.warn("Ошибка закрытия сокета: {}", e.getMessage());
-            }
         }
     }
 
     public void start() {
+        boolean wasEnabled = enabled.getAndSet(true);
+
         if (broadcasterThread == null || !broadcasterThread.isAlive()) {
-            setEnabled(true);
-            broadcasterThread = new Thread(this, "Discovery-Server");
+            broadcasterThread = new Thread((Runnable) this, "Discovery-Server");
             broadcasterThread.setDaemon(true);
             broadcasterThread.start();
-            log.info("DiscoveryServer запущен и включен");
+            log.info("✅ DiscoveryServer поток запущен");
+        }
+
+        sendAnnouncement();
+
+        if (!wasEnabled) {
+            log.info("✅ DiscoveryServer включен и отправил announcement");
         } else {
-            // Если поток уже работает, просто включаем
-            setEnabled(true);
-            log.info("DiscoveryServer уже запущен, включена отправка сообщений");
+            log.info("✅ DiscoveryServer переотправил announcement при повторном входе в сеть");
         }
     }
 
     /**
-     * Отправить сообщение "прощания" при выходе
+     * Принудительная отправка announcement (для кнопки "Обновить")
+     */
+    public void sendAnnouncement() {
+        if (!enabled.get()) {
+            log.debug("Устройство невидимо, announcement не отправлен");
+            return;
+        }
+
+        try (DatagramSocket tempSocket = new DatagramSocket()) {
+            tempSocket.setBroadcast(true);
+            InetAddress broadcastAddr = InetAddress.getByName(
+                    NetworkConstants.BROADCAST_ADDRESS);
+            byte[] buffer = new byte[1];
+            buffer[0] = NetworkConstants.MSG_DISCOVERY;
+            DatagramPacket packet = new DatagramPacket(
+                    buffer, buffer.length, broadcastAddr,
+                    NetworkConstants.DISCOVERY_PORT);
+
+            // Отправляем 3 пакета для надежности!
+            for (int i = 0; i < 3; i++) {
+                tempSocket.send(packet);
+                Thread.sleep(50);
+            }
+
+            log.info("📢 Announcement отправлен (3 пакета)");
+
+        } catch (Exception e) {
+            log.warn("Ошибка отправки announcement: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Отправка запроса на обнаружение (discovery request)
+     * Это заставит другие устройства ответить своими announcement
      */
     public void sendGoodbyePacket() {
         new Thread(() -> {
             try {
-                // Ждем немного, чтобы убедиться, что все потоки завершились
                 Thread.sleep(NetworkConstants.GOODBYE_DELAY_MS);
 
                 try (DatagramSocket goodbyeSocket = new DatagramSocket()) {
                     goodbyeSocket.setBroadcast(true);
                     InetAddress broadcastAddr = InetAddress.getByName(
                             NetworkConstants.BROADCAST_ADDRESS);
-                    byte[] buffer = NetworkConstants.GOODBYE_MESSAGE
-                            .getBytes(StandardCharsets.UTF_8);
+                    byte[] buffer = new byte[1];
+                    buffer[0] = NetworkConstants.MSG_GOODBYE;
                     DatagramPacket packet = new DatagramPacket(
                             buffer, buffer.length, broadcastAddr,
                             NetworkConstants.DISCOVERY_PORT);
 
-                    // Отправляем 3 goodbye-пакета для гарантии
+                    // Отправляем 3 goodbye-пакета
                     for (int i = 0; i < 3; i++) {
                         goodbyeSocket.send(packet);
                         log.debug("Goodbye packet #{}/3 sent", i + 1);
-                        if (i < 2) Thread.sleep(100);
+                        Thread.sleep(100);
                     }
 
-                    log.info("Goodbye packets sent - device is now invisible");
+                    log.info("👋 Goodbye packets sent - device is now invisible");
                 }
             } catch (Exception e) {
                 log.warn("Error sending goodbye packet: {}", e.getMessage());
@@ -135,36 +143,21 @@ public class DiscoveryServer implements Runnable {
     }
 
     public void stop() {
-        sendGoodbyePacket();
+        if (enabled.compareAndSet(true, false)) {
+            log.info("DiscoveryServer выключен");
+            sendGoodbyePacket();
+        }
+
+        running.set(false);
 
         if (broadcasterThread != null) {
             broadcasterThread.interrupt();
             try {
-                broadcasterThread.join(2000); // Даем время на завершение
-                if (broadcasterThread.isAlive()) {
-                    log.warn("DiscoveryServer поток не завершился вовремя");
-                }
+                broadcasterThread.join(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
             broadcasterThread = null;
         }
-
-        setEnabled(false); // Выключаем отправку сообщений
-        running.set(false); // Останавливаем цикл
-        closeSocket(); // Закрываем сокет
-        log.info("DiscoveryServer полностью остановлен");
-    }
-
-    public void setEnabled(boolean enabled) {
-        boolean wasEnabled = this.enabled.getAndSet(enabled);
-        if (wasEnabled != enabled) {
-            log.info("DiscoveryServer {}",
-                    enabled ? "включен (устройство видимо)" : "выключен (устройство невидимо)");
-        }
-    }
-
-    public boolean isEnabled() {
-        return enabled.get();
     }
 }

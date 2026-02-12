@@ -137,9 +137,9 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             String clientIp = clientSocket.getInetAddress().getHostAddress();
 
             try (DataInputStream in = new DataInputStream(clientSocket.getInputStream())) {
-                String message = in.readUTF();
+                byte messageType = in.readByte();
 
-                if (NetworkConstants.KEY_INVALIDATION_MESSAGE.equals(message)) {
+                if (messageType == NetworkConstants.MSG_KEY_INVALIDATION) {
                     log.info("🔴 Получена инвалидация ключей от: {}", clientIp);
                     removePeerKeys(clientIp);
                     closeConnection(clientSocket.getInetAddress());
@@ -170,6 +170,12 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                  DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
 
                 // Получаем публичный ключ клиента
+                byte messageType = in.readByte();
+                if (messageType != NetworkConstants.MSG_KEY_EXCHANGE) {
+                    log.warn("Expected MSG_KEY_EXCHANGE, got: {}", messageType);
+                    return;
+                }
+
                 int keyLength = in.readInt();
                 if (keyLength <= 0 || keyLength > 10000) {
                     throw new IOException("Неверная длина ключа: " + keyLength);
@@ -181,6 +187,8 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 // Отправляем наш публичный ключ
                 ECDHKeyExchange ourKeys = getCurrentKeys();
                 byte[] ourPublicKey = ourKeys.getPublicKeyBytes();
+
+                out.writeByte(NetworkConstants.MSG_KEY_EXCHANGE);
                 out.writeInt(ourPublicKey.length);
                 out.write(ourPublicKey);
                 out.flush();
@@ -287,10 +295,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
             try (DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                  DataInputStream in = new DataInputStream(socket.getInputStream())) {
 
-                if (ourKeys == null) {
-                    log.error("No current keys available");
-                    return false;
-                }
+                out.writeByte(NetworkConstants.MSG_KEY_EXCHANGE);
 
                 // Отправляем наш публичный ключ
                 byte[] ourPublicKey = ourKeys.getPublicKeyBytes();
@@ -298,12 +303,13 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 out.write(ourPublicKey);
                 out.flush();
 
-                // Получаем публичный ключ пира
-                int keyLength = in.readInt();
-                if (keyLength <= 0 || keyLength > 10000) {
-                    throw new IOException("Invalid key length: " + keyLength);
+                byte responseType = in.readByte();
+                if (responseType != NetworkConstants.MSG_KEY_EXCHANGE) {
+                    log.error("Expected MSG_KEY_EXCHANGE response, got: {}", responseType);
+                    return false;
                 }
 
+                int keyLength = in.readInt();
                 byte[] peerPublicKeyBytes = new byte[keyLength];
                 in.readFully(peerPublicKeyBytes);
 
@@ -488,7 +494,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 socket.setSoTimeout(5000);
 
                 try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
-                    out.writeUTF(NetworkConstants.KEY_INVALIDATION_MESSAGE);
+                    out.writeByte(NetworkConstants.MSG_KEY_INVALIDATION);
                     out.flush();
                     log.info("✅ Инвалидация ключей отправлена для: {}", peerAddress.getHostAddress());
                 }

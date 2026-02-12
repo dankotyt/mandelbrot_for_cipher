@@ -44,24 +44,20 @@ public class DiscoveryClient implements Runnable {
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                     socket.receive(packet);
 
-                    String message = new String(packet.getData(), 0, packet.getLength(),
-                            StandardCharsets.UTF_8).trim();
-
+                    byte messageType = packet.getData()[0];
                     InetAddress senderAddress = packet.getAddress();
 
                     if (isOwnAddress(senderAddress)) {
                         continue;
                     }
 
-                    if (NetworkConstants.DISCOVERY_MESSAGE.equals(message)) {
-                        // Обнаружено новое устройство
+                    if (messageType == NetworkConstants.MSG_DISCOVERY) {
                         if (discoveredPeers.add(senderAddress)) {
                             log.info("Discovered new peer: {}", senderAddress.getHostAddress());
                             discoveryService.onPeerDiscovered(senderAddress);
                         }
                     }
-                    else if (NetworkConstants.GOODBYE_MESSAGE.equals(message)) {
-                        // Устройство вышло из сети
+                    else if (messageType == NetworkConstants.MSG_GOODBYE) {
                         discoveryService.onPeerDisconnected(senderAddress);
                         handleGoodbyeMessage(senderAddress);
                     }
