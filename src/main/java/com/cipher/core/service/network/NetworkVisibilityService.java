@@ -25,7 +25,6 @@ public class NetworkVisibilityService {
     @PostConstruct
     public void init() {
         try {
-//            discoveryClient.start();
             isInitialized.set(true);
             log.info("NetworkVisibilityService инициализирован (невидим)");
         } catch (Exception e) {
@@ -68,7 +67,7 @@ public class NetworkVisibilityService {
     public void becomeInvisible() {
         if (isVisible.compareAndSet(true, false)) {
             try {
-                // Останавливаем сервер анонсирования
+                discoveryClient.stop();
                 discoveryServer.stop();
                 peerDiscoveryService.clear();
 
