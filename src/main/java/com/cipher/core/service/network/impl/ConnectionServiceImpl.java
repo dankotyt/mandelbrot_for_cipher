@@ -156,7 +156,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                     "Запрос на подключение",
                     "Входящее подключение",
                     String.format("Получен запрос на подключение от:%nУстройство: %s%nIP: %s%n%nПринять подключение и открыть чат?",
-                            request.fromDeviceName(), request.fromDeviceIp()),
+                            request.toDeviceName(), request.toDeviceIp()),
                     "Принять",
                     "Отклонить"
             );
@@ -164,14 +164,18 @@ public class ConnectionServiceImpl implements ConnectionService {
             if (accepted) {
                 // Отправляем подтверждение
                 DeviceDTO currentDevice = networkService.getCurrentDevice();
-                senderConnectionService.sendAcceptResponse(request.fromDeviceIp(), currentDevice);
+                senderConnectionService.sendAcceptResponse(request.toDeviceIp(), currentDevice);
 
                 // Принимаем соединение
                 acceptConnection(request);
+
+                DeviceDTO remoteDevice = new DeviceDTO(request.toDeviceName(), request.toDeviceIp());
+                sceneManager.showChatPanel(remoteDevice);
+                logger.info("✅ Чат открыт с: {}", request.toDeviceIp());
             } else {
                 // Отправляем отклонение
                 DeviceDTO currentDevice = networkService.getCurrentDevice();
-                senderConnectionService.sendRejectResponse(request.fromDeviceIp(), currentDevice);
+                senderConnectionService.sendRejectResponse(request.toDeviceIp(), currentDevice);
 
                 // Отклоняем соединение
                 rejectConnection(request);
@@ -181,9 +185,8 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void processIncomingAccept(DeviceDTO remoteDevice, String clientIp) {
-        DeviceDTO actualRemoteDevice = new DeviceDTO(remoteDevice.name(), clientIp);
         // Создаем запрос со статусом ACCEPTED
-        ConnectionRequestDTO request = createConnectionRequest(actualRemoteDevice, ConnectionRequestDTO.RequestStatus.ACCEPTED);
+        ConnectionRequestDTO request = createConnectionRequest(remoteDevice, ConnectionRequestDTO.RequestStatus.ACCEPTED);
 
         // Обновляем статус соединения
         acceptConnection(request);
@@ -194,9 +197,8 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void processIncomingReject(DeviceDTO remoteDevice, String clientIp) {
-        DeviceDTO actualRemoteDevice = new DeviceDTO(remoteDevice.name(), clientIp);
         // Создаем запрос со статусом REJECTED
-        ConnectionRequestDTO request = createConnectionRequest(actualRemoteDevice, ConnectionRequestDTO.RequestStatus.REJECTED);
+        ConnectionRequestDTO request = createConnectionRequest(remoteDevice, ConnectionRequestDTO.RequestStatus.REJECTED);
 
         // Обновляем статус соединения
         rejectConnection(request);
