@@ -54,15 +54,15 @@ public class DiscoveryClient implements Runnable {
                         continue;
                     }
 
-                    switch (messageType) {
-                        case NetworkConstants.MSG_DISCOVERY:
-                            handleDiscoveryMessage(senderAddress);
-                            break;
-                        case NetworkConstants.MSG_GOODBYE:
-                            handleGoodbyeMessage(senderAddress);
-                            break;
-                        default:
-                            log.trace("Unknown message type: {}", messageType);
+                    if (messageType == NetworkConstants.MSG_DISCOVERY) {
+                        if (discoveredPeers.add(senderAddress)) {
+                            log.info("Discovered new peer: {}", senderAddress.getHostAddress());
+                            discoveryService.onPeerDiscovered(senderAddress);
+                            respondWithAnnouncement(senderAddress);
+                        }
+                    }
+                    else if (messageType == NetworkConstants.MSG_GOODBYE) {
+                        handleGoodbyeMessage(senderAddress);
                     }
 
                 } catch (SocketTimeoutException e) {
@@ -78,19 +78,6 @@ public class DiscoveryClient implements Runnable {
         }
 
         log.info("Discovery client stopped");
-    }
-
-    private void handleDiscoveryMessage(InetAddress senderAddress) {
-        String senderIp = senderAddress.getHostAddress();
-
-        if (discoveredPeers.add(senderAddress)) {
-            log.info("✅ Обнаружен новый пир: {}", senderIp);
-            discoveryService.onPeerDiscovered(senderAddress);
-        } else {
-            log.debug("Получен повторный announcement от {}, отвечаем", senderIp);
-        }
-
-        respondWithAnnouncement(senderAddress);
     }
 
     /**

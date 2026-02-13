@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -18,6 +17,7 @@ public class DiscoveryServer implements Runnable {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean enabled = new AtomicBoolean(false);
     private Thread broadcasterThread;
+    private DatagramSocket socket;
 
     public DiscoveryServer() {
         log.info("Discovery server initialized");
@@ -28,7 +28,8 @@ public class DiscoveryServer implements Runnable {
         running.set(true);
         log.info("DiscoveryServer поток запущен");
 
-        try (DatagramSocket socket = new DatagramSocket()) {
+        try {
+            socket = new DatagramSocket();
             socket.setBroadcast(true);
             InetAddress broadcastAddr = InetAddress.getByName(
                     NetworkConstants.BROADCAST_ADDRESS);
@@ -37,10 +38,21 @@ public class DiscoveryServer implements Runnable {
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
                     broadcastAddr, NetworkConstants.DISCOVERY_PORT);
 
+            int messageCounter = 0;
+
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     if (enabled.get()) {
                         socket.send(packet);
+                        messageCounter++;
+                        if (messageCounter % 10 == 0) {
+                            log.debug("Broadcast сообщение #{}, enabled={}",
+                                    messageCounter, enabled.get());
+                        } else {
+                            log.trace("Broadcast сообщение отправлено");
+                        }
+                    } else {
+                        log.trace("DiscoveryServer выключен, ожидание...");
                     }
                     Thread.sleep(NetworkConstants.ANNOUNCE_INTERVAL_MS);
                 } catch (InterruptedException e) {
@@ -54,6 +66,20 @@ public class DiscoveryServer implements Runnable {
             }
         } catch (IOException e) {
             log.error("Ошибка создания сокета: {}", e.getMessage());
+        } finally {
+            closeSocket();
+            log.info("DiscoveryServer поток остановлен");
+        }
+    }
+
+    private void closeSocket() {
+        if (socket != null && !socket.isClosed()) {
+            try {
+                socket.close();
+                log.debug("Сокет DiscoveryServer закрыт");
+            } catch (Exception e) {
+                log.warn("Ошибка закрытия сокета: {}", e.getMessage());
+            }
         }
     }
 
@@ -61,7 +87,8 @@ public class DiscoveryServer implements Runnable {
         boolean wasEnabled = enabled.getAndSet(true);
 
         if (broadcasterThread == null || !broadcasterThread.isAlive()) {
-            broadcasterThread = new Thread((Runnable) this, "Discovery-Server");
+            setEnabled(true);
+            broadcasterThread = new Thread(this, "Discovery-Server");
             broadcasterThread.setDaemon(true);
             broadcasterThread.start();
             log.info("✅ DiscoveryServer поток запущен");
@@ -72,6 +99,9 @@ public class DiscoveryServer implements Runnable {
         if (!wasEnabled) {
             log.info("✅ DiscoveryServer включен и отправил announcement");
         } else {
+            // Если поток уже работает, просто включаем
+            setEnabled(true);
+            log.info("DiscoveryServer уже запущен, включена отправка сообщений");
             log.info("✅ DiscoveryServer переотправил announcement при повторном входе в сеть");
         }
     }
@@ -143,9 +173,9 @@ public class DiscoveryServer implements Runnable {
     }
 
     public void stop() {
+        sendGoodbyePacket();
         if (enabled.compareAndSet(true, false)) {
             log.info("DiscoveryServer выключен");
-            sendGoodbyePacket();
         }
 
         running.set(false);
@@ -158,6 +188,17 @@ public class DiscoveryServer implements Runnable {
                 Thread.currentThread().interrupt();
             }
             broadcasterThread = null;
+        }
+        setEnabled(false); // Выключаем отправку сообщений
+        running.set(false); // Останавливаем цикл
+        closeSocket();
+    }
+
+    public void setEnabled(boolean enabled) {
+        boolean wasEnabled = this.enabled.getAndSet(enabled);
+        if (wasEnabled != enabled) {
+            log.info("DiscoveryServer {}",
+                    enabled ? "включен (устройство видимо)" : "выключен (устройство невидимо)");
         }
     }
 }
