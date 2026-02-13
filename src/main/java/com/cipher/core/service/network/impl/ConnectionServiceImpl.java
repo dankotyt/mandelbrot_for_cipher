@@ -1,5 +1,6 @@
 package com.cipher.core.service.network.impl;
 
+import com.cipher.client.service.chat.ChatService;
 import com.cipher.client.service.localNetwork.SenderConnectionService;
 import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
@@ -41,6 +42,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final SenderConnectionService senderConnectionService;
     private final KeyExchangeService keyExchangeService;
     private final SceneManager sceneManager;
+    private final ChatService chatService;
 
     private ServerSocket appServerSocket;
     private boolean serverRunning = false;
@@ -422,12 +424,22 @@ public class ConnectionServiceImpl implements ConnectionService {
 
                 if (keyExchangeSuccess) {
                     logger.info("✅ Обмен ключами успешно завершен с: {}", targetIp);
+                    boolean chatConnected = chatService.connectToPeer(targetIp);
 
-                    // Открываем чат
-                    Platform.runLater(() -> {
-                        sceneManager.showChatPanel(remoteDevice);
-                        logger.info("✅ Чат открыт с: {}", targetIp);
-                    });
+                    if (chatConnected) {
+                        logger.info("✅ P2P чат соединение установлено с: {}", targetIp);
+
+                        // Открываем чат
+                        Platform.runLater(() -> {
+                            sceneManager.showChatPanel(remoteDevice);
+                            logger.info("✅ Чат открыт с: {}", targetIp);
+                        });
+                    } else {
+                        logger.error("❌ Не удалось установить P2P соединение с: {}", targetIp);
+                        Platform.runLater(() ->
+                                dialogDisplayer.showErrorDialog(
+                                        "Ошибка подключения. Не удалось установить P2P соединение"));
+                    }
                 } else {
                     logger.error("❌ Обмен ключами не удался с: {}", targetIp);
                     Platform.runLater(() ->
