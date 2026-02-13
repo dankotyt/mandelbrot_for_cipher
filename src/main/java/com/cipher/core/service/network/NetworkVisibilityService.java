@@ -25,7 +25,7 @@ public class NetworkVisibilityService {
     @PostConstruct
     public void init() {
         try {
-            discoveryClient.start();
+//            discoveryClient.start();
             isInitialized.set(true);
             log.info("NetworkVisibilityService инициализирован (невидим)");
         } catch (Exception e) {
@@ -44,8 +44,11 @@ public class NetworkVisibilityService {
                     init();
                 }
 
+                discoveryClient.start();
                 // Запускаем сервер для анонсирования
                 discoveryServer.start();
+
+                discoveryClient.sendDiscoveryRequest();
 
                 log.info("✅ Устройство стало видимым в сети");
             } catch (Exception e) {

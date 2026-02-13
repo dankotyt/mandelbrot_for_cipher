@@ -104,6 +104,41 @@ public class DiscoveryClient implements Runnable {
         }
     }
 
+    /**
+     * Отправляет запрос на обнаружение устройств в сети
+     */
+    public void sendDiscoveryRequest() {
+        new Thread(() -> {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                socket.setBroadcast(true);
+                socket.setSoTimeout(2000);
+
+                InetAddress broadcastAddr = InetAddress.getByName(
+                        NetworkConstants.BROADCAST_ADDRESS);
+
+                byte[] buffer = new byte[1];
+                buffer[0] = NetworkConstants.MSG_DISCOVERY;
+
+                DatagramPacket packet = new DatagramPacket(
+                        buffer, buffer.length,
+                        broadcastAddr,
+                        NetworkConstants.DISCOVERY_PORT
+                );
+
+                // Отправляем 3 пакета для надежности
+                for (int i = 0; i < 3; i++) {
+                    socket.send(packet);
+                    Thread.sleep(100);
+                }
+
+                log.info("📢 Discovery request отправлен (3 пакета)");
+
+            } catch (Exception e) {
+                log.warn("Ошибка отправки discovery request: {}", e.getMessage());
+            }
+        }, "Discovery-Request").start();
+    }
+
     private void handleGoodbyeMessage(InetAddress senderAddress) {
         if (discoveredPeers.remove(senderAddress)) {
             log.info("👋 Пир покинул сеть: {}", senderAddress.getHostAddress());
