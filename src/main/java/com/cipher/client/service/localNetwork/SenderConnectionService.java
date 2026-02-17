@@ -1,12 +1,12 @@
 package com.cipher.client.service.localNetwork;
 
+import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.model.SignedConnectionPacket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -24,9 +24,7 @@ public class SenderConnectionService {
             // Устанавливаем таймаут подключения
             socket.connect(new InetSocketAddress(targetIp, CONNECTION_PORT), 5000); // 5 секунд
             socket.setSoTimeout(5000); // Таймаут чтения/записи
-
-            OutputStream output = socket.getOutputStream();
-            PrintWriter writer = new PrintWriter(output, true);
+            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
 
             String request = "CONNECT_REQUEST:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(request);
@@ -49,8 +47,7 @@ public class SenderConnectionService {
 
     public void sendAcceptResponse(String targetIp, DeviceDTO fromDevice) {
         try (Socket socket = new Socket(targetIp, CONNECTION_PORT)) {
-            OutputStream output = socket.getOutputStream();
-            PrintWriter writer = new PrintWriter(output, true);
+            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
 
             String response = "ACCEPT_RESPONSE:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(response);
@@ -64,8 +61,7 @@ public class SenderConnectionService {
 
     public void sendRejectResponse(String targetIp, DeviceDTO fromDevice) {
         try (Socket socket = new Socket(targetIp, CONNECTION_PORT)) {
-            OutputStream output = socket.getOutputStream();
-            PrintWriter writer = new PrintWriter(output, true);
+            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
 
             String response = "REJECT_RESPONSE:" + fromDevice.name() + ":" + fromDevice.ip();
             writer.println(response);
@@ -74,6 +70,28 @@ public class SenderConnectionService {
             log.info("Отклонение отправлено к: {}", targetIp);
         } catch (IOException e) {
             log.warn("Не удалось отправить отклонение к {}: {}", targetIp, e.getMessage());
+        }
+    }
+
+    /**
+     * Отправляет подписанный криптографический пакет (после того как соединение установлено)
+     */
+    public SignedConnectionPacket sendSignedPacket(String targetIp, SignedConnectionPacket packet) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(targetIp, NetworkConstants.SIGNED_PACKET_PORT), 5000);
+            socket.setSoTimeout(5000);
+
+            try (ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+
+                oos.writeObject(packet);
+                oos.flush();
+
+                return (SignedConnectionPacket) ois.readObject();
+            }
+        } catch (Exception e) {
+            log.warn("❌ Ошибка отправки подписанного пакета к {}: {}", targetIp, e.getMessage());
+            return null;
         }
     }
 }
