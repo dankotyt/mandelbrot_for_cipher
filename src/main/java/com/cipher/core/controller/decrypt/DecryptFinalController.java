@@ -1,7 +1,7 @@
 package com.cipher.core.controller.decrypt;
 
 import com.cipher.core.encryption.ImageDecrypt;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
@@ -36,7 +36,7 @@ public class DecryptFinalController {
     private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
     private final ImageDecrypt imageDecrypt;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     private String keyFilePath;
     private InetAddress peerAddress;
@@ -45,7 +45,7 @@ public class DecryptFinalController {
         this.keyFilePath = keyFilePath;
         File file = new File(keyFilePath);
 
-        this.peerAddress = keyExchangeService.getConnectedPeer();
+        this.peerAddress = cryptoKeyManager.getConnectedPeer();
         if (this.peerAddress == null) {
             dialogDisplayer.showErrorDialog("Не установлено соединение с пиром. Сначала подключитесь к устройству.");
             return;
@@ -58,7 +58,7 @@ public class DecryptFinalController {
     public void initialize() {
         setupEventHandlers();
 
-        this.peerAddress = keyExchangeService.getConnectedPeer();
+        this.peerAddress = cryptoKeyManager.getConnectedPeer();
         if (this.peerAddress != null) {
             logger.info("✅ Контроллер дешифрования инициализирован с пиром: {}",
                     peerAddress.getHostAddress());
@@ -79,7 +79,7 @@ public class DecryptFinalController {
         }
 
         if (peerAddress == null) {
-            peerAddress = keyExchangeService.getConnectedPeer();
+            peerAddress = cryptoKeyManager.getConnectedPeer();
             if (peerAddress == null) {
                 dialogDisplayer.showErrorDialog("Не установлено соединение с пиром. Сначала подключитесь к устройству.");
                 return;

@@ -9,14 +9,14 @@ import java.time.Instant;
 import java.util.Arrays;
 
 @Getter
-public class ECDHKeyExchange {
+public class ECDHKeyPair {
     private final BigInteger privateKey;
     private final BigInteger[] publicKey; // [x, y]
     private BigInteger[] sharedSecret; // [x, y]
     private final Instant creationTime;
     private byte[] sharedSecretBytes;
 
-    public ECDHKeyExchange() {
+    public ECDHKeyPair() {
         SecureRandom random = new SecureRandom();
         this.privateKey = generatePrivateKey(random);
         this.publicKey = scalarMultiply(ECDHCryptoParams.GX, ECDHCryptoParams.GY, privateKey);

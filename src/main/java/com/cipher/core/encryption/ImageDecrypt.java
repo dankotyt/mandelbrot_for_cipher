@@ -6,16 +6,13 @@ import java.awt.image.DataBuffer;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.file.Files;
 import java.util.Map;
 
-import com.cipher.common.exception.CheckingException;
-import com.cipher.core.dto.encryption.EncryptionResult;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.dto.encryption.EncryptionParams;
 import com.cipher.core.dto.segmentation.SegmentationParams;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 import com.cipher.core.utils.EncryptionDataSerializer;
@@ -37,7 +34,7 @@ public class ImageDecrypt {
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final EncryptionDataSerializer serializer;
     private final CryptographicService cryptographicService;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
     private final TempFileManager tempFileManager;
 
     private static String getProjectRootPath() {
@@ -49,7 +46,7 @@ public class ImageDecrypt {
 
     public BufferedImage decryptImage(File encryptedFile, InetAddress peerAddress) throws Exception {
         try {
-            if (!keyExchangeService.isConnectedTo(peerAddress)) {
+            if (!cryptoKeyManager.isConnectedTo(peerAddress)) {
                 throw new IllegalStateException("Not connected to peer: " + peerAddress.getHostAddress());
             }
 
@@ -93,7 +90,7 @@ public class ImageDecrypt {
 
     // Метод для проверки возможности дешифрования
     public boolean canDecryptFromPeer(InetAddress peerAddress) {
-        return keyExchangeService.isConnectedTo(peerAddress);
+        return cryptoKeyManager.isConnectedTo(peerAddress);
     }
 
     private boolean compareImages(BufferedImage img1, BufferedImage img2) {

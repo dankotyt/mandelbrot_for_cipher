@@ -2,8 +2,6 @@ package com.cipher.core.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.net.InetAddress;
-import java.util.Set;
 
 import com.cipher.core.dto.*;
 import com.cipher.core.dto.encryption.EncryptionArea;
@@ -12,7 +10,7 @@ import com.cipher.core.dto.encryption.EncryptionParams;
 import com.cipher.core.dto.encryption.EncryptionResult;
 import com.cipher.core.dto.segmentation.SegmentationParams;
 import com.cipher.core.dto.segmentation.SegmentationResult;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.*;
 import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
@@ -24,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class ImageEncrypt {
     private final DialogDisplayer dialogDisplayer;
     private MandelbrotParams mandelbrotParams;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     public void initMandelbrotParams(MandelbrotParams mandelbrotParams) {
         this.mandelbrotParams = mandelbrotParams;

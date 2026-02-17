@@ -4,7 +4,7 @@ import com.cipher.client.service.chat.ChatService;
 import com.cipher.client.utils.ChatEncryptionUtil;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.client.utils.NetworkConstants;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 public class P2PChatServiceImpl implements ChatService {
 
     private final ChatEncryptionUtil encryptionUtil;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     private Socket socket;
     private ObjectOutputStream outputStream;
@@ -58,7 +58,7 @@ public class P2PChatServiceImpl implements ChatService {
 
     @Override
     public boolean isConnected() {
-        InetAddress peer = keyExchangeService.getConnectedPeer();
+        InetAddress peer = cryptoKeyManager.getConnectedPeer();
         return peer != null &&
                 socket != null &&
                 socket.isConnected() &&
@@ -67,7 +67,7 @@ public class P2PChatServiceImpl implements ChatService {
 
     @Override
     public String getConnectedPeer() {
-        InetAddress peer = keyExchangeService.getConnectedPeer();
+        InetAddress peer = cryptoKeyManager.getConnectedPeer();
         return peer != null ? peer.getHostAddress() : null;
     }
 
@@ -80,14 +80,14 @@ public class P2PChatServiceImpl implements ChatService {
 
         InetAddress peerAddress = toInetAddress(peerIp);
 
-        if (isConnected() && peerAddress.equals(keyExchangeService.getConnectedPeer())) {
+        if (isConnected() && peerAddress.equals(cryptoKeyManager.getConnectedPeer())) {
             log.info("Already connected to {}", peerIp);
             return true;
         }
 
         disconnect();
 
-        keyExchangeService.setConnectedPeer(peerAddress);
+        cryptoKeyManager.setConnectedPeer(peerAddress);
 
         boolean asClient = isClientRole(peerIp);
         boolean success = asClient ? connectAsClient(peerIp) : waitForConnection(peerIp);
@@ -96,7 +96,7 @@ public class P2PChatServiceImpl implements ChatService {
             notifyConnectionStatusChanged(true, "Connected to " + peerIp);
         } else {
             // Не удалось подключиться - сбрасываем пир
-            keyExchangeService.setConnectedPeer(null);
+            cryptoKeyManager.setConnectedPeer(null);
         }
 
         return success;
@@ -161,13 +161,13 @@ public class P2PChatServiceImpl implements ChatService {
         this.outputStream = new ObjectOutputStream(s.getOutputStream());
         this.inputStream = new ObjectInputStream(s.getInputStream());
 
-        keyExchangeService.setConnectedPeer(toInetAddress(peerIp));
+        cryptoKeyManager.setConnectedPeer(toInetAddress(peerIp));
 
         executor.submit(this::receiveMessages);
     }
 
     private void receiveMessages() {
-        InetAddress currentPeer = keyExchangeService.getConnectedPeer();
+        InetAddress currentPeer = cryptoKeyManager.getConnectedPeer();
         String peerIp = currentPeer != null ? currentPeer.getHostAddress() : null;
 
         while (isConnected()) {
@@ -258,7 +258,7 @@ public class P2PChatServiceImpl implements ChatService {
         socket = null;
         outputStream = null;
         inputStream = null;
-        keyExchangeService.setConnectedPeer(null);
+        cryptoKeyManager.setConnectedPeer(null);
 
         notifyConnectionStatusChanged(false, "Disconnected");
     }

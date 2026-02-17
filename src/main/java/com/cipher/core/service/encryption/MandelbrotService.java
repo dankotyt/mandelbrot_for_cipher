@@ -4,7 +4,7 @@ import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.ConsoleManager;
@@ -48,7 +48,7 @@ public class MandelbrotService extends JPanel {
     private final ImageEncrypt imageEncrypt;
     private final ImageUtils imageUtils;
     private final CryptographicService cryptographicService;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -125,24 +125,24 @@ public class MandelbrotService extends JPanel {
      * @see #checkImageDiversity(BufferedImage)
      */
     public BufferedImage generateImage() {
-        InetAddress peerAddress = keyExchangeService.getConnectedPeer();
+        InetAddress peerAddress = cryptoKeyManager.getConnectedPeer();
         if (peerAddress == null) {
-            Map<InetAddress, String> activeConnections = keyExchangeService.getActiveConnections();
+            Map<InetAddress, String> activeConnections = cryptoKeyManager.getActiveConnections();
             if (!activeConnections.isEmpty()) {
                 peerAddress = activeConnections.keySet().iterator().next();
-                keyExchangeService.setConnectedPeer(peerAddress);
+                cryptoKeyManager.setConnectedPeer(peerAddress);
             } else {
                 throw new IllegalStateException("No connected peer found. Please establish connection first.");
             }
         }
 
-        if (!keyExchangeService.hasKeysForPeer(peerAddress.getHostAddress())) {
+        if (!cryptoKeyManager.hasKeysForPeer(peerAddress.getHostAddress())) {
             throw new IllegalStateException("No encryption keys available for peer: " +
                     peerAddress.getHostAddress() + ". Please perform key exchange first.");
         }
 
         // Получаем мастер-сид из DH обмена
-        byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+        byte[] masterSeed = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
         drbg.initialize(masterSeed);
 
         // Инициализируем сервисы мастер-сидом

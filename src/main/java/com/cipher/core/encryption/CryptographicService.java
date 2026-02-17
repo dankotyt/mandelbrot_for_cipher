@@ -2,7 +2,7 @@ package com.cipher.core.encryption;
 
 import com.cipher.core.dto.encryption.EncryptionResult;
 import com.cipher.core.dto.encryption.EncryptionDataResult;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.EncryptionDataSerializer;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -35,17 +35,17 @@ public class CryptographicService {
     private static final int IV_LENGTH = 12;
 
     private final EncryptionDataSerializer serializer;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     public EncryptionDataResult encryptData(EncryptionResult result) throws Exception {
         byte[] imageData = serializer.serializeImage(result.encryptedImage());
         byte[] salt = generateSalt();
         byte[] iv = generateIV();
 
-        InetAddress peerAddress = keyExchangeService.getConnectedPeer();
+        InetAddress peerAddress = cryptoKeyManager.getConnectedPeer();
 
         // Получаем мастер-сид из DH обмена
-        byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+        byte[] masterSeed = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
         logger.info("Using master seed from DH for peer: {}", peerAddress.getHostAddress());
 
         SecretKey key = generateKeyFromMasterSeed(masterSeed, salt);
@@ -66,7 +66,7 @@ public class CryptographicService {
             byte[] salt = encryptedDataResult.salt();
 
             // Получаем мастер-сид из DH обмена
-            byte[] masterSeed = keyExchangeService.getMasterSeedFromDH(peerAddress);
+            byte[] masterSeed = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
             logger.info("Using master seed from DH for decryption from peer: {}", peerAddress.getHostAddress());
 
             SecretKey key = generateKeyFromMasterSeed(masterSeed, salt);
@@ -120,8 +120,8 @@ public class CryptographicService {
     // Метод для проверки возможности шифрования с указанным пиром
     public boolean canEncryptToPeer(InetAddress peerAddress) {
         try {
-            keyExchangeService.getMasterSeedFromDH(peerAddress);
-            return keyExchangeService.isConnectedTo(peerAddress);
+            cryptoKeyManager.getMasterSeedFromDH(peerAddress);
+            return cryptoKeyManager.isConnectedTo(peerAddress);
         } catch (Exception e) {
             logger.warn("Cannot encrypt to peer {}: {}", peerAddress.getHostAddress(), e.getMessage());
             return false;
