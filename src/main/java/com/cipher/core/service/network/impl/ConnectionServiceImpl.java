@@ -5,8 +5,11 @@ import com.cipher.client.service.localNetwork.SenderConnectionService;
 import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
+import com.cipher.core.model.ECDHKeyPair;
+import com.cipher.core.model.SignedConnectionPacket;
 import com.cipher.core.service.network.ConnectionService;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.DigitalSignatureService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.service.network.NetworkService;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -40,31 +43,42 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final DialogDisplayer dialogDisplayer;
     private final NetworkService networkService;
     private final SenderConnectionService senderConnectionService;
-    private final KeyExchangeService keyExchangeService;
+    private final CryptoKeyManager cryptoKeyManager;
+    private final DigitalSignatureService signatureService;
     private final SceneManager sceneManager;
     private final ChatService chatService;
 
     private ServerSocket appServerSocket;
+    private ServerSocket cryptoServerSocket;
+
     private boolean serverRunning = false;
 
     private final Map<String, ConnectionRequestDTO> pendingRequests = new ConcurrentHashMap<>();
     private final Map<String, ConnectionRequestDTO> establishedConnections = new ConcurrentHashMap<>();
     private final List<ConnectionListener> listeners = new ArrayList<>();
     private final Map<String, Object> requestLocks = new ConcurrentHashMap<>();
+    private final Map<String, Long> blockedPeers = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
         startAppServer();
+        startCryptoServer();
     }
 
     @PreDestroy
     public void cleanup() {
         serverRunning = false;
-        if (appServerSocket != null) {
+        closeServerSocket(appServerSocket, "App");
+        closeServerSocket(cryptoServerSocket, "Crypto");
+    }
+
+    private void closeServerSocket(ServerSocket socket, String name) {
+        if (socket != null) {
             try {
-                appServerSocket.close();
+                socket.close();
+                logger.info("Сервер {} остановлен", name);
             } catch (IOException e) {
-                logger.error("Ошибка при остановке сервера: {}", e.getMessage());
+                logger.warn("Ошибка закрытия сервера {}: {}", name, e.getMessage());
             }
         }
     }
@@ -94,23 +108,48 @@ public class ConnectionServiceImpl implements ConnectionService {
     }
 
     /**
+     * Сервер для криптографических подписанных пакетов
+     */
+    private void startCryptoServer() {
+        new Thread(() -> {
+            try {
+                cryptoServerSocket = new ServerSocket(NetworkConstants.SIGNED_PACKET_PORT);
+                logger.info("Крипто-сервер запущен на порту {}", NetworkConstants.SIGNED_PACKET_PORT);
+
+                while (serverRunning) {
+                    Socket clientSocket = cryptoServerSocket.accept();
+                    processSignedPacket(clientSocket);
+                }
+            } catch (IOException e) {
+                if (serverRunning) {
+                    logger.error("Ошибка крипто-сервера: {}", e.getMessage());
+                }
+            }
+        }, "Crypto-Server").start();
+    }
+
+    /**
      * Обрабатывает входящее соединение
      */
     private void processIncomingConnection(Socket clientSocket) {
         new Thread(() -> {
-            try {
-                String clientIp = clientSocket.getInetAddress().getHostAddress();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            String clientIp = clientSocket.getInetAddress().getHostAddress();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
                 String message = reader.readLine();
 
                 if (message != null) {
-                    logger.info("Получено сообщение от {}: {}", clientIp, message);
+                    logger.info("Получено текстовое сообщение от {}: {}", clientIp, message);
                     parseAndHandleMessage(message, clientIp);
                 }
-
-                clientSocket.close();
             } catch (IOException e) {
-                logger.error("Ошибка обработки соединения: {}", e.getMessage());
+                logger.error("Ошибка обработки текстового сообщения от {}: {}", clientIp, e.getMessage());
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    // игнорируем
+                }
             }
         }).start();
     }
@@ -119,7 +158,7 @@ public class ConnectionServiceImpl implements ConnectionService {
      * Парсит и обрабатывает входящее сообщение
      */
     private void parseAndHandleMessage(String message, String clientIp) {
-        logger.info("📨 ПОЛУЧЕНО СООБЩЕНИЕ от {}: '{}'", clientIp, message);
+        logger.info("ПОЛУЧЕНО СООБЩЕНИЕ от {}: '{}'", clientIp, message);
 
         String[] parts = message.split(":", 3);
         if (parts.length < 3) {
@@ -132,7 +171,7 @@ public class ConnectionServiceImpl implements ConnectionService {
         String deviceIp = parts[2];
         DeviceDTO remoteDevice = new DeviceDTO(deviceName, deviceIp);
 
-        logger.info("🔍 Тип сообщения: {}, от устройства: {} ({})",
+        logger.info("Тип сообщения: {}, от устройства: {} ({})",
                 messageType, deviceName, deviceIp);
 
         switch (messageType) {
@@ -152,6 +191,10 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     public void processIncomingRequest(ConnectionRequestDTO request) {
+        if (isBlocked(request.fromDeviceIp())) {
+            logger.warn("⛔ Запрос от заблокированного пира {} отклонен", request.fromDeviceIp());
+            return;
+        }
         // Показываем диалог пользователю
         Platform.runLater(() -> {
             boolean accepted = dialogDisplayer.showConfirmationDialog(
@@ -168,12 +211,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 DeviceDTO currentDevice = networkService.getCurrentDevice();
                 senderConnectionService.sendAcceptResponse(request.toDeviceIp(), currentDevice);
 
-                // Принимаем соединение
-                acceptConnection(request);
-
-                DeviceDTO remoteDevice = new DeviceDTO(request.toDeviceName(), request.toDeviceIp());
-                sceneManager.showChatPanel(remoteDevice);
-                logger.info("✅ Чат открыт с: {}", request.toDeviceIp());
+                logger.info("🔐 Ожидание обмена подписями от {}", request.toDeviceIp());
             } else {
                 // Отправляем отклонение
                 DeviceDTO currentDevice = networkService.getCurrentDevice();
@@ -193,14 +231,15 @@ public class ConnectionServiceImpl implements ConnectionService {
         // Обновляем статус соединения
         acceptConnection(request);
 
-        // Запускаем обмен ключами
-        initiateKeyExchangeAndOpenChat(request);
+        initiateCryptoExchange(request);
     }
 
     @Override
     public void processIncomingReject(DeviceDTO remoteDevice, String clientIp) {
         // Создаем запрос со статусом REJECTED
         ConnectionRequestDTO request = createConnectionRequest(remoteDevice, ConnectionRequestDTO.RequestStatus.REJECTED);
+
+        blockPeer(clientIp);
 
         // Обновляем статус соединения
         rejectConnection(request);
@@ -210,6 +249,192 @@ public class ConnectionServiceImpl implements ConnectionService {
                 dialogDisplayer.showErrorDialog(
                         String.format("Устройство %s отклонило ваш запрос на " +
                                 "подключение", remoteDevice.name())));
+    }
+
+    // ==================== КРИПТОГРАФИЧЕСКИЙ ОБМЕН (УРОВЕНЬ 2) ====================
+
+    /**
+     * Инициатор отправляет подписанный пакет после получения ACCEPT_RESPONSE
+     */
+    private void initiateCryptoExchange(ConnectionRequestDTO requestDTO) {
+        new Thread(() -> {
+            try {
+                logger.info("🔐 Начинаем криптообмен с {}", requestDTO.toDeviceIp());
+                ECDHKeyPair currentKeys = cryptoKeyManager.getCurrentKeys();
+                InetAddress currentDeviceIp = InetAddress.getByName(networkService.getCurrentDevice().ip());
+
+                // 1. СОЗДАЕМ пакет
+                SignedConnectionPacket packet = SignedConnectionPacket.createRequest(
+                        currentDeviceIp,
+                        networkService.getCurrentDevice().name(),
+                        currentKeys.getPublicKeyBytes(),
+                        signatureService.publicKeyToBytes(signatureService.getSignatureKeyPair().getPublic())
+                );
+
+                // 2. ПОДПИСЫВАЕМ
+                signatureService.signPacket(packet);
+
+                // 3. ОТПРАВЛЯЕМ
+                SignedConnectionPacket response = senderConnectionService.sendSignedPacket(
+                        requestDTO.toDeviceIp(),
+                        packet
+                );
+
+                // 4. ОБРАБАТЫВАЕМ ответ
+                if (response == null) {
+                    Platform.runLater(() ->
+                            dialogDisplayer.showErrorDialog("Не удалось получить ответ от " + requestDTO.toDeviceIp())
+                    );
+                    rejectConnection(requestDTO);
+                    return;
+                }
+
+                // 5. Проверяем подпись
+                if (!signatureService.verifyPacket(response)) {
+                    Platform.runLater(() ->
+                            dialogDisplayer.showErrorDialog("Ошибка проверки цифровой подписи от " + requestDTO.toDeviceIp())
+                    );
+                    rejectConnection(requestDTO);
+                }
+                currentKeys.computeSharedSecret(response.getDhPublicKey());
+
+                // 7. Сохраняем соединение
+                cryptoKeyManager.addConnection(response.getSenderAddress(), currentKeys);
+                cryptoKeyManager.setConnectedPeer(response.getSenderAddress());
+
+                // 8. Обновляем статус в ConnectionServiceImpl
+                acceptConnection(requestDTO);
+
+                boolean chatConnected = chatService.connectToPeer(requestDTO.toDeviceIp());
+                if (chatConnected) {
+                    logger.info("P2P чат соединение установлено с: {}", requestDTO.toDeviceIp());
+
+                    // Открываем чат
+                    Platform.runLater(() -> {
+                        sceneManager.showChatPanel(new DeviceDTO(requestDTO.toDeviceName(), requestDTO.toDeviceIp()));
+                        logger.info("Чат открыт с: {}", requestDTO.toDeviceIp());
+                    });
+                } else {
+                    logger.error("Не удалось установить P2P соединение с: {}", requestDTO.toDeviceIp());
+                    Platform.runLater(() ->
+                            dialogDisplayer.showErrorDialog("Не удалось установить P2P соединение для чата")
+                    );
+                }
+
+            } catch (Exception e) {
+                logger.error("Ошибка в initiateCryptoExchange: {}", e.getMessage(), e);
+                Platform.runLater(() ->
+                        dialogDisplayer.showErrorDialog("Ошибка при установке защищенного соединения: " + e.getMessage())
+                );
+                rejectConnection(requestDTO);
+            }
+        }).start();
+    }
+
+    // ==================== ОБРАБОТКА ПОДПИСАННЫХ ПАКЕТОВ ====================
+
+    private void processSignedPacket(Socket clientSocket) {
+        new Thread(() -> {
+            String clientIp = clientSocket.getInetAddress().getHostAddress();
+
+            try (ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
+                 ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream())) {
+
+                SignedConnectionPacket packet = (SignedConnectionPacket) ois.readObject();
+                logger.info("Получен подписанный пакет от {}", clientIp);
+
+                // Проверяем подпись
+                if (!signatureService.verifyPacket(packet)) {
+                    logger.error("Неверная подпись от {}", clientIp);
+                    sendErrorResponse(oos, "Invalid signature");
+                    return;
+                }
+
+                // Проверяем временную метку
+                if (!packet.isTimestampValid()) {
+                    logger.error("Просроченный пакет от {}", clientIp);
+                    sendErrorResponse(oos, "Packet expired");
+                    return;
+                }
+
+                ECDHKeyPair currentKeys = cryptoKeyManager.getCurrentKeys();
+
+                currentKeys.computeSharedSecret(packet.getDhPublicKey());
+
+                InetAddress currentDeviceIp = InetAddress.getByName(networkService.getCurrentDevice().ip());
+
+                // Создаем ответный пакет
+                SignedConnectionPacket response = SignedConnectionPacket.createResponse(
+                        currentDeviceIp,
+                        true,
+                        "Crypto exchange successful",
+                        currentKeys.getPublicKeyBytes(),
+                        signatureService.publicKeyToBytes(signatureService.getSignatureKeyPair().getPublic()),
+                        0
+                );
+
+                signatureService.signPacket(response);
+
+                // Отправляем ответ
+                oos.writeObject(response);
+                oos.flush();
+
+                cryptoKeyManager.addConnection(packet.getSenderAddress(), currentKeys);
+                cryptoKeyManager.setConnectedPeer(packet.getSenderAddress());
+                logger.info("Общий секрет вычислен для {}", clientIp);
+
+                if (response.getSenderAddress().getHostAddress().equals(clientIp)) {
+                    DeviceDTO remoteDevice = new DeviceDTO(packet.getSenderName(), clientIp);
+                    ConnectionRequestDTO requestDTO = createConnectionRequest(
+                            remoteDevice,
+                            ConnectionRequestDTO.RequestStatus.ACCEPTED
+                    );
+                    logger.info("Все ок. IP из response и clientIp совпадают");
+                    acceptConnection(requestDTO);
+                    boolean chatConnected = chatService.connectToPeer(clientIp);
+                    if (chatConnected) {
+                        logger.info("✅ P2P чат соединение установлено с: {}", clientIp);
+
+                        // Открываем чат
+                        Platform.runLater(() -> {
+                            sceneManager.showChatPanel(remoteDevice);
+                            logger.info("✅ Чат открыт с: {}", clientIp);
+                        });
+                    }
+                } else {
+                    logger.error("IP из response и clientIp не совпадают. response : {}, " +
+                            "clientIp: {}", response.getSenderAddress().getHostAddress(), clientIp);
+                    logger.error("❌ Не удалось установить P2P соединение с: {}", clientIp);
+                    Platform.runLater(() ->
+                            dialogDisplayer.showErrorDialog("Не удалось установить P2P соединение для чата")
+                    );
+                }
+            } catch (Exception e) {
+                logger.error("Ошибка обработки подписанного пакета от {}: {}", clientIp, e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * Отправляет ответ с ошибкой
+     */
+    private void sendErrorResponse(ObjectOutputStream oos, String errorMessage) throws IOException {
+        try {
+            InetAddress currentDeviceIp = InetAddress.getByName(networkService.getCurrentDevice().ip());
+            SignedConnectionPacket errorResponse = SignedConnectionPacket.createResponse(
+                    currentDeviceIp,
+                    false,
+                    errorMessage,
+                    null,
+                    signatureService.publicKeyToBytes(signatureService.getSignatureKeyPair().getPublic()),
+                    0
+            );
+            signatureService.signPacket(errorResponse);
+            oos.writeObject(errorResponse);
+            oos.flush();
+        } catch (Exception e) {
+            logger.error("Ошибка отправки error response: {}", e.getMessage());
+        }
     }
 
     // ==================== Клиентская часть ====================
@@ -246,6 +471,23 @@ public class ConnectionServiceImpl implements ConnectionService {
                 logger.error("Ошибка при отправке запроса: {}", e.getMessage(), e);
             }
         }
+    }
+
+    // ==================== БЛОКИРОВКА ====================
+
+    private void blockPeer(String ip) {
+        blockedPeers.put(ip, System.currentTimeMillis() + 30000); // 30 секунд
+        logger.info("⛔ Пир {} заблокирован на 30 секунд", ip);
+    }
+
+    private boolean isBlocked(String ip) {
+        Long blockUntil = blockedPeers.get(ip);
+        if (blockUntil == null) return false;
+        if (System.currentTimeMillis() > blockUntil) {
+            blockedPeers.remove(ip);
+            return false;
+        }
+        return true;
     }
 
     // ==================== Управление статусом соединений ====================
@@ -391,65 +633,6 @@ public class ConnectionServiceImpl implements ConnectionService {
         } catch (Exception e) {
             return request.fromDeviceIp() + "->" + request.toDeviceIp();
         }
-    }
-
-    // ==================== Обмен ключами ====================
-
-    /**
-     * Инициирует обмен ключами и открывает чат после успеха
-     */
-    private void initiateKeyExchangeAndOpenChat(ConnectionRequestDTO request) {
-        new Thread(() -> {
-            try {
-                String targetIp;
-                DeviceDTO remoteDevice;
-
-                DeviceDTO currentDevice = networkService.getCurrentDevice();
-                boolean isIncomingConnection = request.toDeviceIp().equals(currentDevice.ip());
-
-                if (isIncomingConnection) {
-                    // Входящее подключение: обмениваемся с отправителем
-                    targetIp = request.fromDeviceIp();
-                    remoteDevice = new DeviceDTO(request.fromDeviceName(), request.fromDeviceIp());
-                } else {
-                    // Исходящее подключение: обмениваемся с получателем
-                    targetIp = request.toDeviceIp();
-                    remoteDevice = new DeviceDTO(request.toDeviceName(), request.toDeviceIp());
-                }
-
-                logger.info("🔄 Обмен ключами с: {}", targetIp);
-                InetAddress peerAddress = InetAddress.getByName(targetIp);
-                keyExchangeService.setConnectedPeer(peerAddress);
-                boolean keyExchangeSuccess = keyExchangeService.performKeyExchange(peerAddress);
-
-                if (keyExchangeSuccess) {
-                    logger.info("✅ Обмен ключами успешно завершен с: {}", targetIp);
-                    boolean chatConnected = chatService.connectToPeer(targetIp);
-
-                    if (chatConnected) {
-                        logger.info("✅ P2P чат соединение установлено с: {}", targetIp);
-
-                        // Открываем чат
-                        Platform.runLater(() -> {
-                            sceneManager.showChatPanel(remoteDevice);
-                            logger.info("✅ Чат открыт с: {}", targetIp);
-                        });
-                    } else {
-                        logger.error("❌ Не удалось установить P2P соединение с: {}", targetIp);
-                        Platform.runLater(() ->
-                                dialogDisplayer.showErrorDialog(
-                                        "Ошибка подключения. Не удалось установить P2P соединение"));
-                    }
-                } else {
-                    logger.error("❌ Обмен ключами не удался с: {}", targetIp);
-                    Platform.runLater(() ->
-                            dialogDisplayer.showErrorDialog(
-                                    "Ошибка подключения. Не удалось установить безопасное соединение"));
-                }
-            } catch (Exception e) {
-                logger.error("❌ [ПК1-ОТПРАВИТЕЛЬ] Ошибка при обмене ключами: {}", e.getMessage(), e);
-            }
-        }).start();
     }
 
     // ==================== Уведомления слушателей ====================

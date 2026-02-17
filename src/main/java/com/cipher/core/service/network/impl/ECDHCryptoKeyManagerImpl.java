@@ -2,9 +2,9 @@ package com.cipher.core.service.network.impl;
 
 import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.model.ConnectionStatus;
-import com.cipher.core.model.ECDHKeyExchange;
+import com.cipher.core.model.ECDHKeyPair;
 import com.cipher.core.model.PeerInfo;
-import com.cipher.core.service.network.KeyExchangeService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -20,20 +20,20 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
-public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ECDHKeyExchangeServiceImpl.class);
+public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ECDHCryptoKeyManagerImpl.class);
 
-    private final AtomicReference<ECDHKeyExchange> currentKeyExchange = new AtomicReference<>();
+    private final AtomicReference<ECDHKeyPair> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
     private final Map<InetAddress, Boolean> connectionInProgress = new ConcurrentHashMap<>();
-    private final Map<String, ECDHKeyExchange> peerKeys = new ConcurrentHashMap<>();
+    private final Map<String, ECDHKeyPair> peerKeys = new ConcurrentHashMap<>();
 
     private ServerSocket keyInvalidationServerSocket;
     private boolean serverRunning = false;
     private final ExecutorService connectionPool = Executors.newCachedThreadPool();
     private volatile InetAddress currentPeer;
 
-    public ECDHKeyExchangeServiceImpl() {
+    public ECDHCryptoKeyManagerImpl() {
         generateNewKeys();
     }
 
@@ -127,7 +127,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     }
 
     @Override
-    public ECDHKeyExchange getCurrentKeys() {
+    public ECDHKeyPair getCurrentKeys() {
         return currentKeyExchange.get();
     }
 
@@ -153,13 +153,13 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         }
     }
 
-    private void savePeerKeys(String peerIp, ECDHKeyExchange keys) {
+    private void savePeerKeys(String peerIp, ECDHKeyPair keys) {
         peerKeys.put(peerIp, keys);
         LOGGER.info("Сохранены ключи для пира: {}", peerIp);
     }
 
     @Override
-    public ECDHKeyExchange getPeerKeys(String peerIp) {
+    public ECDHKeyPair getPeerKeys(String peerIp) {
         return peerKeys.get(peerIp);
     }
 
@@ -170,7 +170,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public void removePeerKeys(String peerIp) {
-        ECDHKeyExchange removed = peerKeys.remove(peerIp);
+        ECDHKeyPair removed = peerKeys.remove(peerIp);
         if (removed != null) {
             removed.invalidate();
             log.info("Удалены ключи для пира: {}", peerIp);
@@ -179,7 +179,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     private void updatePeerConnection(InetAddress peerAddress) {
         try {
-            ECDHKeyExchange currentKeys = currentKeyExchange.get();
+            ECDHKeyPair currentKeys = currentKeyExchange.get();
             if (currentKeys == null) {
                 log.warn("Текущие ECDH ключи не найдены, генерируем новые");
                 generateNewKeys();
@@ -201,7 +201,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
 
     @Override
     public void generateNewKeys() {
-        ECDHKeyExchange newKeys = new ECDHKeyExchange();
+        ECDHKeyPair newKeys = new ECDHKeyPair();
         currentKeyExchange.set(newKeys);
         log.info("Generated new ECDH keys");
 
@@ -211,7 +211,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
     }
 
     @Override
-    public void addConnection(InetAddress peerAddress, ECDHKeyExchange keys) {
+    public void addConnection(InetAddress peerAddress, ECDHKeyPair keys) {
         if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
             log.debug("Входящее подключение от {} уже обрабатывается", peerAddress.getHostAddress());
             return;
