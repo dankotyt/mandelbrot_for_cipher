@@ -21,15 +21,13 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Service
 public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
-    private static final Logger logger = LoggerFactory.getLogger(ECDHKeyExchangeServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ECDHKeyExchangeServiceImpl.class);
 
     private final AtomicReference<ECDHKeyExchange> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
     private final Map<InetAddress, Boolean> connectionInProgress = new ConcurrentHashMap<>();
     private final Map<String, ECDHKeyExchange> peerKeys = new ConcurrentHashMap<>();
-    private final Map<String, Object> peerLocks = new ConcurrentHashMap<>();
 
-    private ServerSocket keyExchangeServerSocket;
     private ServerSocket keyInvalidationServerSocket;
     private boolean serverRunning = false;
     private final ExecutorService connectionPool = Executors.newCachedThreadPool();
@@ -44,7 +42,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         activeConnections.clear();
         peerKeys.clear();
         connectionInProgress.clear();
-        startKeyExchangeServer();
         startKeyInvalidationServer();
     }
 
@@ -56,7 +53,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         peerKeys.clear();
         connectionInProgress.clear();
 
-        closeServerSocket(keyExchangeServerSocket, "обмена ключами");
         closeServerSocket(keyInvalidationServerSocket, "инвалидации ключей");
 
         connectionPool.shutdown();
@@ -74,37 +70,11 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         if (socket != null) {
             try {
                 socket.close();
-                log.info("✅ Сервер {} остановлен", serverName);
+                log.info("Сервер {} остановлен", serverName);
             } catch (IOException e) {
-                log.warn("❌ Ошибка закрытия сервера {}: {}", serverName, e.getMessage());
+                log.warn("Ошибка закрытия сервера {}: {}", serverName, e.getMessage());
             }
         }
-    }
-
-    /**
-     * Запускает сервер для обработки входящих соединений обмена ключами
-     * Использует бинарный протокол: [int длина][byte[] ключ]
-     */
-    private void startKeyExchangeServer() {
-        new Thread(() -> {
-            try {
-                keyExchangeServerSocket = new ServerSocket(NetworkConstants.KEY_EXCHANGE_PORT);
-                serverRunning = true;
-                log.info("✅ Сервер обмена ключами запущен на порту {}", NetworkConstants.KEY_EXCHANGE_PORT);
-
-                while (serverRunning) {
-                    Socket clientSocket = keyExchangeServerSocket.accept();
-                    log.info("🔑 Принято входящее соединение для обмена ключами от: {}",
-                            clientSocket.getInetAddress().getHostAddress());
-
-                    handleKeyExchangeConnection(clientSocket);
-                }
-            } catch (IOException e) {
-                if (serverRunning) {
-                    log.error("❌ Ошибка сервера обмена ключами: {}", e.getMessage());
-                }
-            }
-        }, "KeyExchange-Server").start();
     }
 
     /**
@@ -115,7 +85,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         new Thread(() -> {
             try {
                 keyInvalidationServerSocket = new ServerSocket(NetworkConstants.KEY_INVALIDATION_PORT);
-                log.info("✅ Сервер инвалидации ключей запущен на порту {}", NetworkConstants.KEY_INVALIDATION_PORT);
+                log.info("Сервер инвалидации ключей запущен на порту {}", NetworkConstants.KEY_INVALIDATION_PORT);
 
                 while (serverRunning) {
                     Socket clientSocket = keyInvalidationServerSocket.accept();
@@ -123,7 +93,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 }
             } catch (IOException e) {
                 if (serverRunning) {
-                    log.error("❌ Ошибка сервера инвалидации ключей: {}", e.getMessage());
+                    log.error("Ошибка сервера инвалидации ключей: {}", e.getMessage());
                 }
             }
         }, "KeyInvalidation-Server").start();
@@ -140,7 +110,7 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                 byte messageType = in.readByte();
 
                 if (messageType == NetworkConstants.MSG_KEY_INVALIDATION) {
-                    log.info("🔴 Получена инвалидация ключей от: {}", clientIp);
+                    log.info("Получена инвалидация ключей от: {}", clientIp);
                     removePeerKeys(clientIp);
                     closeConnection(clientSocket.getInetAddress());
                 }
@@ -151,63 +121,6 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
                     clientSocket.close();
                 } catch (IOException e) {
                     log.warn("Ошибка закрытия сокета инвалидации: {}", e.getMessage());
-                }
-            }
-        });
-    }
-
-    /**
-     * Обрабатывает входящее соединение для обмена ключами.
-     * Логика: получаем -> отправляем.
-     * @param clientSocket сокет клиента
-     */
-    private void handleKeyExchangeConnection(Socket clientSocket) {
-        connectionPool.execute(() -> {
-            String clientIp = clientSocket.getInetAddress().getHostAddress();
-            log.info("🔄 Входящее соединение для обмена ключами от: {}", clientIp);
-
-            try (DataInputStream in = new DataInputStream(clientSocket.getInputStream());
-                 DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream())) {
-
-                // Получаем публичный ключ клиента
-                byte messageType = in.readByte();
-                if (messageType != NetworkConstants.MSG_KEY_EXCHANGE) {
-                    log.warn("Expected MSG_KEY_EXCHANGE, got: {}", messageType);
-                    return;
-                }
-
-                int keyLength = in.readInt();
-                if (keyLength <= 0 || keyLength > 10000) {
-                    throw new IOException("Неверная длина ключа: " + keyLength);
-                }
-
-                byte[] clientPublicKeyBytes = new byte[keyLength];
-                in.readFully(clientPublicKeyBytes);
-
-                // Отправляем наш публичный ключ
-                ECDHKeyExchange ourKeys = getCurrentKeys();
-                byte[] ourPublicKey = ourKeys.getPublicKeyBytes();
-
-                out.writeByte(NetworkConstants.MSG_KEY_EXCHANGE);
-                out.writeInt(ourPublicKey.length);
-                out.write(ourPublicKey);
-                out.flush();
-
-                // Вычисляем общий секрет
-                ourKeys.computeSharedSecret(clientPublicKeyBytes);
-
-                // Сохраняем соединение
-                addConnection(clientSocket.getInetAddress(), ourKeys);
-
-                log.info("✅ Обмен ключами завершен с: {}", clientIp);
-
-            } catch (IOException e) {
-                log.error("❌ Ошибка обмена ключами с {}: {}", clientIp, e.getMessage());
-            } finally {
-                try {
-                    clientSocket.close();
-                } catch (IOException e) {
-                    log.warn("Ошибка закрытия сокета: {}", e.getMessage());
                 }
             }
         });
@@ -240,99 +153,9 @@ public class ECDHKeyExchangeServiceImpl implements KeyExchangeService {
         }
     }
 
-    @Override
-    public boolean performKeyExchange(InetAddress peerAddress) {
-        String peerIp = peerAddress.getHostAddress();
-        Object lock = peerLocks.computeIfAbsent(peerIp, k -> new Object());
-
-        synchronized (lock) {
-            if (connectionInProgress.putIfAbsent(peerAddress, true) != null) {
-                log.debug("Подключение к {} уже выполняется, пропускаем", peerIp);
-                return false;
-            }
-
-            try {
-                log.info("Выполнение ECDH обмена ключами с: {}", peerIp);
-
-                if (isConnectedTo(peerAddress)) {
-                    log.debug("Уже подключены к {}, пропускаем обмен ключами", peerIp);
-                    return true;
-                }
-
-                ECDHKeyExchange ourKeys = currentKeyExchange.get();
-                boolean success = keyExchange(peerAddress, ourKeys);
-
-                if (success) {
-                    savePeerKeys(peerIp, ourKeys);
-                    updatePeerConnection(peerAddress);
-                    log.info("✅ ECDH обмен ключами успешно завершен с: {}", peerIp);
-                } else {
-                    log.error("❌ ECDH обмен ключами не удался с: {}", peerIp);
-                }
-
-                return success;
-
-            } catch (Exception e) {
-                log.error("❌ Ошибка при выполнении ECDH обмена ключами с {}: {}", peerIp, e.getMessage(), e);
-                return false;
-            } finally {
-                connectionInProgress.remove(peerAddress);
-            }
-        }
-    }
-
-    /**
-     * Инициация соединения
-     * Логика: отправляем -> получаем
-    */
-    private boolean keyExchange(InetAddress peerAddress, ECDHKeyExchange ourKeys) {
-        log.info("Initiating key exchange with {}", peerAddress.getHostAddress());
-
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(peerAddress, NetworkConstants.KEY_EXCHANGE_PORT), 10000);
-            socket.setSoTimeout(30000);
-
-            try (DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                 DataInputStream in = new DataInputStream(socket.getInputStream())) {
-
-                out.writeByte(NetworkConstants.MSG_KEY_EXCHANGE);
-
-                // Отправляем наш публичный ключ
-                byte[] ourPublicKey = ourKeys.getPublicKeyBytes();
-                out.writeInt(ourPublicKey.length);
-                out.write(ourPublicKey);
-                out.flush();
-
-                byte responseType = in.readByte();
-                if (responseType != NetworkConstants.MSG_KEY_EXCHANGE) {
-                    log.error("Expected MSG_KEY_EXCHANGE response, got: {}", responseType);
-                    return false;
-                }
-
-                int keyLength = in.readInt();
-                byte[] peerPublicKeyBytes = new byte[keyLength];
-                in.readFully(peerPublicKeyBytes);
-
-                // Вычисляем общий секрет
-                ourKeys.computeSharedSecret(peerPublicKeyBytes);
-
-                log.info("Key exchange completed successfully with {}", peerAddress.getHostAddress());
-                return true;
-
-            } catch (SocketTimeoutException e) {
-                log.error("Key exchange timeout with {}: {}", peerAddress.getHostAddress(), e.getMessage());
-                return false;
-            }
-
-        } catch (IOException e) {
-            log.error("Key exchange failed with {}: {}", peerAddress.getHostAddress(), e.getMessage());
-            return false;
-        }
-    }
-
     private void savePeerKeys(String peerIp, ECDHKeyExchange keys) {
         peerKeys.put(peerIp, keys);
-        logger.info("Сохранены ключи для пира: {}", peerIp);
+        LOGGER.info("Сохранены ключи для пира: {}", peerIp);
     }
 
     @Override

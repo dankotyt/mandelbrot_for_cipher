@@ -9,7 +9,6 @@ public interface KeyExchangeService {
 
     // Основные методы для использования в ImageEncrypt/ImageDecrypt
     byte[] getMasterSeedFromDH(InetAddress peerAddress);
-    boolean performKeyExchange(InetAddress peerAddress);
     void generateNewKeys();
     ECDHKeyExchange getCurrentKeys();
 
