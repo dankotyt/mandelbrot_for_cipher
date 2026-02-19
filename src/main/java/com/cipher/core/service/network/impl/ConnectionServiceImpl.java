@@ -383,7 +383,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 cryptoKeyManager.setConnectedPeer(packet.getSenderAddress());
                 logger.info("Общий секрет вычислен для {}", clientIp);
 
-                if (response.getSenderAddress().getHostAddress().equals(clientIp)) {
+                if (packet.getSenderAddress().getHostAddress().equals(clientIp)) {
                     DeviceDTO remoteDevice = new DeviceDTO(packet.getSenderName(), clientIp);
                     ConnectionRequestDTO requestDTO = createConnectionRequest(
                             remoteDevice,
