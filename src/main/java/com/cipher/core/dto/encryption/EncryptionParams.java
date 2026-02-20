@@ -3,6 +3,7 @@ package com.cipher.core.dto.encryption;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.segmentation.SegmentationParams;
 
+@Deprecated
 public record EncryptionParams(
         EncryptionArea area,
         SegmentationParams segmentation,

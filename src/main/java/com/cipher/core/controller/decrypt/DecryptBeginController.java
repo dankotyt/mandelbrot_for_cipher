@@ -43,8 +43,10 @@ public class DecryptBeginController {
         uploadButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Выбрать файл'");
-                tempFileManager.selectKeyFileForDecrypt();
-                sceneManager.showDecryptModePanel();
+                var selectedFile = tempFileManager.selectEncryptedFileForDecrypt();
+                if (selectedFile != null) {
+                    sceneManager.showDecryptFinalPanel(selectedFile.getAbsolutePath());
+                }
             } catch (Exception ex) {
                 logger.error("Ошибка при выборе файла: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка при выборе файла: " + ex.getMessage());

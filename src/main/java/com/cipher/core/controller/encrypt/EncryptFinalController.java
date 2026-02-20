@@ -1,7 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.client.service.chat.ChatService;
-import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
 import com.cipher.core.utils.DialogDisplayer;
@@ -19,7 +18,9 @@ import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import javax.imageio.ImageIO;
 
 @Controller
@@ -39,7 +40,7 @@ public class EncryptFinalController {
 
     private BufferedImage encryptedImage;
     @Setter
-    private EncryptionDataResult encryptionDataResult;
+    private File encryptedFile;
 
     public void setEncryptedImage(BufferedImage encryptedImage) {
         this.encryptedImage = encryptedImage;
@@ -67,12 +68,7 @@ public class EncryptFinalController {
     private void updateSendButtonState() {
         boolean isConnected = chatService.isConnected();
         sendToChatButton.setDisable(!isConnected);
-
-        if (!isConnected) {
-            sendToChatButton.setText("Нет подключения");
-        } else {
-            sendToChatButton.setText("Отправить в чат");
-        }
+        sendToChatButton.setText(isConnected ? "Отправить в чат" : "Нет подключения");
     }
 
     private void handleBack() {
@@ -80,7 +76,7 @@ public class EncryptFinalController {
     }
 
     private void handleSendToChat() {
-        if (encryptedImage != null && encryptionDataResult != null) {
+        if (encryptedImage != null && encryptedFile.exists()) {
             try {
                 // Проверяем соединение
                 if (!chatService.isConnected()) {
@@ -89,16 +85,10 @@ public class EncryptFinalController {
                     return;
                 }
 
-                // Конвертируем BufferedImage в byte[] для отправки
-                byte[] imageData = convertImageToBytes(encryptedImage);
+                byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
+                chatService.sendFile(fileData, encryptedFile.getName());
 
-                // Отправляем изображение в чат
-                chatService.sendImage(imageData, "encrypted_image.png");
-
-                // Сохраняем параметры шифрования во временные файлы (на всякий случай)
-                tempFileManager.saveEncryptedData(encryptedImage, encryptionDataResult);
-
-                // Переходим в чат
+                dialogDisplayer.showSuccessDialog("Зашифрованный файл отправлен в чат!");
                 sceneManager.showChatPanel();
 
                 dialogDisplayer.showSuccessDialog(

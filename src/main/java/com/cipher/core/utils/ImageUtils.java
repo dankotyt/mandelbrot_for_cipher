@@ -4,10 +4,8 @@ import com.cipher.core.dto.MandelbrotParams;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import lombok.Getter;
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
@@ -60,5 +58,12 @@ public class ImageUtils {
         g.dispose();
 
         return argbImage;
+    }
+
+    public Image getOriginalFXImage() {
+        if (originalImage != null) {
+            return SwingFXUtils.toFXImage(originalImage, null);
+        }
+        return null;
     }
 }

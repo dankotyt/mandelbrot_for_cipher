@@ -1,98 +1,156 @@
 package com.cipher.core.utils;
 
-import com.cipher.core.dto.encryption.EncryptionResult;
-import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.encryption.EncryptionArea;
-import com.cipher.core.dto.encryption.EncryptionDataResult;
-import com.cipher.core.dto.encryption.EncryptionParams;
-import com.cipher.core.dto.segmentation.SegmentationParams;
+import com.cipher.core.dto.encryption.EncryptedData;
 import org.springframework.stereotype.Component;
-
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 @Component
 public class EncryptionDataSerializer {
 
-    // Сериализация для сохранения в файл .bin
-    public byte[] serializeForFile(EncryptionDataResult dataResult) throws IOException {
+    /**
+     * Сериализует зашифрованные данные в массив байт
+     */
+    public byte[] serialize(EncryptedData data) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
+        try (DataOutputStream dos = new DataOutputStream(baos)) {
 
-        // 1. Зашифрованное изображение
-        writeByteArray(dos, dataResult.encryptedImageData());
+            // 1. Тип шифрования
+            dos.writeByte(data.encryptionType());
 
-        // 2. Параметры шифрования
-        writeEncryptionParams(dos, dataResult.params());
+            // 2. Зашифрованное изображение
+            writeByteArray(dos, data.encryptedImage());
 
-        // 3. Криптопараметры
-        writeByteArray(dos, dataResult.iv());
-        writeByteArray(dos, dataResult.salt());
+            // 3. Зашифрованные параметры oneTime фрактала
+            writeByteArray(dos, data.encryptedOneTimeParams());
 
-        dos.flush();
+            // 4. Параметры сегментации
+            dos.writeInt(data.segmentSize());
+            Map<Integer, Integer> mapping = data.segmentMapping();
+            dos.writeInt(mapping.size());
+            for (Map.Entry<Integer, Integer> entry : mapping.entrySet()) {
+                dos.writeInt(entry.getKey());
+                dos.writeInt(entry.getValue());
+            }
+
+            // 5. Для частичного шифрования - информация об области
+            if (data.isPartial()) {
+                dos.writeInt(data.areaStartX());
+                dos.writeInt(data.areaStartY());
+                dos.writeInt(data.areaWidth());
+                dos.writeInt(data.areaHeight());
+            }
+
+            // 6. Размеры изображения
+            dos.writeInt(data.originalWidth());
+            dos.writeInt(data.originalHeight());
+
+            dos.flush();
+        }
         return baos.toByteArray();
     }
 
-    // Десериализация из файла .bin
-    public EncryptionDataResult deserializeFromFile(byte[] fileData) throws IOException {
+    /**
+     * Десериализует зашифрованные данные из массива байт
+     */
+    public EncryptedData deserialize(byte[] fileData) throws IOException {
         ByteArrayInputStream bais = new ByteArrayInputStream(fileData);
-        DataInputStream dis = new DataInputStream(bais);
+        try (DataInputStream dis = new DataInputStream(bais)) {
 
-        byte[] encryptedImageData = readByteArray(dis);
-        EncryptionParams params = readEncryptionParams(dis);
-        byte[] iv = readByteArray(dis);
-        byte[] salt = readByteArray(dis);
+            // 1. Тип шифрования
+            byte type = dis.readByte();
 
-        return new EncryptionDataResult(encryptedImageData, params, iv, salt);
-    }
+            // 2. Зашифрованное изображение
+            byte[] encryptedImage = readByteArray(dis);
 
-    // Сериализация изображения для внутреннего шифрования
-    public byte[] serializeImage(BufferedImage image) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
+            // 3. Зашифрованные параметры
+            byte[] encryptedOneTimeParams = readByteArray(dis);
 
-        dos.writeInt(image.getWidth());
-        dos.writeInt(image.getHeight());
-        dos.writeInt(image.getType());
+            // 4. Параметры сегментации
+            int segmentSize = dis.readInt();
+            int mapSize = dis.readInt();
+            Map<Integer, Integer> segmentMapping = new HashMap<>();
+            for (int i = 0; i < mapSize; i++) {
+                segmentMapping.put(dis.readInt(), dis.readInt());
+            }
 
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                dos.writeInt(image.getRGB(x, y));
+            // 5. Для частичного шифрования - информация об области
+            Integer areaStartX = null;
+            Integer areaStartY = null;
+            Integer areaWidth = null;
+            Integer areaHeight = null;
+
+            if (type == EncryptedData.TYPE_PARTIAL) {
+                areaStartX = dis.readInt();
+                areaStartY = dis.readInt();
+                areaWidth = dis.readInt();
+                areaHeight = dis.readInt();
+            }
+
+            // 6. Размеры изображения
+            int imageWidth = dis.readInt();
+            int imageHeight = dis.readInt();
+
+            if (type == EncryptedData.TYPE_PARTIAL) {
+                return EncryptedData.forPartialImage(
+                        encryptedImage,
+                        encryptedOneTimeParams,
+                        segmentMapping,
+                        segmentSize,
+                        areaStartX, areaStartY,
+                        areaWidth, areaHeight,
+                        imageWidth, imageHeight
+                );
+            } else {
+                return EncryptedData.forWholeImage(
+                        encryptedImage,
+                        encryptedOneTimeParams,
+                        segmentMapping,
+                        segmentSize,
+                        imageWidth, imageHeight
+                );
             }
         }
+    }
 
-        dos.flush();
+    /**
+     * Конвертирует BufferedImage в массив байт
+     */
+    public byte[] imageToBytes(BufferedImage image) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (DataOutputStream dos = new DataOutputStream(baos)) {
+            for (int y = 0; y < image.getHeight(); y++) {
+                for (int x = 0; x < image.getWidth(); x++) {
+                    dos.writeInt(image.getRGB(x, y));
+                }
+            }
+        }
         return baos.toByteArray();
     }
 
-    // Десериализация изображения
-    public BufferedImage deserializeImage(byte[] imageData) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
-        DataInputStream dis = new DataInputStream(bais);
-
-        int width = dis.readInt();
-        int height = dis.readInt();
-        int type = dis.readInt();
-
-        BufferedImage image = new BufferedImage(width, height, type);
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                image.setRGB(x, y, dis.readInt());
+    /**
+     * Конвертирует массив байт в BufferedImage
+     */
+    public BufferedImage bytesToImage(byte[] bytes) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        try (DataInputStream dis = new DataInputStream(bais)) {
+            int width = dis.readInt();
+            int height = dis.readInt();
+            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    image.setRGB(x, y, dis.readInt());
+                }
             }
+            return image;
         }
-
-        return image;
     }
 
-    // Вспомогательные методы
+    /**
+     * Записывает массив байт с префиксом длины
+     */
     private void writeByteArray(DataOutputStream dos, byte[] data) throws IOException {
         dos.writeInt(data.length);
         if (data.length > 0) {
@@ -100,102 +158,14 @@ public class EncryptionDataSerializer {
         }
     }
 
+    /**
+     * Читает массив байт с префиксом длины
+     */
     private byte[] readByteArray(DataInputStream dis) throws IOException {
         int length = dis.readInt();
         if (length == 0) return new byte[0];
         byte[] data = new byte[length];
         dis.readFully(data);
         return data;
-    }
-
-    private void writeEncryptionParams(DataOutputStream dos, EncryptionParams params) throws IOException {
-        if (params == null) {
-            dos.writeBoolean(false);
-            return;
-        }
-        dos.writeBoolean(true);
-
-        // MandelbrotParams
-        writeMandelbrotParams(dos, params.mandelbrot());
-
-        // SegmentationParams
-        writeSegmentationParams(dos, params.segmentation());
-
-        // EncryptionArea (может быть null)
-        if (params.area() != null) {
-            dos.writeBoolean(true);
-            writeEncryptionArea(dos, params.area());
-        } else {
-            dos.writeBoolean(false);
-        }
-    }
-
-    private EncryptionParams readEncryptionParams(DataInputStream dis) throws IOException {
-        if (!dis.readBoolean()) return null;
-
-        MandelbrotParams mandelbrot = readMandelbrotParams(dis);
-        SegmentationParams segmentation = readSegmentationParams(dis);
-
-        EncryptionArea area = null;
-        if (dis.readBoolean()) {
-            area = readEncryptionArea(dis);
-        }
-
-        return new EncryptionParams(area, segmentation, mandelbrot);
-    }
-
-    private void writeMandelbrotParams(DataOutputStream dos, MandelbrotParams params) throws IOException {
-        dos.writeDouble(params.zoom());
-        dos.writeDouble(params.offsetX());
-        dos.writeDouble(params.offsetY());
-        dos.writeInt(params.maxIter());
-    }
-
-    private MandelbrotParams readMandelbrotParams(DataInputStream dis) throws IOException {
-        double zoom = dis.readDouble();
-        double offsetX = dis.readDouble();
-        double offsetY = dis.readDouble();
-        int maxIter = dis.readInt();
-        return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
-    }
-
-    private void writeSegmentationParams(DataOutputStream dos, SegmentationParams params) throws IOException {
-        dos.writeInt(params.segmentSize());
-
-        Map<Integer, Integer> mapping = params.segmentMapping();
-        dos.writeInt(mapping.size());
-        for (Map.Entry<Integer, Integer> entry : mapping.entrySet()) {
-            dos.writeInt(entry.getKey());
-            dos.writeInt(entry.getValue());
-        }
-    }
-
-    private SegmentationParams readSegmentationParams(DataInputStream dis) throws IOException {
-        int segmentSize = dis.readInt();
-
-        int mapSize = dis.readInt();
-        Map<Integer, Integer> segmentMapping = new HashMap<>();
-        for (int i = 0; i < mapSize; i++) {
-            int key = dis.readInt();
-            int value = dis.readInt();
-            segmentMapping.put(key, value);
-        }
-
-        return new SegmentationParams(segmentSize, segmentMapping);
-    }
-
-    private void writeEncryptionArea(DataOutputStream dos, EncryptionArea area) throws IOException {
-        dos.writeInt(area.startX());
-        dos.writeInt(area.startY());
-        dos.writeInt(area.width());
-        dos.writeInt(area.height());
-    }
-
-    private EncryptionArea readEncryptionArea(DataInputStream dis) throws IOException {
-        int startX = dis.readInt();
-        int startY = dis.readInt();
-        int width = dis.readInt();
-        int height = dis.readInt();
-        return new EncryptionArea(startX, startY, width, height);
     }
 }

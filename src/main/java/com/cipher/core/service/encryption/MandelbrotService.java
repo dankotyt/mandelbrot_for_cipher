@@ -1,12 +1,9 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.encryption.CryptographicService;
-import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.threading.MandelbrotThread;
-import com.cipher.core.utils.BinaryFile;
 import com.cipher.core.utils.ConsoleManager;
 import com.cipher.core.utils.DeterministicRandomGenerator;
 
@@ -43,7 +40,6 @@ public class MandelbrotService extends JPanel {
 
     private final DeterministicRandomGenerator drbg;
     private final ImageSegmentShuffler imageSegmentShuffler;
-    private final ImageEncrypt imageEncrypt;
     private final ImageUtils imageUtils;
     private final CryptoKeyManager cryptoKeyManager;
 
@@ -184,8 +180,10 @@ public class MandelbrotService extends JPanel {
                     ConsoleManager.log("Попытка №" + attempt + ". Подождите, пожалуйста...");
                 } else {
                     ConsoleManager.log("Изображение успешно сгенерировано после " + attempt + " попыток.");
-
-                    imageEncrypt.initMandelbrotParams(currentParams);
+                    /**
+                     * todo проверить, правильно ли используются потом сгенерированные параметры,
+                     * которые используются в ImageEncrypt.wholeImage()
+                     * */
                     imageUtils.setMandelbrotImage(resultImage, currentParams);
                 }
             } catch (InterruptedException e) {
@@ -215,7 +213,8 @@ public class MandelbrotService extends JPanel {
 
                 futures.add(executor.submit(new MandelbrotThread(
                         startX, 0, width, originalHeight,
-                        ZOOM, MAX_ITER, offsetX, offsetY, resultImage
+                        currentParams.zoom(), currentParams.maxIter(),
+                        currentParams.offsetX(), currentParams.offsetY(), resultImage
                 )));
             }
 

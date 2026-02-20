@@ -1,9 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
-import com.cipher.core.encryption.ImageSegmentShuffler;
-import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -48,12 +45,8 @@ public class EncryptChooseAreaController {
     @FXML private Button swapButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
     private final DialogDisplayer dialogDisplayer;
     private final ImageEncrypt imageEncrypt;
-    private final MandelbrotService mandelbrotService;
-    private final ImageSegmentShuffler imageSegmentShuffler;
-    private final CryptographicService cryptographicService;
 
     private Point2D startPoint;
     private Point2D endPoint;
@@ -241,8 +234,7 @@ public class EncryptChooseAreaController {
         try {
             BufferedImage originalImage = imageUtils.getOriginalImage();
             if (originalImage != null) {
-                imageEncrypt.encryptWhole(originalImage, mandelbrotService, imageSegmentShuffler,
-                        cryptographicService, sceneManager);
+                imageEncrypt.encryptWhole(originalImage);
             }
         } catch (Exception e) {
             logger.error("Ошибка загрузки изображения", e);
@@ -268,8 +260,7 @@ public class EncryptChooseAreaController {
                 return;
             }
 
-            imageEncrypt.encryptPart(imageToEncrypt, mandelbrotService,
-                    imageSegmentShuffler, cryptographicService, selectedRectangle, sceneManager);
+            imageEncrypt.encryptPart(imageToEncrypt, selectedRectangle);
             clearRectangles();
 
         } catch (Exception e) {

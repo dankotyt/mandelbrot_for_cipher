@@ -1,8 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.encryption.CryptographicService;
 import com.cipher.core.encryption.ImageEncrypt;
-import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
@@ -28,8 +26,6 @@ import java.awt.image.BufferedImage;
 @RequiredArgsConstructor
 public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
-    private final CryptographicService cryptographicService;
-    private final ImageSegmentShuffler imageSegmentShuffler;
     private final ImageEncrypt imageEncrypt;
 
     @FXML private ImageView imageView;
@@ -182,8 +178,7 @@ public class EncryptGenerateController {
             if (!imageUtils.hasOriginalImage()) {
                 logger.error("original image is null");
             }
-            imageEncrypt.encryptWhole(originalImage, mandelbrotService,
-                    imageSegmentShuffler, cryptographicService, sceneManager);
+            imageEncrypt.encryptWhole(originalImage);
         } catch (Exception e) {
             logger.error("Ошибка шифрования", e);
             dialogDisplayer.showErrorDialog("Ошибка шифрования: " + e.getMessage());

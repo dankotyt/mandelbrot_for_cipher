@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 
 @Component
 @RequiredArgsConstructor
@@ -93,8 +94,21 @@ public class SceneManager {
         showScreen("/fxml/encrypt/encrypt-begin.fxml");
     }
 
-    public void showEncryptLoadPanel() {
-        showScreen("/fxml/encrypt/encrypt-load.fxml");
+    public void showEncryptLoadPanel(File selectedFile) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-load.fxml"));
+            loader.setControllerFactory(controllerFactory);
+            Parent root = loader.load();
+
+            EncryptLoadController controller = loader.getController();
+            controller.setSelectedFile(selectedFile);
+
+            primaryStage.getScene().setRoot(root);
+        } catch (Exception e) {
+            logger.error("Error loading encrypt load screen", e);
+            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
+            showEncryptBeginPanel();
+        }
     }
 
     public void showEncryptModePanel() {
@@ -134,7 +148,7 @@ public class SceneManager {
         }
     }
 
-    public void showEncryptFinalPanel(BufferedImage encryptedImage, EncryptionDataResult result) {
+    public void showEncryptFinalPanel(BufferedImage encryptedImage, File result) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final.fxml"));
             loader.setControllerFactory(controllerFactory);
@@ -142,7 +156,7 @@ public class SceneManager {
 
             EncryptFinalController controller = loader.getController();
             controller.setEncryptedImage(encryptedImage);
-            controller.setEncryptionDataResult(result);
+            controller.setEncryptedFile(result);
 
             primaryStage.getScene().setRoot(root);
         } catch (Exception e) {

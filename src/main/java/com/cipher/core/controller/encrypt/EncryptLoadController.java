@@ -8,18 +8,19 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
-import java.awt.image.BufferedImage;
+import java.io.File;
 
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptLoadController {
-    private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
+    private static final Logger logger = LoggerFactory.getLogger(EncryptLoadController.class);
     @FXML private ImageView imageView;
     @FXML private Button continueButton;
     @FXML private Button backButton;
@@ -28,6 +29,8 @@ public class EncryptLoadController {
     private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
 
+    @Setter
+    private File selectedFile;
 
     @FXML
     public void initialize() {
@@ -43,14 +46,25 @@ public class EncryptLoadController {
 
     private void loadInputImage() {
         try {
-            if (imageUtils.hasOriginalImage()) {
-                BufferedImage originalBuffered = imageUtils.getOriginalImage();
-                Image originalFx = imageUtils.convertToFxImage(originalBuffered);
-                imageView.setImage(originalFx);
-            }
+            if (selectedFile != null && selectedFile.exists()) {
+                logger.info("Загрузка изображения из файла: {}", selectedFile.getAbsolutePath());
 
+                // Загружаем изображение через TempFileManager (он уже сохранил в imageUtils)
+                Image image = new Image(selectedFile.toURI().toString());
+                imageView.setImage(image);
+
+                logger.info("Изображение успешно загружено");
+            } else if (imageUtils.hasOriginalImage()) {
+                logger.info("Загрузка изображения из imageUtils");
+                Image image = imageUtils.getOriginalFXImage();
+                imageView.setImage(image);
+            } else {
+                logger.error("Нет изображения для отображения");
+                dialogDisplayer.showErrorDialog("Изображение не было загружено");
+            }
         } catch (Exception e) {
-            dialogDisplayer.showErrorDialog("Ошибка загрузки изображений");
+            logger.error("Ошибка загрузки изображения: {}", e.getMessage(), e);
+            dialogDisplayer.showErrorDialog("Ошибка загрузки изображения: " + e.getMessage());
         }
     }
 }

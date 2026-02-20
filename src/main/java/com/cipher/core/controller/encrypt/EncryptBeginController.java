@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
+import java.io.File;
+
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor
@@ -60,9 +62,15 @@ public class EncryptBeginController {
 
         uploadButton.setOnAction(e -> {
             try {
-                logger.debug("Нажата кнопка 'Выбрать файл'");
-                tempFileManager.selectOriginalImageFile();
-                sceneManager.showEncryptLoadPanel();
+                logger.debug("Нажата кнопка 'Выбрать изображение'");
+                File selectedFile = tempFileManager.selectImageForEncrypt();
+
+                if (selectedFile != null) {
+                    sceneManager.showEncryptLoadPanel(selectedFile);
+                } else {
+                    logger.info("Файл не выбран");
+                }
+
             } catch (Exception ex) {
                 logger.error("Ошибка при выборе файла: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка при выборе файла: " + ex.getMessage());

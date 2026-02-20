@@ -68,8 +68,15 @@ public class DecryptFinalController {
     }
 
     private void setupEventHandlers() {
-        backButton.setOnAction(e -> sceneManager.showDecryptModePanel());
-        saveButton.setOnAction(e -> tempFileManager.saveDecryptedImage()); //todo заменить на полное сохранение
+        backButton.setOnAction(e -> sceneManager.showDecryptBeginPanel());
+        saveButton.setOnAction(e -> {
+            BufferedImage decryptedImage = tempFileManager.loadBufferedImageFromTemp("decrypted_image.png");
+            if (decryptedImage != null) {
+                tempFileManager.saveDecryptedImage(decryptedImage);
+            } else {
+                dialogDisplayer.showErrorDialog("Нет расшифрованного изображения для сохранения");
+            }
+        });
     }
 
     private void startDecryption(File file) {
@@ -87,29 +94,33 @@ public class DecryptFinalController {
             logger.info("🔄 Пир восстановлен из ConnectionManager: {}", peerAddress.getHostAddress());
         }
 
-        Task<BufferedImage> decryptImageTask = new Task<>() {
+        Task<BufferedImage> decryptTask = getBufferedImageTask(file);
+
+        new Thread(decryptTask).start();
+    }
+
+    private Task<BufferedImage> getBufferedImageTask(File file) {
+        Task<BufferedImage> decryptTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
-                return imageDecrypt.decryptImage(file, peerAddress);
-
+                return imageDecrypt.decryptImage(file);
             }
         };
 
-        decryptImageTask.setOnSucceeded(e -> {
+        decryptTask.setOnSucceeded(e -> {
             try {
                 displayDecryptedImage();
+                dialogDisplayer.showSuccessDialog("Изображение успешно расшифровано!");
             } catch (Exception ex) {
                 logger.error("Ошибка при загрузке расшифрованного изображения", ex);
-                //dialogDisplayer.showErrorDialog("Ошибка при загрузке изображения: " + ex.getMessage());
             }
         });
 
-        decryptImageTask.setOnFailed(e -> {
-            logger.error("Ошибка при расшифровке изображения", decryptImageTask.getException());
-            dialogDisplayer.showErrorDialog("Ошибка при расшифровке: " + decryptImageTask.getException().getMessage());
+        decryptTask.setOnFailed(e -> {
+            logger.error("Ошибка при расшифровке изображения", decryptTask.getException());
+            dialogDisplayer.showErrorDialog("Ошибка при расшифровке: " + decryptTask.getException().getMessage());
         });
-
-        new Thread(decryptImageTask).start();
+        return decryptTask;
     }
 
     private void displayDecryptedImage() {
@@ -123,7 +134,7 @@ public class DecryptFinalController {
             }
         } catch (Exception e) {
             logger.error("Ошибка отображения расшифрованного изображения", e);
-            //dialogDisplayer.showErrorDialog("Ошибка отображения изображения: " + e.getMessage());
+            dialogDisplayer.showErrorDialog("Не удалось загрузить расшифрованное изображение");
         }
     }
 }

@@ -55,7 +55,6 @@ public class EncryptFinalSelectedController {
 
     private void handleSaveAndExit() {
         if (encryptedImage != null) {
-            tempFileManager.saveEncryptedImage(encryptedImage);
             sceneManager.showStartPanel();
         }
     }

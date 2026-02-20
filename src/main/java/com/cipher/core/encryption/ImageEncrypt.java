@@ -2,72 +2,76 @@ package com.cipher.core.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 
 import com.cipher.core.dto.*;
-import com.cipher.core.dto.encryption.EncryptionArea;
-import com.cipher.core.dto.encryption.EncryptionDataResult;
-import com.cipher.core.dto.encryption.EncryptionParams;
-import com.cipher.core.dto.encryption.EncryptionResult;
-import com.cipher.core.dto.segmentation.SegmentationParams;
+import com.cipher.core.dto.encryption.EncryptedData;
 import com.cipher.core.dto.segmentation.SegmentationResult;
-import com.cipher.core.service.network.CryptoKeyManager;
+import com.cipher.core.service.encryption.SessionMandelbrotGenerator;
 import com.cipher.core.utils.*;
 import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import static com.cipher.core.encryption.XOR.performXOR;
+import static com.cipher.core.encryption.XOR.xorBytes;
+
 @Component
 @RequiredArgsConstructor
 public class ImageEncrypt {
-    private final DialogDisplayer dialogDisplayer;
-    private MandelbrotParams mandelbrotParams;
-    private final CryptoKeyManager cryptoKeyManager;
 
-    public void initMandelbrotParams(MandelbrotParams mandelbrotParams) {
-        this.mandelbrotParams = mandelbrotParams;
+    private final MandelbrotService mandelbrotService;
+    private final SessionMandelbrotGenerator sessionGenerator;
+    private final ImageSegmentShuffler imageSegmentShuffler;
+    private final EncryptionDataSerializer serializer;
+    private final SceneManager sceneManager;
+    private final TempFileManager tempFileManager;
+
+public void encryptWhole(BufferedImage originalImage) throws Exception {
+    if (!sessionGenerator.isInitialized()) {
+        throw new IllegalStateException("Session generator not initialized. Establish connection first.");
     }
-
-public void encryptWhole(BufferedImage originalImage,
-                         MandelbrotService mandelbrotService,
-                         ImageSegmentShuffler imageSegmentShuffler,
-                         CryptographicService cryptographicService,
-                         SceneManager sceneManager) throws Exception {
 
     SegmentationResult segmentationResult = imageSegmentShuffler.segmentAndShuffle(originalImage);
     BufferedImage segmentationUpdateImage = segmentationResult.shuffledImage();
 
     BufferedImage finalFractal = mandelbrotService
             .generateImage(segmentationUpdateImage.getWidth(), segmentationUpdateImage.getHeight());
+    MandelbrotParams oneTimeParams = mandelbrotService.getCurrentParams();
 
-    BufferedImage encryptedImage = XOR.performXOR(segmentationUpdateImage, finalFractal);
+    BufferedImage encryptedImage = performXOR(segmentationUpdateImage, finalFractal);
 
-    EncryptionResult result = new EncryptionResult(
-            encryptedImage,
-            new EncryptionParams(
-                    new EncryptionArea(
-                            0, 0,
-                            segmentationUpdateImage.getWidth(),
-                            segmentationUpdateImage.getHeight()
-                    ),
-                    new SegmentationParams(
-                            segmentationResult.segmentSize(),
-                            segmentationResult.segmentMapping()
-                    ),
-                    mandelbrotService.getCurrentParams()
-            )
+    byte[] sessionFractalBytes = sessionGenerator.getSessionFractalBytes();
+    byte[] oneTimeParamsBytes = mandelbrotService.paramsToBytes(oneTimeParams);
+
+    byte[] encryptedParams = xorBytes(oneTimeParamsBytes, sessionFractalBytes);
+
+    byte[] encryptedImageBytes = serializer.imageToBytes(encryptedImage);
+
+    EncryptedData data = EncryptedData.forWholeImage(
+            encryptedImageBytes,
+            encryptedParams,
+            segmentationResult.segmentMapping(),
+            segmentationResult.segmentSize(),
+            encryptedImage.getWidth(),
+            encryptedImage.getHeight()
     );
-    EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
 
-    sceneManager.showEncryptFinalPanel(encryptedImage, cipherDataResult);
+    // 6. Сохраняем в файл
+    File outputFile = tempFileManager.saveEncryptedData(data);
+
+    // 7. Показываем результат
+    sceneManager.showEncryptFinalPanel(encryptedImage, outputFile);
 }
 
     public void encryptPart(BufferedImage originalImage,
-                            MandelbrotService mandelbrotService,
-                            ImageSegmentShuffler imageSegmentShuffler,
-                            CryptographicService cryptographicService,
-                            Rectangle2D selectedArea,
-                            SceneManager sceneManager) throws Exception {
+                            Rectangle2D selectedArea) throws Exception {
+        if (!sessionGenerator.isInitialized()) {
+            throw new IllegalStateException("Session generator not initialized. Establish connection first.");
+        }
 
         int startX = (int) selectedArea.getMinX();
         int startY = (int) selectedArea.getMinY();
@@ -91,9 +95,10 @@ public void encryptWhole(BufferedImage originalImage,
         int shuffledHeight = segmentationResult.shuffledImage().getHeight();
 
         BufferedImage finalFractal = mandelbrotService.generateImage(shuffledWidth, shuffledHeight);
+        MandelbrotParams oneTimeParams = mandelbrotService.getCurrentParams();
 
         // XOR только выделенной области
-        BufferedImage encryptedPart = XOR.performXOR(segmentationResult.shuffledImage(), finalFractal);
+        BufferedImage encryptedPart = performXOR(segmentationResult.shuffledImage(), finalFractal);
 
         // Создаем копию всего исходного изображения
         BufferedImage finalImage = new BufferedImage(
@@ -105,32 +110,43 @@ public void encryptWhole(BufferedImage originalImage,
         // Копируем исходное изображение
         Graphics2D g = finalImage.createGraphics();
         g.drawImage(originalImage, 0, 0, null);
-
-        // Вставляем зашифрованную часть на нужное место
         g.drawImage(encryptedPart, startX, startY, null);
         g.dispose();
 
-        // Создаем EncryptionResult с оригинальными размерами
-        EncryptionResult result = new EncryptionResult(
-                finalImage,
-                new EncryptionParams(
-                        new EncryptionArea(
-                                startX, startY,
-                                width,
-                                height
-                        ),
-                        new SegmentationParams(
-                                segmentationResult.segmentSize(),
-                                segmentationResult.segmentMapping()
-                        ),
-                        mandelbrotService.getCurrentParams()
-                )
+        byte[] sessionFractalBytes = sessionGenerator.getSessionFractalBytes();
+        byte[] oneTimeParamsBytes = mandelbrotService.paramsToBytes(oneTimeParams);
+        byte[] encryptedParams = xorBytes(oneTimeParamsBytes, sessionFractalBytes);
+
+        byte[] fullImageBytes = serializer.imageToBytes(finalImage);
+
+        EncryptedData data = EncryptedData.forPartialImage(
+                fullImageBytes,
+                encryptedParams,
+                segmentationResult.segmentMapping(),
+                segmentationResult.segmentSize(),
+                startX, startY,
+                width, height,
+                originalImage.getWidth(),
+                originalImage.getHeight()
         );
 
-        // Передаем peerAddress в cryptographicService
-        EncryptionDataResult cipherDataResult = cryptographicService.encryptData(result);
+        // 8. Сохраняем в файл
+        File outputFile = tempFileManager.saveEncryptedData(data);
 
-        // Передаем полное изображение с зашифрованной областью
-        sceneManager.showEncryptFinalPanel(finalImage, cipherDataResult);
+        // 9. Показываем результат
+        sceneManager.showEncryptFinalPanel(finalImage, outputFile);
+    }
+
+    /**
+     * Сохраняет EncryptedData в файл
+     */
+    private File saveToFile(EncryptedData data) throws IOException {
+        String fileName = "encrypted_" + System.currentTimeMillis() + ".bin";
+        File outputFile = new File(tempFileManager.getTempPath(), fileName);
+
+        byte[] serializedData = serializer.serialize(data);
+        Files.write(outputFile.toPath(), serializedData);
+
+        return outputFile;
     }
 }
