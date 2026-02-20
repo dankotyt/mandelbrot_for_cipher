@@ -267,7 +267,7 @@ public class ChatController implements ChatService.ChatListener {
 
         boolean confirmed = dialogDisplayer.showConfirmationDialog(
                 "Очистка чата",
-                "Вы уверены, что хотите очистить историю сообщений?",
+                "Вы уверены, что хотите очистить историю сообщений? История очиститься только у вас!",
                 "Это действие нельзя отменить.",
                 "ОК", "Отмена"
         );

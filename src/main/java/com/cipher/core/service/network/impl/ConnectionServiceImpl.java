@@ -7,6 +7,7 @@ import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.model.ECDHKeyPair;
 import com.cipher.core.model.SignedConnectionPacket;
+import com.cipher.core.service.encryption.SessionMandelbrotGenerator;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.DigitalSignatureService;
 import com.cipher.core.service.network.CryptoKeyManager;
@@ -47,6 +48,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final DigitalSignatureService signatureService;
     private final SceneManager sceneManager;
     private final ChatService chatService;
+    private final SessionMandelbrotGenerator sessionMandelbrotGenerator;
 
     private ServerSocket appServerSocket;
     private ServerSocket cryptoServerSocket;
@@ -68,6 +70,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     @PreDestroy
     public void cleanup() {
         serverRunning = false;
+        sessionMandelbrotGenerator.clearCache();
         closeServerSocket(appServerSocket, "App");
         closeServerSocket(cryptoServerSocket, "Crypto");
     }
@@ -298,6 +301,9 @@ public class ConnectionServiceImpl implements ConnectionService {
                 }
                 currentKeys.computeSharedSecret(response.getDhPublicKey());
 
+                byte[] masterSeed = currentKeys.getSharedSecretBytes();
+                sessionMandelbrotGenerator.initializeWithSeed(masterSeed);
+
                 // 7. Сохраняем соединение
                 cryptoKeyManager.addConnection(response.getSenderAddress(), currentKeys);
                 cryptoKeyManager.setConnectedPeer(response.getSenderAddress());
@@ -393,6 +399,8 @@ public class ConnectionServiceImpl implements ConnectionService {
                     acceptConnection(requestDTO);
                     boolean chatConnected = chatService.connectToPeer(clientIp);
                     if (chatConnected) {
+                        byte[] masterSeed = currentKeys.getSharedSecretBytes();
+                        sessionMandelbrotGenerator.initializeWithSeed(masterSeed);
                         logger.info("✅ P2P чат соединение установлено с: {}", clientIp);
 
                         // Открываем чат
@@ -570,6 +578,7 @@ public class ConnectionServiceImpl implements ConnectionService {
 
         // Уведомляем слушателей
         notifyConnectionDisconnected(deviceIp);
+        sessionMandelbrotGenerator.clearCache();
     }
 
     // ==================== Проверки статуса ====================

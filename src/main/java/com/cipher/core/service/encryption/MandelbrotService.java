@@ -15,8 +15,7 @@ import javax.swing.*;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.security.SecureRandom;
 import java.util.*;
@@ -43,12 +42,12 @@ public class MandelbrotService extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
 
     private final DeterministicRandomGenerator drbg;
-    private final BinaryFile binaryFile;
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final ImageEncrypt imageEncrypt;
     private final ImageUtils imageUtils;
-    private final CryptographicService cryptographicService;
     private final CryptoKeyManager cryptoKeyManager;
+
+    private final SecureRandom secureRandom = new SecureRandom();
 
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
@@ -57,7 +56,6 @@ public class MandelbrotService extends JPanel {
     private double offsetX;
     private double offsetY;
     private BufferedImage image;
-    private byte[] masterSeed;
     @Getter
     private MandelbrotParams currentParams;
 
@@ -68,21 +66,6 @@ public class MandelbrotService extends JPanel {
     private String getTempPath() {
         return getProjectRootPath() + "temp" + File.separator;
     }
-
-//    public MandelbrotService createWithSize(int width, int height) {
-//        MandelbrotService service = new MandelbrotService(this.drbg, this.binaryFile);
-//        service.startMandelbrotWidth = width;
-//        service.startMandelbrotHeight = height;
-//        service.addMouseListener(new MouseAdapter() {
-//            @Override
-//            public void mousePressed(MouseEvent e) {
-//                if (SwingUtilities.isLeftMouseButton(e) || SwingUtilities.isRightMouseButton(e)) {
-//                    service.generateImage();
-//                }
-//            }
-//        });
-//        return service;
-//    }
 
     /**
      * Переопределяет метод paintComponent для отрисовки сгенерированного изображения множества Мандельброта.
@@ -98,16 +81,27 @@ public class MandelbrotService extends JPanel {
     }
 
     /**
-     * Генерирует случайные значения для параметров MAX_ITER, offsetX, offsetY и ZOOM.
+     * Генерирует случайные значения для параметров используя OneTime генератор
      */
-    public void randomPositionOnPlenty() {
+    public void randomOneTimePosition() {
         startMandelbrotWidth = 720;
         startMandelbrotHeight = 540;
-        MAX_ITER = 500 + (drbg.nextInt(91) * 10); // 91 для диапазона от 0 до 90, чтобы получить 300, 310 и до 1200
-        offsetX = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
-        offsetY = -0.9998 + (drbg.nextDouble() * (0.9998 - -0.9998));
-        ZOOM = 100000 + (drbg.nextInt(44) * 1000);
+
+        MandelbrotParams params = generateOneTimeParams();
+        this.ZOOM = params.zoom();
+        this.offsetX = params.offsetX();
+        this.offsetY = params.offsetY();
+        this.MAX_ITER = params.maxIter();
+
         repaint();
+    }
+
+    private MandelbrotParams generateOneTimeParams() {
+        double zoom = 100000 + (secureRandom.nextInt(44) * 1000);
+        double offsetX = -0.9998 + (secureRandom.nextDouble() * (0.9998 - -0.9998));
+        double offsetY = -0.9998 + (secureRandom.nextDouble() * (0.9998 - -0.9998));
+        int maxIter = 300 + (secureRandom.nextInt(91) * 10);
+        return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
     }
 
     /**
@@ -154,7 +148,7 @@ public class MandelbrotService extends JPanel {
 
         while (!validImage && !Thread.currentThread().isInterrupted()) {
             attempt++;
-            randomPositionOnPlenty();
+            randomOneTimePosition();
 
             try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
                 resultImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
@@ -206,10 +200,6 @@ public class MandelbrotService extends JPanel {
         repaint();
         return resultImage;
     }
-
-    /*todo Тут уже не используем рандомизацию, а просто подставляем значения из
-       MandelbrotParams. Устанавливаем только новые значения ширины и высоты
-    */
 
     public BufferedImage generateImage(int originalWidth, int originalHeight) {
         BufferedImage resultImage = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
@@ -287,7 +277,7 @@ public class MandelbrotService extends JPanel {
 
             // Ожидаем завершения всех задач
             for (Future<?> future : futures) {
-                future.get(); // Дожидаемся завершения каждого потока
+                future.get();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -315,27 +305,6 @@ public class MandelbrotService extends JPanel {
      * @param image изображение для проверки
      * @return true если изображение удовлетворяет критериям, иначе false
      */
-//    public boolean checkImageDiversity(BufferedImage image) {
-//        Map<Integer, Integer> colorCount = new HashMap<>();
-//        int totalPixels = image.getWidth() * image.getHeight();
-//
-//        for (int x = 0; x < image.getWidth(); x++) {
-//            for (int y = 0; y < image.getHeight(); y++) {
-//                int color = image.getRGB(x, y);
-//                colorCount.put(color, colorCount.getOrDefault(color, 0) + 1);
-//            }
-//        }
-//
-//        int uniqueColors = colorCount.size();
-//        int maxCount = colorCount.values().stream().max(Integer::compare).orElse(0);
-//        double percentage = (double) maxCount / totalPixels;
-//
-//        if (isImageBlackPercentageAboveThreshold(image, 0.05)) {
-//            return false;
-//        }
-//
-//        return (uniqueColors > 250 && percentage < 0.25);
-//    }
     private boolean checkImageDiversity(BufferedImage image) {
         if (isImageBlackPercentageAboveThreshold(image, 0.05)) { //todo попробовать меньше значение
             return false;
@@ -366,24 +335,6 @@ public class MandelbrotService extends JPanel {
      * @param threshold пороговое значение (от 0.0 до 1.0)
      * @return true, если процент чёрных пикселей превышает порог, иначе false
      */
-//    public static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
-//        int width = image.getWidth();
-//        int height = image.getHeight();
-//        int blackPixelCount = 0;
-//
-//        for (int y = 0; y < height; y++) {
-//            for (int x = 0; x < width; x++) {
-//                int pixel = image.getRGB(x, y);
-//                if (isBlackPixel(pixel)) {
-//                    blackPixelCount++;
-//                }
-//            }
-//        }
-//
-//        double percentageBlack = (double) blackPixelCount / (width * height);
-//
-//        return percentageBlack > threshold;
-//    }
     private static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
         int width = image.getWidth();
         int height = image.getHeight();
@@ -419,13 +370,6 @@ public class MandelbrotService extends JPanel {
         return red == 0 && green == 0 && blue == 0;
     }
 
-    //todo при онлайн-соединении masterSeed = K, который образуется по алгоритму Д.-Х.
-    private byte[] generateMasterSeed() {
-        masterSeed = new byte[32];
-        new SecureRandom().nextBytes(masterSeed);
-        return masterSeed;
-    }
-
     /**
      * Сохраняет изображение в папку resources в корне проекта.
      *
@@ -446,5 +390,74 @@ public class MandelbrotService extends JPanel {
                 alert.showAndWait();
             });
         }
+    }
+
+    /**
+     * Конвертирует параметры в байты
+     */
+    public byte[] paramsToBytes(MandelbrotParams params) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeDouble(params.zoom());
+        dos.writeDouble(params.offsetX());
+        dos.writeDouble(params.offsetY());
+        dos.writeInt(params.maxIter());
+        return baos.toByteArray();
+    }
+
+    /**
+     * Восстанавливает параметры из байт
+     */
+    public MandelbrotParams bytesToParams(byte[] bytes) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        DataInputStream dis = new DataInputStream(bais);
+        return new MandelbrotParams(
+                dis.readDouble(),
+                dis.readDouble(),
+                dis.readDouble(),
+                dis.readInt()
+        );
+    }
+
+    /**
+     * Конвертирует изображение в массив байт
+     */
+    public byte[] fractalToBytes(BufferedImage fractal) {
+        int width = fractal.getWidth();
+        int height = fractal.getHeight();
+        byte[] bytes = new byte[width * height * 3];
+
+        int index = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = fractal.getRGB(x, y);
+                bytes[index++] = (byte) ((rgb >> 16) & 0xFF);
+                bytes[index++] = (byte) ((rgb >> 8) & 0xFF);
+                bytes[index++] = (byte) (rgb & 0xFF);
+            }
+        }
+        return bytes;
+    }
+
+    /**
+     * Восстанавливает изображение из байт
+     */
+    public BufferedImage bytesToFractal(byte[] bytes, int width, int height) {
+        if (bytes.length != width * height * 3) {
+            throw new IllegalArgumentException("Неверный размер массива байт");
+        }
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        int index = 0;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int r = bytes[index++] & 0xFF;
+                int g = bytes[index++] & 0xFF;
+                int b = bytes[index++] & 0xFF;
+                image.setRGB(x, y, (r << 16) | (g << 8) | b);
+            }
+        }
+        return image;
     }
 }
