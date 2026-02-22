@@ -33,7 +33,7 @@ public class DecryptBeginController {
         backButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Назад'");
-                sceneManager.showStartPanel();
+                sceneManager.showChatPanel();
             } catch (Exception ex) {
                 logger.error("Ошибка при переходе на стартовую панель: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка перехода: " + ex.getMessage());

@@ -53,7 +53,7 @@ public class EncryptBeginController {
         backButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Назад'");
-                sceneManager.showStartPanel();
+                sceneManager.showChatPanel();
             } catch (Exception ex) {
                 logger.error("Ошибка при переходе на стартовую панель: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка перехода: " + ex.getMessage());
@@ -63,14 +63,8 @@ public class EncryptBeginController {
         uploadButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Выбрать изображение'");
-                File selectedFile = tempFileManager.selectImageForEncrypt();
-
-                if (selectedFile != null) {
-                    sceneManager.showEncryptLoadPanel(selectedFile);
-                } else {
-                    logger.info("Файл не выбран");
-                }
-
+                tempFileManager.selectImageForEncrypt();
+                sceneManager.showEncryptLoadPanel();
             } catch (Exception ex) {
                 logger.error("Ошибка при выборе файла: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка при выборе файла: " + ex.getMessage());

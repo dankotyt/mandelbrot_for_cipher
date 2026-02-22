@@ -94,6 +94,7 @@ public class EncryptFinalController {
                 dialogDisplayer.showSuccessDialog(
                         "Зашифрованное изображение отправлено в чат!");
 
+                tempFileManager.cleanupTemp();
             } catch (Exception e) {
                 logger.error("Ошибка отправки в чат", e);
                 dialogDisplayer.showErrorDialog(
@@ -102,13 +103,6 @@ public class EncryptFinalController {
         } else {
             dialogDisplayer.showErrorDialog(
                     "Нет данных для отправки");
-        }
-    }
-
-    private byte[] convertImageToBytes(BufferedImage image) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            ImageIO.write(image, "png", baos);
-            return baos.toByteArray();
         }
     }
 }

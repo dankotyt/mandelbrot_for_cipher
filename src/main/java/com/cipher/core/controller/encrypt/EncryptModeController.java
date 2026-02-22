@@ -22,8 +22,8 @@ public class EncryptModeController {
     private ImageView imageView;
     @FXML
     private Button generateButton;
-    @FXML
-    private Button manualButton;
+//    @FXML
+//    private Button manualButton;
     @FXML
     private Button backButton;
 

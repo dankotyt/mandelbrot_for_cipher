@@ -14,6 +14,7 @@ import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
 
+@Deprecated
 @Controller
 @Scope("prototype")
 @RequiredArgsConstructor

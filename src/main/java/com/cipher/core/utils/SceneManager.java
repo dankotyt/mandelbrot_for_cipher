@@ -94,21 +94,8 @@ public class SceneManager {
         showScreen("/fxml/encrypt/encrypt-begin.fxml");
     }
 
-    public void showEncryptLoadPanel(File selectedFile) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-load.fxml"));
-            loader.setControllerFactory(controllerFactory);
-            Parent root = loader.load();
-
-            EncryptLoadController controller = loader.getController();
-            controller.setSelectedFile(selectedFile);
-
-            primaryStage.getScene().setRoot(root);
-        } catch (Exception e) {
-            logger.error("Error loading encrypt load screen", e);
-            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
-            showEncryptBeginPanel();
-        }
+    public void showEncryptLoadPanel() {
+        showScreen("/fxml/encrypt/encrypt-load.fxml");
     }
 
     public void showEncryptModePanel() {
@@ -181,6 +168,7 @@ public class SceneManager {
 //        }
 //    }
 
+    @Deprecated
     public void showEncryptFinalSelectedPanel(BufferedImage encryptedImage) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final-selected.fxml"));

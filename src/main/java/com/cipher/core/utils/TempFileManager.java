@@ -1,6 +1,7 @@
 package com.cipher.core.utils;
 
 import com.cipher.core.dto.encryption.EncryptedData;
+import jakarta.annotation.PreDestroy;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -95,23 +96,41 @@ public class TempFileManager {
     /**
      * Выбор изображения для шифрования
      */
-    public File selectImageForEncrypt() {
+    public void selectImageForEncrypt() {
         try {
             Stage primaryStage = sceneManager.getPrimaryStage();
             if (primaryStage == null) {
                 logger.error("Primary stage is not set!");
-                return null;
+                displayer.showErrorDialog("Ошибка: главное окно не инициализировано");
             }
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Выберите изображение для шифрования");
-            fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg")
-            );
-            return fileChooser.showOpenDialog(primaryStage);
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg"));
+
+            File selectedFile = fileChooser.showOpenDialog(primaryStage);
+
+            if (selectedFile != null) {
+                saveInputImageToMemory(selectedFile);
+                logger.info("Файл выбран: {}", selectedFile.getAbsolutePath());
+            } else {
+                logger.info("Файл не выбран.");
+            }
         } catch (Exception e) {
-            logger.error("Ошибка при выборе изображения: {}", e.getMessage(), e);
-            displayer.showErrorDialog("Ошибка при выборе изображения: " + e.getMessage());
-            return null;
+            logger.error("Ошибка при выборе файла для шифрования: {}", e.getMessage(), e);
+            displayer.showErrorDialog("Ошибка при выборе файла: " + e.getMessage());
+        }
+    }
+
+    private void saveInputImageToMemory(File selectedFile) {
+        try {
+            BufferedImage image = ImageIO.read(selectedFile);
+            if (image == null) {
+                throw new IOException("Не удалось прочитать изображение");
+            }
+            imageUtils.setOriginalImage(image);
+        } catch (IOException e) {
+            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
+            displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
         }
     }
 
@@ -149,27 +168,6 @@ public class TempFileManager {
             displayer.showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
         } catch (Exception e) {
             displayer.showErrorAlert("Ошибка сохранения", "Ошибка сохранения изображения: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Загружает изображение из файла в imageUtils
-     */
-    public void loadImageToMemory(File selectedFile) {
-        try {
-            BufferedImage image = ImageIO.read(selectedFile);
-            if (image == null) {
-                throw new IOException("Не удалось прочитать изображение");
-            }
-            imageUtils.setOriginalImage(image);
-
-            // Сохраняем копию в temp
-            saveBufferedImageToTemp(image, "input.png");
-
-            logger.info("Изображение загружено в память: {}", selectedFile.getAbsolutePath());
-        } catch (IOException e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
         }
     }
 
@@ -219,6 +217,7 @@ public class TempFileManager {
     /**
      * Очистка temp папки (кроме текущих файлов)
      */
+    @PreDestroy
     public void cleanupTemp() {
         try {
             File tempDir = new File(getTempPath());
