@@ -14,7 +14,7 @@ import org.springframework.stereotype.Controller;
 import java.io.File;
 
 @Controller
-@Scope("singleton")
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptBeginController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptBeginController.class);

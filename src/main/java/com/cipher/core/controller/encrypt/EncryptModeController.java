@@ -14,7 +14,7 @@ import org.springframework.stereotype.Controller;
 import java.awt.image.BufferedImage;
 
 @Controller
-@Scope("singleton")
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptModeController {
 

@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Controller
-@Scope("singleton")
+@Scope("prototype")
 @RequiredArgsConstructor
 public class ChatController implements ChatService.ChatListener {
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
@@ -80,6 +80,7 @@ public class ChatController implements ChatService.ChatListener {
         }
         try {
             logger.info("Инициализация ChatController");
+            isInitialized = true;
 
             setupEventHandlers();
             chatService.addListener(this);
@@ -566,7 +567,7 @@ public class ChatController implements ChatService.ChatListener {
                         try {
                             File tempFile = new File(tempFileManager.getTempPath() + fileName);
                             Files.write(tempFile.toPath(), fileData);
-                            sceneManager.showDecryptBeginPanel();
+                            sceneManager.showDecryptFinalPanel(tempFile.getPath());
                             logger.info("Открыт экран дешифрования для файла: {}", fileName);
                         } catch (IOException ex) {
                             logger.error("Ошибка при сохранении временного файла", ex);

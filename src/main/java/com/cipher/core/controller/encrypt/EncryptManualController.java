@@ -15,7 +15,7 @@ import org.springframework.stereotype.Controller;
 import java.awt.image.BufferedImage;
 
 @Controller
-@Scope("singleton")
+@Scope("prototype")
 @RequiredArgsConstructor
 public class EncryptManualController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptManualController.class);
