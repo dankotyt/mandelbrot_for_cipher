@@ -5,12 +5,14 @@ import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
+import com.cipher.core.utils.TempFileManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 @Controller
 @Scope("prototype")
@@ -56,6 +59,7 @@ public class ChatController implements ChatService.ChatListener {
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ChatService chatService;
+    private final TempFileManager tempFileManager;
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
@@ -134,15 +138,13 @@ public class ChatController implements ChatService.ChatListener {
         encryptionInfoButton.setOnAction(e -> showEncryptionInfo());
 
         messageTextArea.setOnKeyPressed(event -> {
-            switch (event.getCode()) {
-                case ENTER:
-                    if (event.isShiftDown()) {
-                        messageTextArea.appendText("\n");
-                    } else {
-                        event.consume();
-                        handleSendMessage();
-                    }
-                    break;
+            if (Objects.requireNonNull(event.getCode()) == KeyCode.ENTER) {
+                if (event.isShiftDown()) {
+                    messageTextArea.appendText("\n");
+                } else {
+                    event.consume();
+                    handleSendMessage();
+                }
             }
         });
     }
@@ -535,7 +537,24 @@ public class ChatController implements ChatService.ChatListener {
 
         // Добавляем обработчик клика для сохранения файла
         fileContent.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
+            if (event.getClickCount() == 1) {
+                // Одиночный клик - открываем дешифрование (только для зашифрованных файлов)
+                if (fileName.endsWith(".bin")) {
+                    try {
+                        // Сохраняем файл во временную директорию
+                        File tempFile = new File(tempFileManager.getTempPath() + fileName);
+                        Files.write(tempFile.toPath(), fileData);
+
+                        sceneManager.showDecryptFinalPanel(tempFile.getPath());
+
+                        logger.info("Открыт экран дешифрования для файла: {}", fileName);
+                    } catch (IOException e) {
+                        logger.error("Ошибка при сохранении временного файла", e);
+                        dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
+                    }
+                }
+            } else if (event.getClickCount() == 2) {
+                // Двойной клик - сохраняем на диск
                 saveFileToDevice(fileData, fileName);
             }
         });
