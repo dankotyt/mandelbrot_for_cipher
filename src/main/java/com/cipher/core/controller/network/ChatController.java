@@ -6,6 +6,7 @@ import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
 import com.cipher.core.utils.TempFileManager;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
@@ -20,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -536,33 +538,41 @@ public class ChatController implements ChatService.ChatListener {
         fileContent.setAlignment(Pos.CENTER_LEFT);
 
         // Добавляем обработчик клика для сохранения файла
+        PauseTransition pause = new PauseTransition(Duration.millis(350));
+
         fileContent.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 1) {
-                // Одиночный клик - открываем дешифрование (только для зашифрованных файлов)
-                if (fileName.endsWith(".bin")) {
-                    try {
-                        // Сохраняем файл во временную директорию
-                        File tempFile = new File(tempFileManager.getTempPath() + fileName);
-                        Files.write(tempFile.toPath(), fileData);
-
-                        sceneManager.showDecryptFinalPanel(tempFile.getPath());
-
-                        logger.info("Открыт экран дешифрования для файла: {}", fileName);
-                    } catch (IOException e) {
-                        logger.error("Ошибка при сохранении временного файла", e);
-                        dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
-                    }
-                }
-            } else if (event.getClickCount() == 2) {
-                // Двойной клик - сохраняем на диск
-                saveFileToDevice(fileData, fileName);
+            if (event.getClickCount() == 2) {
+                pause.stop();
+                handleDoubleClick(fileData, fileName);
+            } else if (event.getClickCount() == 1) {
+                pause.setOnFinished(e -> handleSingleClick(fileData, fileName));
+                pause.play();
             }
+            event.consume();
         });
 
         messageContent.getChildren().add(fileContent);
         messageBox.getChildren().add(messageContent);
 
         messagesContainer.getChildren().add(messageBox);
+    }
+
+    private void handleSingleClick(byte[] fileData, String fileName) {
+        if (fileName.endsWith(".bin")) {
+            try {
+                File tempFile = new File(tempFileManager.getTempPath() + fileName);
+                Files.write(tempFile.toPath(), fileData);
+                sceneManager.showDecryptBeginPanel();
+                logger.info("Открыт экран дешифрования для файла: {}", fileName);
+            } catch (IOException e) {
+                logger.error("Ошибка при сохранении временного файла", e);
+                dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
+            }
+        }
+    }
+
+    private void handleDoubleClick(byte[] fileData, String fileName) {
+        saveFileToDevice(fileData, fileName);
     }
 
     private void saveFileToDevice(byte[] fileData, String fileName) {
