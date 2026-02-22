@@ -216,6 +216,14 @@ public class SceneManager {
         showScreen("/fxml/network/chat.fxml");
     }
 
+    public void returnToChat() {
+        if (Platform.isFxApplicationThread()) {
+           loadScreen("/fxml/network/chat.fxml");
+        } else {
+            Platform.runLater(() -> loadScreen("/fxml/network/chat.fxml"));
+        }
+    }
+
     public void showChatPanel(DeviceDTO device) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/network/chat.fxml"));

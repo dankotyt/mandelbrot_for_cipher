@@ -53,7 +53,7 @@ public class EncryptBeginController {
         backButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Назад'");
-                sceneManager.showChatPanel();
+                sceneManager.returnToChat();
             } catch (Exception ex) {
                 logger.error("Ошибка при переходе на стартовую панель: {}", ex.getMessage(), ex);
                 dialogDisplayer.showErrorDialog("Ошибка перехода: " + ex.getMessage());
