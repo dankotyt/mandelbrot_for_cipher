@@ -22,7 +22,7 @@ import org.springframework.stereotype.Controller;
 import java.awt.image.BufferedImage;
 
 @Controller
-@Scope("prototype")
+@Scope("singleton")
 @RequiredArgsConstructor
 public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);

@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Controller
-@Scope("prototype")
+@Scope("singleton")
 @RequiredArgsConstructor
 public class EncryptChooseAreaController {
 

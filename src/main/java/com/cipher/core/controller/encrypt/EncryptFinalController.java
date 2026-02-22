@@ -24,7 +24,7 @@ import java.nio.file.Files;
 import javax.imageio.ImageIO;
 
 @Controller
-@Scope("prototype")
+@Scope("singleton")
 @RequiredArgsConstructor
 public class EncryptFinalController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptFinalController.class);
