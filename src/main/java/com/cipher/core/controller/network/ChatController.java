@@ -73,16 +73,10 @@ public class ChatController implements ChatService.ChatListener {
     public void initialize() {
         try {
             if (!isInitialized) {
-                logger.info("=== ИНИЦИАЛИЗАЦИЯ НОВОГО ChatController ===");
                 chatService.addListener(this);
             }
-            logger.info("Хэш-код контроллера: {}", System.identityHashCode(this));
-            logger.info("ChatHistoryService хэш: {}", System.identityHashCode(chatHistoryService));
-
             setupEventHandlers();
             setupUI();
-
-            logger.info("ChatController инициализирован успешно, хэш: {}", System.identityHashCode(this));
             isInitialized = true;
         } catch (Exception e) {
             logger.error("Ошибка инициализации ChatController: {}", e.getMessage(), e);
@@ -94,36 +88,22 @@ public class ChatController implements ChatService.ChatListener {
      * Устанавливает информацию о подключении к пиру
      */
     public void setConnectionInfo(String deviceName, String deviceIp) {
-        logger.info("=== setConnectionInfo вызван ===");
-        logger.info("Устройство: {}, IP: {}", deviceName, deviceIp);
-        logger.info("Текущий remoteDeviceIp был: {}, станет: {}", this.remoteDeviceIp, deviceIp);
-        logger.info("Хэш контроллера: {}", System.identityHashCode(this));
-
         this.remoteDeviceName = deviceName;
         this.remoteDeviceIp = deviceIp;
 
         Platform.runLater(() -> {
-            logger.info("Platform.runLater в setConnectionInfo - начало");
-
             chatTitleLabel.setText("Чат с " + deviceName);
             connectionInfoLabel.setText("IP: " + deviceIp);
 
-            // Устанавливаем текущий чат в истории и восстанавливаем сообщения
-            logger.info("Устанавливаем текущий чат в истории: {}", deviceIp);
             chatHistoryService.setCurrentChat(deviceIp);
 
             // Проверяем, есть ли сообщения в истории
             List<HBox> history = chatHistoryService.getMessages(deviceIp);
-            logger.info("В истории найдено сообщений для {}: {}", deviceIp, history.size());
 
             if (!history.isEmpty()) {
                 logger.info("Будет восстановлено {} сообщений", history.size());
-                for (int i = 0; i < history.size(); i++) {
-                    logger.debug("Сообщение {}: {}", i, history.get(i).getStyleClass());
-                }
             } else {
                 logger.warn("История пуста для IP: {}", deviceIp);
-
             }
 
             restoreChatHistory();
@@ -139,57 +119,31 @@ public class ChatController implements ChatService.ChatListener {
             }
 
             updateStatus("Установка P2P соединения...");
-            logger.info("Platform.runLater в setConnectionInfo - конец");
         });
-
-        logger.info("setConnectionInfo завершен");
     }
 
     private void restoreChatHistory() {
-        logger.info("=== restoreChatHistory вызван ===");
-        logger.info("remoteDeviceIp: {}, хэш контроллера: {}", remoteDeviceIp, System.identityHashCode(this));
-
-        if (remoteDeviceIp == null) {
-            logger.error("remoteDeviceIp = null, невозможно восстановить историю");
-            return;
-        }
-
         List<HBox> history = chatHistoryService.getMessages(remoteDeviceIp);
         logger.info("Получено {} сообщений из ChatHistoryService для IP {}", history.size(), remoteDeviceIp);
 
         if (!history.isEmpty()) {
-            logger.info("Восстанавливаем сообщения в UI...");
             hideNoMessagesHint();
 
-            int beforeCount = messagesContainer.getChildren().size();
             messagesContainer.getChildren().addAll(history);
-            int afterCount = messagesContainer.getChildren().size();
-
-            logger.info("До восстановления: {} элементов, после: {} элементов", beforeCount, afterCount);
-
             // Прокрутка вниз после восстановления
             Platform.runLater(() -> {
                 messagesScrollPane.setVvalue(1.0);
                 logger.info("Прокрутка вниз выполнена");
             });
-
-            logger.info("Восстановлено {} сообщений для чата с {}", history.size(), remoteDeviceIp);
         } else {
             logger.warn("Нет сообщений для восстановления для IP: {}", remoteDeviceIp);
             showNoMessagesHint();
         }
-
-        logger.info("restoreChatHistory завершен");
     }
 
     private boolean isCurrentChat() {
         String currentChatId = chatHistoryService.getCurrentChatId();
-        boolean isCurrent = remoteDeviceIp != null && remoteDeviceIp.equals(currentChatId);
-
-        logger.debug("isCurrentChat проверка: remoteIp={}, currentChatId={}, результат={}",
-                remoteDeviceIp, currentChatId, isCurrent);
-
-        return isCurrent;
+        return remoteDeviceIp != null && remoteDeviceIp.equals(currentChatId);
     }
 
     private void attemptAutoReconnection() {
@@ -492,12 +446,6 @@ public class ChatController implements ChatService.ChatListener {
     }
 
     private void displayTextMessage(String text, boolean isOwnMessage) {
-        logger.info("=== displayTextMessage ===");
-        logger.info("Текст: {}, isOwnMessage: {}, remoteDeviceIp: {}",
-                text.length() > 20 ? text.substring(0, 20) + "..." : text,
-                isOwnMessage, remoteDeviceIp);
-        logger.info("Хэш контроллера: {}", System.identityHashCode(this));
-
         hideNoMessagesHint();
 
         HBox messageBox = new HBox();
@@ -545,38 +493,20 @@ public class ChatController implements ChatService.ChatListener {
 
         // Сохраняем в историю
         if (remoteDeviceIp != null) {
-            logger.info("Сохраняем сообщение в историю для IP: {}", remoteDeviceIp);
             chatHistoryService.addMessage(remoteDeviceIp, messageBox);
-
-            // Проверяем, что сообщение сохранилось
-            List<HBox> history = chatHistoryService.getMessages(remoteDeviceIp);
-            logger.info("После сохранения в истории {} сообщений", history.size());
-        } else {
-            logger.error("remoteDeviceIp = null, сообщение НЕ сохранено в истории!");
         }
 
         // Если это текущий чат - отображаем
         if (isCurrentChat()) {
-            logger.info("Это текущий чат, отображаем сообщение");
             messagesContainer.getChildren().add(messageBox);
 
-            // Автопрокрутка к новому сообщению
             Platform.runLater(() -> {
                 messagesScrollPane.setVvalue(1.0);
             });
-        } else {
-            logger.warn("Это НЕ текущий чат, сообщение скрыто. currentChatId={}",
-                    chatHistoryService.getCurrentChatId());
         }
-
-        logger.info("displayTextMessage завершен");
     }
 
     private void displayImageMessage(byte[] imageData, String fileName, boolean isOwnMessage) {
-        logger.info("=== displayImageMessage ===");
-        logger.info("Файл: {}, размер: {}, isOwnMessage: {}, remoteDeviceIp: {}",
-                fileName, imageData.length, isOwnMessage, remoteDeviceIp);
-
         hideNoMessagesHint();
 
         HBox messageBox = new HBox();
@@ -622,40 +552,24 @@ public class ChatController implements ChatService.ChatListener {
 
             // Сохраняем в историю
             if (remoteDeviceIp != null) {
-                logger.info("Сохраняем изображение в историю для IP: {}", remoteDeviceIp);
                 chatHistoryService.addMessage(remoteDeviceIp, messageBox);
-
-                List<HBox> history = chatHistoryService.getMessages(remoteDeviceIp);
-                logger.info("После сохранения в истории {} сообщений", history.size());
-            } else {
-                logger.error("remoteDeviceIp = null, изображение НЕ сохранено в истории!");
             }
 
-            // Если это текущий чат - отображаем
             if (isCurrentChat()) {
-                logger.info("Это текущий чат, отображаем изображение");
                 messagesContainer.getChildren().add(messageBox);
 
                 Platform.runLater(() -> {
                     messagesScrollPane.setVvalue(1.0);
                 });
-            } else {
-                logger.warn("Это НЕ текущий чат, изображение скрыто. currentChatId={}",
-                        chatHistoryService.getCurrentChatId());
             }
 
         } catch (Exception e) {
             logger.error("Ошибка отображения изображения: {}", e.getMessage(), e);
-            // Показываем сообщение об ошибке
             displayTextMessage("Не удалось загрузить изображение: " + fileName, isOwnMessage);
         }
     }
 
     private void displayFileMessage(byte[] fileData, String fileName, long fileSize, boolean isOwnMessage) {
-        logger.info("=== displayFileMessage ===");
-        logger.info("Файл: {}, размер: {}, isOwnMessage: {}, remoteDeviceIp: {}",
-                fileName, fileSize, isOwnMessage, remoteDeviceIp);
-
         hideNoMessagesHint();
 
         HBox messageBox = new HBox();
@@ -691,7 +605,6 @@ public class ChatController implements ChatService.ChatListener {
         fileContent.getStyleClass().add("file-content");
         fileContent.setAlignment(Pos.CENTER_LEFT);
 
-        // Добавляем обработчик клика для сохранения файла
         PauseTransition pause = new PauseTransition(Duration.millis(350));
 
         fileContent.setOnMouseClicked(event -> {
@@ -708,28 +621,15 @@ public class ChatController implements ChatService.ChatListener {
         messageContent.getChildren().add(fileContent);
         messageBox.getChildren().add(messageContent);
 
-        // Сохраняем в историю
         if (remoteDeviceIp != null) {
-            logger.info("Сохраняем файл в историю для IP: {}", remoteDeviceIp);
             chatHistoryService.addMessage(remoteDeviceIp, messageBox);
-
-            List<HBox> history = chatHistoryService.getMessages(remoteDeviceIp);
-            logger.info("После сохранения в истории {} сообщений", history.size());
-        } else {
-            logger.error("remoteDeviceIp = null, файл НЕ сохранен в истории!");
         }
 
-        // Если это текущий чат - отображаем
         if (isCurrentChat()) {
-            logger.info("Это текущий чат, отображаем файл");
             messagesContainer.getChildren().add(messageBox);
-
             Platform.runLater(() -> {
                 messagesScrollPane.setVvalue(1.0);
             });
-        } else {
-            logger.warn("Это НЕ текущий чат, файл скрыт. currentChatId={}",
-                    chatHistoryService.getCurrentChatId());
         }
     }
 
@@ -813,7 +713,6 @@ public class ChatController implements ChatService.ChatListener {
                 new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg")
         );
 
-        // Используем любой доступный UI элемент для контекста
         File file = fileChooser.showSaveDialog(messageTextArea.getScene().getWindow());
         if (file != null) {
             try {
