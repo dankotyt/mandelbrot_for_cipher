@@ -32,6 +32,8 @@ public class SceneManager {
     private final ControllerFactory controllerFactory;
     private final DialogDisplayer dialogDisplayer;
 
+    private DeviceDTO lastChatDevice;
+
     public void showScreen(String fxmlPath) {
         // Все операции с JavaFX должны выполняться в FX Application Thread
         if (Platform.isFxApplicationThread()) {
@@ -217,13 +219,14 @@ public class SceneManager {
 
     public void returnToChat() {
         if (Platform.isFxApplicationThread()) {
-           loadScreen("/fxml/network/chat.fxml");
+            showChatPanel(lastChatDevice);
         } else {
             Platform.runLater(() -> loadScreen("/fxml/network/chat.fxml"));
         }
     }
 
     public void showChatPanel(DeviceDTO device) {
+        this.lastChatDevice = device;
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/network/chat.fxml"));
             loader.setControllerFactory(controllerFactory);
