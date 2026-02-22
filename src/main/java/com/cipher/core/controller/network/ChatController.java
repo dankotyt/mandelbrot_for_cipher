@@ -64,22 +64,26 @@ public class ChatController implements ChatService.ChatListener {
     private final TempFileManager tempFileManager;
     private final ChatHistoryService chatHistoryService;
 
+    private boolean isInitialized = false;
+
     private String remoteDeviceName;
     private String remoteDeviceIp;
 
     @FXML
     public void initialize() {
         try {
-            logger.info("=== ИНИЦИАЛИЗАЦИЯ НОВОГО ChatController ===");
+            if (!isInitialized) {
+                logger.info("=== ИНИЦИАЛИЗАЦИЯ НОВОГО ChatController ===");
+                chatService.addListener(this);
+            }
             logger.info("Хэш-код контроллера: {}", System.identityHashCode(this));
             logger.info("ChatHistoryService хэш: {}", System.identityHashCode(chatHistoryService));
 
             setupEventHandlers();
-            chatService.addListener(this);
             setupUI();
 
             logger.info("ChatController инициализирован успешно, хэш: {}", System.identityHashCode(this));
-
+            isInitialized = true;
         } catch (Exception e) {
             logger.error("Ошибка инициализации ChatController: {}", e.getMessage(), e);
             throw e;
@@ -450,6 +454,7 @@ public class ChatController implements ChatService.ChatListener {
                 encryptionStatusLabel.setText("Шифрование: Неактивно");
                 dialogDisplayer.showTimedErrorAlert("Соединение потеряно",
                         "Соединение с удаленным устройством разорвано", 5);
+                chatHistoryService.clearChat(peerInfo);
             }
         });
     }
@@ -826,6 +831,7 @@ public class ChatController implements ChatService.ChatListener {
     public void cleanup() {
         chatHistoryService.clearChat(remoteDeviceIp);
         chatService.removeListener(this);
+        isInitialized = false;
         chatService.disconnect();
         logger.info("ChatController очищен, хэш: {}", System.identityHashCode(this));
     }

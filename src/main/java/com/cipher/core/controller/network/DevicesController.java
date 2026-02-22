@@ -446,8 +446,8 @@ public class DevicesController implements ConnectionService.ConnectionListener {
                     logger.info("Отправка запроса на подключение и открытие чата с: {}", device);
                     updateStatus("Отправка запроса...");
 
-                    // Сразу открываем чат (ожидающий подключения)
-                    sceneManager.showChatPanel(device);
+//                    // Сразу открываем чат (ожидающий подключения)
+//                    sceneManager.showChatPanel(device);
 
                     // Отправляем запрос на подключение
                     connectionService.initiateConnection(device);
