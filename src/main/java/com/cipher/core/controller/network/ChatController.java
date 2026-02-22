@@ -35,7 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 @Controller
-@Scope("prototype")
+@Scope("singleton")
 @RequiredArgsConstructor
 public class ChatController implements ChatService.ChatListener {
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
