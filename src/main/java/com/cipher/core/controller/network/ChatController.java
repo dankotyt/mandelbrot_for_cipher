@@ -10,6 +10,7 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -34,6 +35,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Controller
@@ -65,9 +68,16 @@ public class ChatController implements ChatService.ChatListener {
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
+    private boolean isInitialized = false;
+
+    private final List<Node> messageHistory = new ArrayList<>();
 
     @FXML
     public void initialize() {
+        if (isInitialized) {
+            restoreMessageHistory();
+            return;
+        }
         try {
             logger.info("Инициализация ChatController");
 
@@ -81,6 +91,28 @@ public class ChatController implements ChatService.ChatListener {
             logger.error("Ошибка инициализации ChatController: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    private void restoreMessageHistory() {
+        if (!messageHistory.isEmpty()) {
+            Platform.runLater(() -> {
+                messagesContainer.getChildren().setAll(messageHistory);
+                hideNoMessagesHint();
+                logger.info("Восстановлено {} сообщений из истории", messageHistory.size());
+            });
+        }
+    }
+
+    private void addMessage(Node messageNode) {
+        messageHistory.add(messageNode);
+        messagesContainer.getChildren().add(messageNode);
+        hideNoMessagesHint();
+
+        Platform.runLater(() -> {
+            if (messagesScrollPane != null) {
+                messagesScrollPane.setVvalue(1.0);
+            }
+        });
     }
 
     /**
@@ -278,6 +310,7 @@ public class ChatController implements ChatService.ChatListener {
 
         if (confirmed) {
             messagesContainer.getChildren().clear();
+            messageHistory.clear();
             showNoMessagesHint();
             logger.info("История чата очищена");
         }
@@ -394,9 +427,48 @@ public class ChatController implements ChatService.ChatListener {
         });
     }
 
+    /**
+     * Создает и отображает текстовое сообщение
+     */
     private void displayTextMessage(String text, boolean isOwnMessage) {
-        hideNoMessagesHint();
+        HBox messageBox = createTextMessageBox(text, isOwnMessage);
+        addMessage(messageBox);
+    }
 
+    /**
+     * Создает и отображает файловое сообщение
+     */
+    private void displayFileMessage(byte[] fileData, String fileName, long fileSize, boolean isOwnMessage) {
+        HBox messageBox = createFileMessageBox(fileData, fileName, fileSize, isOwnMessage);
+        addMessage(messageBox);
+    }
+
+    /**
+     * Создает и отображает сообщение с изображением
+     */
+    private void displayImageMessage(byte[] imageData, String fileName, boolean isOwnMessage) {
+        HBox messageBox = createImageMessageBox(imageData, fileName, isOwnMessage);
+        addMessage(messageBox);
+    }
+
+    private void handleSingleClick(byte[] fileData, String fileName) {
+        if (fileName.endsWith(".bin")) {
+            try {
+                File tempFile = new File(tempFileManager.getTempPath() + fileName);
+                Files.write(tempFile.toPath(), fileData);
+                sceneManager.showDecryptBeginPanel();
+                logger.info("Открыт экран дешифрования для файла: {}", fileName);
+            } catch (IOException e) {
+                logger.error("Ошибка при сохранении временного файла", e);
+                dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
+            }
+        }
+    }
+
+    /**
+     * Создает текстовое сообщение
+     */
+    private HBox createTextMessageBox(String text, boolean isOwnMessage) {
         HBox messageBox = new HBox();
         messageBox.getStyleClass().add("message-box");
 
@@ -440,17 +512,83 @@ public class ChatController implements ChatService.ChatListener {
         messageContent.getChildren().addAll(textFlow, messageMeta);
         messageBox.getChildren().add(messageContent);
 
-        messagesContainer.getChildren().add(messageBox);
-
-        // Автопрокрутка к новому сообщению
-        Platform.runLater(() -> {
-            messagesScrollPane.setVvalue(1.0);
-        });
+        return messageBox;
     }
 
-    private void displayImageMessage(byte[] imageData, String fileName, boolean isOwnMessage) {
-        hideNoMessagesHint();
+    /**
+     * Создает сообщение с файлом
+     */
+    private HBox createFileMessageBox(byte[] fileData, String fileName, long fileSize, boolean isOwnMessage) {
+        HBox messageBox = new HBox();
+        messageBox.getStyleClass().add("message-box");
 
+        if (isOwnMessage) {
+            messageBox.getStyleClass().add("own-message");
+            messageBox.setAlignment(Pos.CENTER_RIGHT);
+        } else {
+            messageBox.getStyleClass().add("received-message");
+            messageBox.setAlignment(Pos.CENTER_LEFT);
+        }
+
+        VBox messageContent = new VBox();
+        messageContent.getStyleClass().add("file-message-content");
+        messageContent.setMaxWidth(300);
+
+        // Иконка файла
+        Label fileIcon = new Label("📎");
+        fileIcon.getStyleClass().add("file-icon");
+
+        // Информация о файле
+        Label fileNameLabel = new Label(fileName);
+        fileNameLabel.getStyleClass().add("file-name");
+        fileNameLabel.setWrapText(true);
+
+        Label fileSizeLabel = new Label(formatFileSize(fileSize));
+        fileSizeLabel.getStyleClass().add("file-size");
+
+        VBox fileInfo = new VBox(2, fileNameLabel, fileSizeLabel);
+        fileInfo.getStyleClass().add("file-info");
+
+        HBox fileContent = new HBox(10, fileIcon, fileInfo);
+        fileContent.getStyleClass().add("file-content");
+        fileContent.setAlignment(Pos.CENTER_LEFT);
+
+        // Используем PauseTransition для различения одиночного и двойного клика
+        PauseTransition pause = new PauseTransition(Duration.millis(250));
+
+        fileContent.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                pause.stop();
+                saveFileToDevice(fileData, fileName);
+            } else if (event.getClickCount() == 1) {
+                pause.setOnFinished(e -> {
+                    if (fileName.endsWith(".bin")) {
+                        try {
+                            File tempFile = new File(tempFileManager.getTempPath() + fileName);
+                            Files.write(tempFile.toPath(), fileData);
+                            sceneManager.showDecryptBeginPanel();
+                            logger.info("Открыт экран дешифрования для файла: {}", fileName);
+                        } catch (IOException ex) {
+                            logger.error("Ошибка при сохранении временного файла", ex);
+                            dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
+                        }
+                    }
+                });
+                pause.play();
+            }
+            event.consume();
+        });
+
+        messageContent.getChildren().add(fileContent);
+        messageBox.getChildren().add(messageContent);
+
+        return messageBox;
+    }
+
+    /**
+     * Создает сообщение с изображением
+     */
+    private HBox createImageMessageBox(byte[] imageData, String fileName, boolean isOwnMessage) {
         HBox messageBox = new HBox();
         messageBox.getStyleClass().add("message-box");
 
@@ -474,10 +612,12 @@ public class ChatController implements ChatService.ChatListener {
             imageView.setPreserveRatio(true);
             imageView.getStyleClass().add("message-image");
 
+
             imageView.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2) { // двойной клик
+                if (event.getClickCount() == 2) {
                     saveImageToDevice(imageData, fileName);
                 }
+                event.consume();
             });
 
             Label fileNameLabel = new Label(fileName);
@@ -492,87 +632,12 @@ public class ChatController implements ChatService.ChatListener {
             messageContent.getChildren().addAll(imageView, fileInfo);
             messageBox.getChildren().add(messageContent);
 
-            messagesContainer.getChildren().add(messageBox);
-
         } catch (Exception e) {
             logger.error("Ошибка отображения изображения: {}", e.getMessage());
-            // Показываем сообщение об ошибке
-            displayTextMessage("Не удалось загрузить изображение: " + fileName, isOwnMessage);
-        }
-    }
-
-    private void displayFileMessage(byte[] fileData, String fileName, long fileSize, boolean isOwnMessage) {
-        hideNoMessagesHint();
-
-        HBox messageBox = new HBox();
-        messageBox.getStyleClass().add("message-box");
-
-        if (isOwnMessage) {
-            messageBox.getStyleClass().add("own-message");
-            messageBox.setAlignment(Pos.CENTER_RIGHT);
-        } else {
-            messageBox.getStyleClass().add("received-message");
-            messageBox.setAlignment(Pos.CENTER_LEFT);
+            return createTextMessageBox("Не удалось загрузить изображение: " + fileName, isOwnMessage);
         }
 
-        VBox messageContent = new VBox();
-        messageContent.getStyleClass().add("file-message-content");
-        messageContent.setMaxWidth(300);
-
-        // Иконка файла
-        Label fileIcon = new Label("📎");
-        fileIcon.getStyleClass().add("file-icon");
-
-        // Информация о файле
-        Label fileNameLabel = new Label(fileName);
-        fileNameLabel.getStyleClass().add("file-name");
-
-        Label fileSizeLabel = new Label(formatFileSize(fileSize));
-        fileSizeLabel.getStyleClass().add("file-size");
-
-        VBox fileInfo = new VBox(2, fileNameLabel, fileSizeLabel);
-        fileInfo.getStyleClass().add("file-info");
-
-        HBox fileContent = new HBox(10, fileIcon, fileInfo);
-        fileContent.getStyleClass().add("file-content");
-        fileContent.setAlignment(Pos.CENTER_LEFT);
-
-        // Добавляем обработчик клика для сохранения файла
-        PauseTransition pause = new PauseTransition(Duration.millis(350));
-
-        fileContent.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                pause.stop();
-                handleDoubleClick(fileData, fileName);
-            } else if (event.getClickCount() == 1) {
-                pause.setOnFinished(e -> handleSingleClick(fileData, fileName));
-                pause.play();
-            }
-            event.consume();
-        });
-
-        messageContent.getChildren().add(fileContent);
-        messageBox.getChildren().add(messageContent);
-
-        messagesContainer.getChildren().add(messageBox);
-    }
-
-    private void handleSingleClick(byte[] fileData, String fileName) {
-        if (fileName.endsWith(".bin")) {
-            try {
-                File tempFile = new File(tempFileManager.getTempPath() + fileName);
-                Files.write(tempFile.toPath(), fileData);
-                sceneManager.showDecryptBeginPanel();
-                logger.info("Открыт экран дешифрования для файла: {}", fileName);
-            } catch (IOException e) {
-                logger.error("Ошибка при сохранении временного файла", e);
-                dialogDisplayer.showErrorDialog("Не удалось открыть файл для дешифрования");
-            }
-        }
-    }
-
-    private void handleDoubleClick(byte[] fileData, String fileName) {
-        saveFileToDevice(fileData, fileName);
+        return messageBox;
     }
 
     private void saveFileToDevice(byte[] fileData, String fileName) {
@@ -655,6 +720,7 @@ public class ChatController implements ChatService.ChatListener {
     public void cleanup() {
         chatService.removeListener(this);
         chatService.disconnect();
+        messageHistory.clear();
         logger.info("ChatController очищен");
     }
 }
