@@ -5,7 +5,6 @@ import com.cipher.core.controller.encrypt.*;
 import com.cipher.core.controller.network.ChatController;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.encryption.EncryptionDataResult;
 import com.cipher.core.factory.ControllerFactory;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;

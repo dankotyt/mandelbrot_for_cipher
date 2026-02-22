@@ -1,5 +1,6 @@
 package com.cipher.core.controller.network;
 
+import com.cipher.client.service.chat.ChatHistoryService;
 import com.cipher.client.service.chat.ChatService;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.core.dto.DeviceDTO;
@@ -10,7 +11,6 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Objects;
 
 @Controller
@@ -63,6 +64,7 @@ public class ChatController implements ChatService.ChatListener {
     private final DialogDisplayer dialogDisplayer;
     private final ChatService chatService;
     private final TempFileManager tempFileManager;
+    private final ChatHistoryService chatHistoryService;
 
     private String remoteDeviceName;
     private String remoteDeviceIp;
@@ -95,6 +97,9 @@ public class ChatController implements ChatService.ChatListener {
             chatTitleLabel.setText("Чат с " + deviceName);
             connectionInfoLabel.setText("IP: " + deviceIp);
 
+            chatHistoryService.setCurrentChat(deviceIp);
+            restoreChatHistory();
+
             if (chatService.isConnected()) {
                 String currentPeer = chatService.getConnectedPeer();
                 if (deviceIp.equals(currentPeer)) {
@@ -106,6 +111,25 @@ public class ChatController implements ChatService.ChatListener {
 
             updateStatus("Установка P2P соединения...");
         });
+    }
+
+    private void restoreChatHistory() {
+        List<HBox> history = chatHistoryService.getMessages(remoteDeviceIp);
+        if (!history.isEmpty()) {
+            hideNoMessagesHint();
+            messagesContainer.getChildren().addAll(history);
+
+            Platform.runLater(() -> {
+                messagesScrollPane.setVvalue(1.0);
+            });
+
+            logger.info("Восстановлено {} сообщений для чата с {}", history.size(), remoteDeviceIp);
+        }
+    }
+
+    private boolean isCurrentChat() {
+        return remoteDeviceIp != null &&
+                remoteDeviceIp.equals(chatHistoryService.getCurrentChatId());
     }
 
     private void attemptAutoReconnection() {
@@ -278,6 +302,10 @@ public class ChatController implements ChatService.ChatListener {
         );
 
         if (confirmed) {
+            if (remoteDeviceIp != null) {
+                chatHistoryService.clearChat(remoteDeviceIp);
+            }
+
             messagesContainer.getChildren().clear();
             showNoMessagesHint();
             logger.info("История чата очищена");
@@ -441,12 +469,17 @@ public class ChatController implements ChatService.ChatListener {
         messageContent.getChildren().addAll(textFlow, messageMeta);
         messageBox.getChildren().add(messageContent);
 
-        messagesContainer.getChildren().add(messageBox);
+        if (remoteDeviceIp != null) {
+            chatHistoryService.addMessage(remoteDeviceIp, messageBox);
+        }
 
-        // Автопрокрутка к новому сообщению
-        Platform.runLater(() -> {
-            messagesScrollPane.setVvalue(1.0);
-        });
+        if (isCurrentChat()) {
+            messagesContainer.getChildren().add(messageBox);
+
+            Platform.runLater(() -> {
+                messagesScrollPane.setVvalue(1.0);
+            });
+        }
     }
 
     private void displayImageMessage(byte[] imageData, String fileName, boolean isOwnMessage) {
@@ -493,7 +526,17 @@ public class ChatController implements ChatService.ChatListener {
             messageContent.getChildren().addAll(imageView, fileInfo);
             messageBox.getChildren().add(messageContent);
 
-            messagesContainer.getChildren().add(messageBox);
+            if (remoteDeviceIp != null) {
+                chatHistoryService.addMessage(remoteDeviceIp, messageBox);
+            }
+
+            if (isCurrentChat()) {
+                messagesContainer.getChildren().add(messageBox);
+
+                Platform.runLater(() -> {
+                    messagesScrollPane.setVvalue(1.0);
+                });
+            }
 
         } catch (Exception e) {
             logger.error("Ошибка отображения изображения: {}", e.getMessage());
@@ -555,7 +598,17 @@ public class ChatController implements ChatService.ChatListener {
         messageContent.getChildren().add(fileContent);
         messageBox.getChildren().add(messageContent);
 
-        messagesContainer.getChildren().add(messageBox);
+        if (remoteDeviceIp != null) {
+            chatHistoryService.addMessage(remoteDeviceIp, messageBox);
+        }
+
+        if (isCurrentChat()) {
+            messagesContainer.getChildren().add(messageBox);
+
+            Platform.runLater(() -> {
+                messagesScrollPane.setVvalue(1.0);
+            });
+        }
     }
 
     private void handleSingleClick(byte[] fileData, String fileName) {
