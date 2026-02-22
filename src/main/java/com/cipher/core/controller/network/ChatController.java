@@ -331,6 +331,19 @@ public class ChatController implements ChatService.ChatListener {
     }
 
     @Override
+    public void onFileReceived(ChatMessageDTO fileMessage) {
+        Platform.runLater(() -> {
+            displayFileMessage(
+                    fileMessage.getFileData(),
+                    fileMessage.getFileName(),
+                    fileMessage.getFileSize(),
+                    false
+            );
+            updateStatus("Получен файл");
+        });
+    }
+
+    @Override
     public void onConnectionStatusChanged(boolean connected, String peerInfo) {
         Platform.runLater(() -> {
             if (connected) {

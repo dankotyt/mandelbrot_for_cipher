@@ -183,6 +183,8 @@ public class P2PChatServiceImpl implements ChatService {
                         listeners.forEach(l -> l.onMessageReceived(decrypted));
                     } else if (decrypted.isImage()) {
                         listeners.forEach(l -> l.onImageReceived(decrypted));
+                    } else if (decrypted.isFile() && decrypted.hasFile()) {
+                        listeners.forEach(l -> l.onFileReceived(decrypted));
                     }
                 }
             } catch (EOFException e) {

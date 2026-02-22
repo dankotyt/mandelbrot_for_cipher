@@ -21,6 +21,7 @@ public interface ChatService {
     interface ChatListener {
         void onMessageReceived(ChatMessageDTO message);
         void onImageReceived(ChatMessageDTO imageMessage);
+        void onFileReceived(ChatMessageDTO fileMessage);
         void onConnectionStatusChanged(boolean connected, String peerInfo);
         void onError(String errorMessage);
         void onIncomingConnection(String peerIp);

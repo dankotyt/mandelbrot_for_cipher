@@ -34,6 +34,8 @@ public class ChatMessageDTO implements Serializable {
         return type == MessageType.TEXT;
     }
 
+    public boolean isFile() { return type == MessageType.FILE; }
+
     public boolean hasFile() {
         return fileData != null && fileData.length > 0;
     }
