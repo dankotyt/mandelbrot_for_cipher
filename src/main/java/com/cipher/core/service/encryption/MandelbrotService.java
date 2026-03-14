@@ -1,11 +1,11 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.encryption.HKDF;
 import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.threading.MandelbrotThread;
 import com.cipher.core.utils.ConsoleManager;
-import com.cipher.core.utils.DeterministicRandomGenerator;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -14,6 +14,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
@@ -38,13 +39,17 @@ import org.springframework.stereotype.Component;
 public class MandelbrotService extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
 
-    private final DeterministicRandomGenerator drbg;
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final ImageUtils imageUtils;
     private final CryptoKeyManager cryptoKeyManager;
 
-    private final SecureRandom secureRandom = new SecureRandom();
-
+    private SecureRandom paramsPrng;
+    @Getter
+    private int attemptCount;
+    @Getter
+    private byte[] sessionSalt;
+    private int targetWidth;
+    private int targetHeight;
     private int startMandelbrotWidth;
     private int startMandelbrotHeight;
     private double ZOOM;
@@ -76,28 +81,59 @@ public class MandelbrotService extends JPanel {
         }
     }
 
-    /**
-     * Генерирует случайные значения для параметров используя OneTime генератор
-     */
-    public void randomOneTimePosition() {
-        startMandelbrotWidth = 720;
-        startMandelbrotHeight = 540;
-
-        MandelbrotParams params = generateOneTimeParams();
-        this.ZOOM = params.zoom();
-        this.offsetX = params.offsetX();
-        this.offsetY = params.offsetY();
-        this.MAX_ITER = params.maxIter();
-
-        repaint();
+    public void setTargetSize(int width, int height) {
+        this.targetWidth = width;
+        this.targetHeight = height;
     }
 
-    private MandelbrotParams generateOneTimeParams() {
-        double zoom = 100000 + (secureRandom.nextInt(44) * 1000);
-        double offsetX = -0.9998 + (secureRandom.nextDouble() * (0.9998 - -0.9998));
-        double offsetY = -0.9998 + (secureRandom.nextDouble() * (0.9998 - -0.9998));
-        int maxIter = 300 + (secureRandom.nextInt(91) * 10);
+    public void prepareSession(byte[] sharedSecret) throws Exception {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        this.sessionSalt = salt;
+
+        byte[] prk = HKDF.extract(salt, sharedSecret);
+        byte[] keyFractalParams = HKDF.expand(prk, "fractal-params".getBytes(StandardCharsets.UTF_8), 32);
+        byte[] keySegmentation = HKDF.expand(prk, "segmentation".getBytes(StandardCharsets.UTF_8), 32);
+
+        this.paramsPrng = SecureRandom.getInstance("SHA1PRNG");
+        this.paramsPrng.setSeed(keyFractalParams);
+
+        // Инициализация ImageSegmentShuffler
+        imageSegmentShuffler.initialize(keySegmentation);
+
+        this.attemptCount = 0;
+    }
+
+    private MandelbrotParams generateParams() {
+        double zoom = 1000 + (paramsPrng.nextInt(1000) * 100);
+        double offsetX = -0.9998 + paramsPrng.nextDouble() * (0.45 - (-0.9998));
+        double offsetY;
+        if (paramsPrng.nextBoolean()) {
+            offsetY = -0.7 + paramsPrng.nextDouble() * 0.6; // интервал [-0.7, -0.1]
+        } else {
+            offsetY = 0.1 + paramsPrng.nextDouble() * 0.6;  // интервал [0.1, 0.7]
+        }
+        int maxIter = 300;
         return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
+    }
+
+    public MandelbrotParams generateParams(SecureRandom prng) {
+        double zoom = 100000 + (prng.nextInt(44) * 1000);
+        double offsetX = -0.9998 + (prng.nextDouble() * (0.9998 - -0.9998));
+        double offsetY = -0.9998 + (prng.nextDouble() * (0.9998 - -0.9998));
+        int maxIter = 300 + (prng.nextInt(91) * 10);
+        return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
+    }
+
+    public BufferedImage generateImage() {
+        if (paramsPrng == null) {
+            throw new IllegalStateException("Session not prepared. Call prepareSession first.");
+        }
+        MandelbrotParams params = generateParams();
+        this.currentParams = params;
+        this.attemptCount++;
+        return generateImage(targetWidth, targetHeight,
+                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
     }
 
     /**
@@ -114,90 +150,89 @@ public class MandelbrotService extends JPanel {
      * @return сгенерированное изображение или null, если поток был прерван
      * @see #checkImageDiversity(BufferedImage)
      */
-    public BufferedImage generateImage() {
-        InetAddress peerAddress = cryptoKeyManager.getConnectedPeer();
-        if (peerAddress == null) {
-            Map<InetAddress, String> activeConnections = cryptoKeyManager.getActiveConnections();
-            if (!activeConnections.isEmpty()) {
-                peerAddress = activeConnections.keySet().iterator().next();
-                cryptoKeyManager.setConnectedPeer(peerAddress);
-            } else {
-                throw new IllegalStateException("No connected peer found. Please establish connection first.");
-            }
-        }
-
-        if (!cryptoKeyManager.hasKeysForPeer(peerAddress.getHostAddress())) {
-            throw new IllegalStateException("No encryption keys available for peer: " +
-                    peerAddress.getHostAddress() + ". Please perform key exchange first.");
-        }
-
-        // Получаем мастер-сид из DH обмена
-        byte[] masterSeed = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
-        drbg.initialize(masterSeed);
-
-        // Инициализируем сервисы мастер-сидом
-        imageSegmentShuffler.initializeWithSeed(masterSeed);
-
-        boolean validImage = false;
-        int attempt = 0;
-        BufferedImage resultImage = null;
-
-        while (!validImage && !Thread.currentThread().isInterrupted()) {
-            attempt++;
-            randomOneTimePosition();
-
-            try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
-                resultImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
-                int processors = Runtime.getRuntime().availableProcessors();
-                int chunkWidth = startMandelbrotWidth / processors;
-
-                List<Future<?>> futures = new ArrayList<>();
-                for (int i = 0; i < processors; i++) {
-                    int startX = i * chunkWidth;
-                    int width = (i == processors - 1) ? startMandelbrotWidth - startX : chunkWidth;
-
-                    futures.add(executor.submit(new MandelbrotThread(
-                            startX, 0, width, startMandelbrotHeight,
-                            ZOOM, MAX_ITER, offsetX, offsetY, resultImage
-                    )));
-                }
-
-                // Ожидаем завершения всех задач
-                for (Future<?> future : futures) {
-                    future.get();
-                }
-
-                currentParams = new MandelbrotParams(
-                        ZOOM,
-                        offsetX,
-                        offsetY,
-                        MAX_ITER
-                );
-
-                validImage = checkImageDiversity(resultImage);
-
-                if (!validImage) {
-                    ConsoleManager.log("Попытка №" + attempt + ". Подождите, пожалуйста...");
-                } else {
-                    ConsoleManager.log("Изображение успешно сгенерировано после " + attempt + " попыток.");
-                    /**
-                     * todo проверить, правильно ли используются потом сгенерированные параметры,
-                     * которые используются в ImageEncrypt.wholeImage()
-                     * */
-                    imageUtils.setMandelbrotImage(resultImage, currentParams);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.error("Генерация прервана", e);
-                return null;
-            } catch (ExecutionException e) {
-                logger.error("Ошибка в потоке вычислений (попытка " + attempt + ")", e);
-            }
-        }
-
-        repaint();
-        return resultImage;
-    }
+//    public BufferedImage generateImage() {
+//        InetAddress peerAddress = cryptoKeyManager.getConnectedPeer();
+//        if (peerAddress == null) {
+//            Map<InetAddress, String> activeConnections = cryptoKeyManager.getActiveConnections();
+//            if (!activeConnections.isEmpty()) {
+//                peerAddress = activeConnections.keySet().iterator().next();
+//                cryptoKeyManager.setConnectedPeer(peerAddress);
+//            } else {
+//                throw new IllegalStateException("No connected peer found. Please establish connection first.");
+//            }
+//        }
+//
+//        if (!cryptoKeyManager.hasKeysForPeer(peerAddress.getHostAddress())) {
+//            throw new IllegalStateException("No encryption keys available for peer: " +
+//                    peerAddress.getHostAddress() + ". Please perform key exchange first.");
+//        }
+//
+//        // Получаем мастер-сид из DH обмена
+//        byte[] masterSeed = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
+//
+//        // Инициализируем сервисы мастер-сидом
+//        imageSegmentShuffler.initializeWithSeed(masterSeed);
+//
+//        boolean validImage = false;
+//        int attempt = 0;
+//        BufferedImage resultImage = null;
+//
+//        while (!validImage && !Thread.currentThread().isInterrupted()) {
+//            attempt++;
+//            randomOneTimePosition();
+//
+//            try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+//                resultImage = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+//                int processors = Runtime.getRuntime().availableProcessors();
+//                int chunkWidth = startMandelbrotWidth / processors;
+//
+//                List<Future<?>> futures = new ArrayList<>();
+//                for (int i = 0; i < processors; i++) {
+//                    int startX = i * chunkWidth;
+//                    int width = (i == processors - 1) ? startMandelbrotWidth - startX : chunkWidth;
+//
+//                    futures.add(executor.submit(new MandelbrotThread(
+//                            startX, 0, width, startMandelbrotHeight,
+//                            ZOOM, MAX_ITER, offsetX, offsetY, resultImage
+//                    )));
+//                }
+//
+//                // Ожидаем завершения всех задач
+//                for (Future<?> future : futures) {
+//                    future.get();
+//                }
+//
+//                currentParams = new MandelbrotParams(
+//                        ZOOM,
+//                        offsetX,
+//                        offsetY,
+//                        MAX_ITER
+//                );
+//
+//                validImage = checkImageDiversity(resultImage);
+//
+//                if (!validImage) {
+//                    ConsoleManager.log("Попытка №" + attempt + ". Подождите, пожалуйста...");
+//                } else {
+//                    ConsoleManager.log("Изображение успешно сгенерировано после " + attempt + " попыток.");
+//                    /**
+//                     * todo проверить, правильно ли используются потом сгенерированные параметры,
+//                     * которые используются в ImageEncrypt.wholeImage()
+//                     * */
+//                    imageUtils.setMandelbrotImage(resultImage, currentParams);
+//                }
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                logger.error("Генерация прервана", e);
+//                return null;
+//            } catch (ExecutionException e) {
+//                logger.error("Ошибка в потоке вычислений (попытка " + attempt + ")", e);
+//            }
+//        }
+//
+//        repaint();
+//        return resultImage;
+//    }
 
     public BufferedImage generateImage(int originalWidth, int originalHeight) {
         BufferedImage resultImage = new BufferedImage(originalWidth, originalHeight, BufferedImage.TYPE_INT_RGB);
@@ -304,7 +339,7 @@ public class MandelbrotService extends JPanel {
      * @param image изображение для проверки
      * @return true если изображение удовлетворяет критериям, иначе false
      */
-    private boolean checkImageDiversity(BufferedImage image) {
+    public boolean checkImageDiversity(BufferedImage image) {
         if (isImageBlackPercentageAboveThreshold(image, 0.05)) { //todo попробовать меньше значение
             return false;
         }

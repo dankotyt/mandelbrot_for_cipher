@@ -116,39 +116,6 @@ public class EncryptionDataSerializer {
     }
 
     /**
-     * Конвертирует BufferedImage в массив байт
-     */
-    public byte[] imageToBytes(BufferedImage image) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (DataOutputStream dos = new DataOutputStream(baos)) {
-            for (int y = 0; y < image.getHeight(); y++) {
-                for (int x = 0; x < image.getWidth(); x++) {
-                    dos.writeInt(image.getRGB(x, y));
-                }
-            }
-        }
-        return baos.toByteArray();
-    }
-
-    /**
-     * Конвертирует массив байт в BufferedImage
-     */
-    public BufferedImage bytesToImage(byte[] bytes) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-        try (DataInputStream dis = new DataInputStream(bais)) {
-            int width = dis.readInt();
-            int height = dis.readInt();
-            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    image.setRGB(x, y, dis.readInt());
-                }
-            }
-            return image;
-        }
-    }
-
-    /**
      * Записывает массив байт с префиксом длины
      */
     private void writeByteArray(DataOutputStream dos, byte[] data) throws IOException {

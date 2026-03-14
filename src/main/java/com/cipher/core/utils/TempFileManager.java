@@ -237,4 +237,12 @@ public class TempFileManager {
             logger.error("Ошибка при очистке temp папки: {}", e.getMessage());
         }
     }
+
+    public File saveBytesToFile(byte[] data, String filename) throws IOException {
+        createTempFolder(); // создаёт папку temp, если её нет
+        File file = new File(getTempPath(), filename);
+        Files.write(file.toPath(), data);
+        logger.info("Saved encrypted file: {}", file.getAbsolutePath());
+        return file;
+    }
 }

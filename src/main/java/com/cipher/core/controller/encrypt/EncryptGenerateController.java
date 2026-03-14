@@ -2,6 +2,7 @@ package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.encryption.ImageEncrypt;
 import com.cipher.core.service.encryption.MandelbrotService;
+import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
+import java.net.InetAddress;
 
 @Controller
 @Scope("prototype")
@@ -43,6 +45,7 @@ public class EncryptGenerateController {
     private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
+    private final CryptoKeyManager cryptoKeyManager;
 
     private Task<Image> currentTask;
     private BufferedImage originalImage;
@@ -53,6 +56,16 @@ public class EncryptGenerateController {
         loadHintBox();
         loadInputImage();
         setupEventHandlers();
+        try {
+            InetAddress peer = cryptoKeyManager.getConnectedPeer();
+            byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
+            mandelbrotService.setTargetSize(originalImage.getWidth(), originalImage.getHeight());
+            mandelbrotService.prepareSession(sharedSecret);
+            generateUntilGood();
+        } catch (Exception e) {
+            logger.error("Ошибка подготовки сессии", e);
+            dialogDisplayer.showErrorDialog("Ошибка подготовки сессии");
+        }
     }
 
     private void setupConsole() {
@@ -149,6 +162,48 @@ public class EncryptGenerateController {
         });
 
         new Thread(currentTask).start();
+    }private void generateUntilGood() {
+        setButtonsDisabled(true);
+        showLoading(true);
+        ConsoleManager.clear();
+
+        currentTask = new Task<Image>() {
+            @Override
+            protected Image call() throws Exception {
+                int maxAttempts = 50;
+                for (int i = 0; i < maxAttempts; i++) {
+                    if (isCancelled()) return null;
+
+                    BufferedImage fractal = mandelbrotService.generateImage();
+                    if (!mandelbrotService.checkImageDiversity(fractal)) {
+                        ConsoleManager.log("Попытка " + (i+1) + ": недостаточно разнообразен, продолжаем...");
+                        continue;
+                    }
+                    return SwingFXUtils.toFXImage(fractal, null);
+                }
+                throw new RuntimeException("Не удалось получить качественный фрактал");
+            }
+        };
+
+        currentTask.setOnSucceeded(e -> {
+            Image result = currentTask.getValue();
+            if (result != null) {
+                ImageView iv = new ImageView(result);
+                iv.setFitWidth(720); iv.setFitHeight(540);
+                imageContainer.getChildren().set(1, iv);
+            }
+            setButtonsDisabled(false);
+            showLoading(false);
+        });
+
+        currentTask.setOnFailed(e -> {
+            logger.error("Ошибка генерации", currentTask.getException());
+            ConsoleManager.log("Ошибка: " + currentTask.getException().getMessage());
+            setButtonsDisabled(false);
+            showLoading(false);
+        });
+
+        new Thread(currentTask).start();
     }
 
     private void showLoading(boolean show) {
@@ -170,7 +225,15 @@ public class EncryptGenerateController {
 
     private void handleRegenerate() {
         cancelCurrentTask();
-        startImageGeneration();
+        try {
+            InetAddress peer = cryptoKeyManager.getConnectedPeer();
+            byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
+            mandelbrotService.prepareSession(sharedSecret); // новая соль, сброс attemptCount
+            generateUntilGood();
+        } catch (Exception e) {
+            logger.error("Ошибка при регенерации", e);
+            dialogDisplayer.showErrorDialog("Ошибка подготовки фрактала");
+        }
     }
 
     private void handleEncryptWholeImage() {

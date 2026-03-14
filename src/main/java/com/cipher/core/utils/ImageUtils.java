@@ -66,4 +66,41 @@ public class ImageUtils {
         }
         return null;
     }
+
+    /**
+     * Конвертирует BufferedImage в массив байт
+     */
+    public byte[] imageToBytes(BufferedImage image) {
+        int width = image.getWidth(), height = image.getHeight();
+        byte[] bytes = new byte[width * height * 3];
+        int idx = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = image.getRGB(x, y);
+                bytes[idx++] = (byte) ((rgb >> 16) & 0xFF);
+                bytes[idx++] = (byte) ((rgb >> 8) & 0xFF);
+                bytes[idx++] = (byte) (rgb & 0xFF);
+            }
+        }
+        return bytes;
+    }
+
+    /**
+     * Конвертирует массив байт в BufferedImage
+     */
+    public BufferedImage bytesToImage(byte[] bytes, int width, int height) {
+        if (bytes.length != width * height * 3)
+            throw new IllegalArgumentException("Invalid byte array length");
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        int idx = 0;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int r = bytes[idx++] & 0xFF;
+                int g = bytes[idx++] & 0xFF;
+                int b = bytes[idx++] & 0xFF;
+                img.setRGB(x, y, (r << 16) | (g << 8) | b);
+            }
+        }
+        return img;
+    }
 }

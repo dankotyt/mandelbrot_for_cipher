@@ -16,6 +16,7 @@ import java.util.Random;
  * Реализует интерфейс Random для совместимости с методами вроде Collections.shuffle.
  */
 @Component
+@Deprecated
 public class DeterministicRandomGenerator extends Random {
 
     private SecureRandom secureRandom;
@@ -94,21 +95,8 @@ public class DeterministicRandomGenerator extends Random {
         else return 32;
     }
 
-    /**
-     * Перемешивает список детерминированным образом
-     */
-    public <T> void shuffleList(List<T> list) {
-        reinitialize();
-        //Collections.shuffle(list, this);
 
-        // Алгоритм Фишера-Йетса с использованием secureRandom
-        for (int i = list.size() - 1; i > 0; i--) {
-            int j = secureRandom.nextInt(i + 1);
-            T temp = list.get(i);
-            list.set(i, list.get(j));
-            list.set(j, temp);
-        }
-    }
+
 
     /**
      * Шифрует данные с использованием AES на основе мастер-ключа

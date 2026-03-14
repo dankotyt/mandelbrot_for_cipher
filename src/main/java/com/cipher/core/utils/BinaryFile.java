@@ -15,6 +15,7 @@ import java.nio.file.StandardOpenOption;
 
 @Component
 @RequiredArgsConstructor
+@Deprecated
 public class BinaryFile {
     private static String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;

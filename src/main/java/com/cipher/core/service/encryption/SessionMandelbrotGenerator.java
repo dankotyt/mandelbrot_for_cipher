@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 @Component
+@Deprecated
 public class SessionMandelbrotGenerator {
 
     public static final int SESSION_FRACTAL_WIDTH = 1024;

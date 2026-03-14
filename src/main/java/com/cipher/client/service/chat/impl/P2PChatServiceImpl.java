@@ -4,7 +4,6 @@ import com.cipher.client.service.chat.ChatService;
 import com.cipher.client.utils.ChatEncryptionUtil;
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.client.utils.NetworkConstants;
-import com.cipher.core.service.encryption.SessionMandelbrotGenerator;
 import com.cipher.core.service.network.CryptoKeyManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -29,7 +28,6 @@ public class P2PChatServiceImpl implements ChatService {
 
     private final ChatEncryptionUtil encryptionUtil;
     private final CryptoKeyManager cryptoKeyManager;
-    private final SessionMandelbrotGenerator sessionMandelbrotGenerator;
 
     private Socket socket;
     private ObjectOutputStream outputStream;
@@ -53,7 +51,6 @@ public class P2PChatServiceImpl implements ChatService {
 
     @PreDestroy
     public void cleanup() {
-        sessionMandelbrotGenerator.clearCache();
         active = false;
         disconnect();
         executor.shutdownNow();
