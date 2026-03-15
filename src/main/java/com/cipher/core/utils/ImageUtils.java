@@ -60,13 +60,6 @@ public class ImageUtils {
         return argbImage;
     }
 
-    public Image getOriginalFXImage() {
-        if (originalImage != null) {
-            return SwingFXUtils.toFXImage(originalImage, null);
-        }
-        return null;
-    }
-
     /**
      * Конвертирует BufferedImage в массив байт
      */

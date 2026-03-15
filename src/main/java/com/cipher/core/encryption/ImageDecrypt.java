@@ -10,20 +10,17 @@ import java.nio.file.Files;
 import java.security.SecureRandom;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.dto.encryption.EncryptedData;
 import com.cipher.core.service.network.CryptoKeyManager;
-import com.cipher.core.utils.EncryptionDataSerializer;
 import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.TempFileManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import static com.cipher.core.encryption.XOR.performXOR;
-import static com.cipher.core.encryption.XOR.xorBytes;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ImageDecrypt {
     private final MandelbrotService mandelbrotService;
     private final ImageSegmentShuffler imageSegmentShuffler;
@@ -32,8 +29,21 @@ public class ImageDecrypt {
     private final CryptoKeyManager cryptoKeyManager;
 
     /**
-     * Дешифрование из файла .bin
+     * Дешифрует изображение из бинарного файла, созданного методом encryptWhole.
+     * Процесс включает:
+     * <ol>
+     *   <li>Чтение соли, количества попыток, координат области и размеров</li>
+     *   <li>Восстановление ключей через HKDF с использованием общего секрета</li>
+     *   <li>Восстановление параметров фрактала путём прокрутки PRNG</li>
+     *   <li>Генерацию фрактала и обратную сегментацию области</li>
+     *   <li>XOR для восстановления оригинального изображения</li>
+     * </ol>
+     *
+     * @param encryptedFile файл с зашифрованными данными
+     * @return расшифрованное изображение
+     * @throws Exception если возникает ошибка при чтении файла или дешифровании
      */
+
     public BufferedImage decryptImage(File encryptedFile) throws Exception {
         byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
         ByteBuffer buf = ByteBuffer.wrap(fileData);
@@ -51,6 +61,16 @@ public class ImageDecrypt {
         byte[] imageBytes = new byte[buf.remaining()];
         buf.get(imageBytes);
 
+        log.info("Decrypt: attempts={}", attempts);
+
+        log.info("decryptImage: fullWidth={}, fullHeight={}, imageBytes.length={}, ожидалось {}",
+                fullWidth, fullHeight, imageBytes.length, fullWidth * fullHeight * 3);
+        if (imageBytes.length != fullWidth * fullHeight * 3) {
+            throw new IllegalArgumentException(String.format(
+                    "Несоответствие длины: получили %d, ожидали %d (ширина %d, высота %d)",
+                    imageBytes.length, fullWidth * fullHeight * 3, fullWidth, fullHeight));
+        }
+
         BufferedImage encryptedImage = imageUtils.bytesToImage(imageBytes, fullWidth, fullHeight);
 
         InetAddress peer = cryptoKeyManager.getConnectedPeer();
@@ -62,10 +82,15 @@ public class ImageDecrypt {
 
         SecureRandom paramsPrng = SecureRandom.getInstance("SHA1PRNG");
         paramsPrng.setSeed(keyFractalParams);
+        MandelbrotParams params = null;
         for (int i = 0; i < attempts; i++) {
-            mandelbrotService.generateParams(paramsPrng); // прокрутка
+            params = mandelbrotService.generateParams(paramsPrng);
         }
-        MandelbrotParams params = mandelbrotService.generateParams(paramsPrng);
+        if (params == null) { // attempts == 0
+            params = mandelbrotService.generateParams(paramsPrng);
+        }
+        log.info("Decrypt: attempts={}, params: zoom={}, offsetX={}, offsetY={}, maxIter={}",
+                attempts, params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
 
         imageSegmentShuffler.initialize(keySegmentation);
 
@@ -92,111 +117,6 @@ public class ImageDecrypt {
         g.dispose();
 
         tempFileManager.saveBufferedImageToTemp(result, "decrypted_image.png");
-        return result;
-    }
-
-    /**
-     * Дешифрование из EncryptedData
-     */
-//    private BufferedImage decryptImage(EncryptedData data) throws Exception {
-//
-//        // Расшифровываем параметры одноразового фрактала
-//        byte[] oneTimeParamsBytes = xorBytes(
-//                data.encryptedOneTimeParams(),
-//                sessionFractalBytes
-//        );
-//        MandelbrotParams oneTimeParams = mandelbrotService.bytesToParams(oneTimeParamsBytes);
-//
-//        // Восстанавливаем изображение из байт
-//        BufferedImage encryptedImage = serializer.bytesToImage(data.encryptedImage());
-//
-//        if (data.isPartial()) {
-//            return decryptPartial(encryptedImage, data, oneTimeParams);
-//        } else {
-//            return decryptWhole(encryptedImage, data, oneTimeParams);
-//        }
-//    }
-
-    /**
-     * Дешифрование полного изображения
-     */
-    private BufferedImage decryptWhole(
-            BufferedImage encryptedImage,
-            EncryptedData data,
-            MandelbrotParams oneTimeParams
-    ) {
-
-        // Генерируем одноразовый фрактал
-        BufferedImage oneTimeFractal = mandelbrotService.generateImage(
-                encryptedImage.getWidth(),
-                encryptedImage.getHeight(),
-                oneTimeParams.zoom(),
-                oneTimeParams.offsetX(),
-                oneTimeParams.offsetY(),
-                oneTimeParams.maxIter()
-        );
-
-        // XOR для получения перемешанного изображения
-        BufferedImage shuffledImage = performXOR(encryptedImage, oneTimeFractal);
-
-        // Восстанавливаем оригинальный порядок сегментов
-        return imageSegmentShuffler.unshuffledSegments(
-                shuffledImage,
-                data.segmentMapping(),
-                data.segmentSize()
-        );
-    }
-
-    /**
-     * Дешифрование части изображения
-     */
-    private BufferedImage decryptPartial(
-            BufferedImage encryptedImage,
-            EncryptedData data,
-            MandelbrotParams oneTimeParams
-    ) {
-
-        // 1. Извлекаем зашифрованную область
-        BufferedImage encryptedArea = encryptedImage.getSubimage(
-                data.areaStartX(),
-                data.areaStartY(),
-                data.areaWidth(),
-                data.areaHeight()
-        );
-
-        // 2. Генерируем одноразовый фрактал для размера области
-        BufferedImage oneTimeFractal = mandelbrotService.generateImage(
-                data.areaWidth(),
-                data.areaHeight(),
-                oneTimeParams.zoom(),
-                oneTimeParams.offsetX(),
-                oneTimeParams.offsetY(),
-                oneTimeParams.maxIter()
-        );
-
-        // 3. XOR области с одноразовым фракталом
-        BufferedImage shuffledArea = performXOR(encryptedArea, oneTimeFractal);
-
-        // 4. Восстанавливаем сегменты в области
-        BufferedImage decryptedArea = imageSegmentShuffler.unshuffledSegments(
-                shuffledArea,
-                data.segmentMapping(),
-                data.segmentSize()
-        );
-
-        // 5. Создаем ПОЛНОЕ изображение
-        BufferedImage result = new BufferedImage(
-                encryptedImage.getWidth(),
-                encryptedImage.getHeight(),
-                BufferedImage.TYPE_INT_RGB
-        );
-
-        // 6. Копируем полное изображение и заменяем область
-        Graphics2D g = result.createGraphics();
-        g.drawImage(encryptedImage, 0, 0, null);
-        g.drawImage(decryptedArea, data.areaStartX(), data.areaStartY(), null);
-        g.dispose();
-
         return result;
     }
 }

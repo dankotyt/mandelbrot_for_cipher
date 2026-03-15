@@ -1,8 +1,8 @@
 package com.cipher.core.encryption;
 
 import com.cipher.core.dto.segmentation.SegmentationResult;
-import com.cipher.core.utils.Pair;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.awt.image.BufferedImage;
@@ -14,20 +14,23 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ImageSegmentShuffler {
 
     private SecureRandom segmentPrng;
 
-    private byte[] masterSeed;
-
-    public void initializeWithSeed(byte[] seed) {
-        this.masterSeed = seed.clone();
-    }
-
+    /**
+     * Инициализирует генератор псевдослучайных чисел для перемешивания сегментов
+     * с использованием предоставленного ключа.
+     *
+     * @param key ключ для инициализации PRNG
+     * @throws Exception если возникает ошибка при создании экземпляра SecureRandom
+     */
     public void initialize(byte[] key) throws Exception {
         this.segmentPrng = SecureRandom.getInstance("SHA1PRNG");
         this.segmentPrng.setSeed(key);
     }
+
     /**
      * Создает список сегментов изображения заданного размера
      * @param image исходное изображение
@@ -50,29 +53,22 @@ public class ImageSegmentShuffler {
         return segments;
     }
 
-//    public ImageSegmentShuffler(BufferedImage my_image) {
-//        DataBuffer dataBuffer = my_image.getRaster().getDataBuffer();
-//        if (dataBuffer instanceof DataBufferInt) {
-//            this.pixels = ((DataBufferInt) dataBuffer).getData();
-//        } else {
-//
-//            BufferedImage convertedImage = new BufferedImage(my_image.getWidth(), my_image.getHeight(), BufferedImage.TYPE_INT_ARGB);
-//            Graphics2D g2d = convertedImage.createGraphics();
-//            g2d.drawImage(my_image, 0, 0, null);
-//            g2d.dispose();
-//            this.pixels = ((DataBufferInt) convertedImage.getRaster().getDataBuffer()).getData();
-//        }
-//    }
-    public SegmentationResult reshufflePartOfImage(BufferedImage image) {
-        return segmentAndShuffle(image);
-    }
     /**
-     * Перемешивает сегменты изображения
-     * @param image исходное изображение
-     * @return перемешанное изображение и карта соответствия сегментов
+     * Выполняет перемешивание сегментов изображения.
+     * Процесс включает:
+     * <ol>
+     *   <li>Определение размера сегмента на основе размеров изображения</li>
+     *   <li>Дополнение изображения до размеров, кратных размеру сегмента</li>
+     *   <li>Разбиение на сегменты и их случайное перемешивание</li>
+     * </ol>
+     *
+     * @param image исходное изображение для перемешивания
+     * @return результат перемешивания, включающий перемешанное изображение,
+     *         размер сегмента и карту соответствия
      */
     public SegmentationResult segmentAndShuffle(BufferedImage image) {
         int segmentSize = generateSegmentSize(image.getWidth(), image.getHeight());
+        log.info("Segment size used: {}", segmentSize);
         BufferedImage paddedImage = padImageToSegmentSize(image, segmentSize);
         List<Rectangle> segments = createSegments(paddedImage, segmentSize);
         List<Integer> indices = getShuffledIndices(segments.size());
@@ -92,74 +88,19 @@ public class ImageSegmentShuffler {
         return new SegmentationResult(result, segmentSize, paddedImage.getWidth(), paddedImage.getHeight(), mapping);
     }
 
-    private List<Integer> createAndShuffleIndices(int count) {
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            indices.add(i);
-        }
-        shuffleList(indices);
-        return indices;
-    }
-
-    private Map<Integer, Integer> createSegmentMapping(List<Integer> indices) {
-        Map<Integer, Integer> mapping = new HashMap<>();
-        for (int i = 0; i < indices.size(); i++) {
-            mapping.put(i, indices.get(i));
-        }
-        return mapping;
-    }
-
-    private void copySegmentsToResult(BufferedImage source, List<Rectangle> segments,
-                                      List<Integer> indices, BufferedImage result) {
-
-        Graphics2D g = result.createGraphics();
-        for (int i = 0; i < segments.size(); i++) {
-            Rectangle srcRect = segments.get(indices.get(i));
-            Rectangle destRect = segments.get(i);
-
-            BufferedImage segment = source.getSubimage(
-                    srcRect.x, srcRect.y, srcRect.width, srcRect.height);
-            g.drawImage(segment, destRect.x, destRect.y, null);
-        }
-        g.dispose();
-    }
-
     /**
-     * Восстанавливает оригинальный порядок сегментов
-     * @param shuffledImage перемешанное изображение
-     * @param segmentMapping карта соответствия сегментов
-     * @param segmentSize ширина и высота сегмента
+     * Восстанавливает оригинальный порядок сегментов в перемешанном изображении.
+     * Использует детерминированное перемешивание на основе того же PRNG,
+     * что и при шифровании, для получения обратного порядка сегментов.
+     *
+     * @param shuffledImage  перемешанное изображение
+     * @param originalWidth  оригинальная ширина изображения (до дополнения)
+     * @param originalHeight оригинальная высота изображения (до дополнения)
      * @return изображение с восстановленным порядком сегментов
      */
-    public BufferedImage unshuffledSegments(
-            BufferedImage shuffledImage, Map<Integer, Integer> segmentMapping,
-            int segmentSize) {
-
-        List<Rectangle> segments = createSegments(shuffledImage, segmentSize);
-        BufferedImage result = new BufferedImage(
-                shuffledImage.getWidth(), shuffledImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
-
-        Map<Integer, Integer> reverseMapping = new HashMap<>();
-        for (Map.Entry<Integer, Integer> entry : segmentMapping.entrySet()) {
-            reverseMapping.put(entry.getValue(), entry.getKey());
-        }
-
-        Graphics2D g = result.createGraphics();
-        for (int i = 0; i < segments.size(); i++) {
-            Rectangle srcRect = segments.get(reverseMapping.get(i));
-            Rectangle destRect = segments.get(i);
-
-            BufferedImage segment = shuffledImage.getSubimage(
-                    srcRect.x, srcRect.y, srcRect.width, srcRect.height);
-            g.drawImage(segment, destRect.x, destRect.y, null);
-        }
-        g.dispose();
-
-        return result;
-    }
-
     public BufferedImage unshuffle(BufferedImage shuffledImage, int originalWidth, int originalHeight) {
         int segmentSize = generateSegmentSize(originalWidth, originalHeight);
+        log.info("Segment size used: {}", segmentSize);
         List<Rectangle> segments = createSegments(shuffledImage, segmentSize);
         List<Integer> indices = getShuffledIndices(segments.size());
 
@@ -178,6 +119,14 @@ public class ImageSegmentShuffler {
         return result;
     }
 
+    /**
+     * Дополняет изображение прозрачными пикселями до размеров, кратных размеру сегмента.
+     * Дополнение добавляется справа и снизу изображения.
+     *
+     * @param image       исходное изображение
+     * @param segmentSize размер сегмента
+     * @return дополненное изображение или исходное, если дополнение не требуется
+     */
     public BufferedImage padImageToSegmentSize(BufferedImage image, int segmentSize) {
         int newWidth = (int) Math.ceil((double) image.getWidth() / segmentSize) * segmentSize;
         int newHeight = (int) Math.ceil((double) image.getHeight() / segmentSize) * segmentSize;
@@ -210,9 +159,9 @@ public class ImageSegmentShuffler {
     public int generateSegmentSize(int imageWidth, int imageHeight) {
         int maxDimension = Math.max(imageWidth, imageHeight);
 
-        if (maxDimension <= 768) return 4;
-        else if (maxDimension <= 1920) return 16;
-        else return 32;
+        if (maxDimension <= 768) return 1;
+        else if (maxDimension <= 1920) return 4;
+        else return 16;
     }
 
     /**

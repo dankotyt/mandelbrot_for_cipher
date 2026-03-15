@@ -81,8 +81,6 @@ public class EncryptGenerateController {
         manualButton.setOnAction(e -> sceneManager.showManualEncryptionPanel());
         okayButton.setOnAction(e -> handleEncryptWholeImage());
         swapButton.setOnAction(e -> sceneManager.showEncryptChooseAreaPanel());
-
-        startImageGeneration();
     }
 
     private void loadHintBox() {
@@ -108,61 +106,7 @@ public class EncryptGenerateController {
         }
     }
 
-    private void startImageGeneration() {
-
-        setButtonsDisabled(true);
-        showLoading(true);
-        ConsoleManager.clear();
-
-        currentTask = new Task<>() {
-            @Override
-            protected Image call() {
-                try {
-                    BufferedImage mandelbrotImage = mandelbrotService.generateImage();
-
-                    return mandelbrotImage != null ? SwingFXUtils.toFXImage(mandelbrotImage, null) : null;
-                } catch (Exception e) {
-                    logger.error("Ошибка генерации фрактала", e);
-                    ConsoleManager.log("Ошибка генерации: " + e.getMessage());
-                    return null;
-                }
-            }
-        };
-
-        currentTask.setOnSucceeded(e -> {
-            Image resultImage = currentTask.getValue();
-            if (resultImage != null) {
-                ImageView resultImageView = new ImageView(resultImage);
-                resultImageView.setFitWidth(720);
-                resultImageView.setFitHeight(540);
-
-                if (imageContainer.getChildren().size() > 1) {
-                    imageContainer.getChildren().set(1, resultImageView);
-                } else {
-                    imageContainer.getChildren().add(1, resultImageView);
-                }
-            }
-            setButtonsDisabled(false);
-            showLoading(false);
-
-        });
-
-        currentTask.setOnFailed(e -> {
-            logger.error("Генерация failed", currentTask.getException());
-            ConsoleManager.log("Ошибка генерации: " + currentTask.getException().getMessage());
-            dialogDisplayer.showErrorDialog("Ошибка генерации");
-            setButtonsDisabled(false);
-            showLoading(false);
-        });
-
-        currentTask.setOnCancelled(e -> {
-            ConsoleManager.log("Генерация отменена");
-            setButtonsDisabled(false);
-            showLoading(false);
-        });
-
-        new Thread(currentTask).start();
-    }private void generateUntilGood() {
+    private void generateUntilGood() {
         setButtonsDisabled(true);
         showLoading(true);
         ConsoleManager.clear();
@@ -176,7 +120,7 @@ public class EncryptGenerateController {
 
                     BufferedImage fractal = mandelbrotService.generateImage();
                     if (!mandelbrotService.checkImageDiversity(fractal)) {
-                        ConsoleManager.log("Попытка " + (i+1) + ": недостаточно разнообразен, продолжаем...");
+                        ConsoleManager.log("Попытка " + (i+1) + ": фрактал не подходит, продолжаем...");
                         continue;
                     }
                     return SwingFXUtils.toFXImage(fractal, null);
