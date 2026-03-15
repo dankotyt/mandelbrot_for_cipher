@@ -1,31 +1,36 @@
 package com.cipher.core.utils;
 
+import com.cipher.core.dto.encryption.EncryptedData;
+import jakarta.annotation.PreDestroy;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
-
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.nio.file.Files;
+
 @Component
+@RequiredArgsConstructor
 public class TempFileManager {
     private static final Logger logger = LoggerFactory.getLogger(TempFileManager.class);
-    private final DialogDisplayer displayer = new DialogDisplayer();
+
+    private final DialogDisplayer displayer;
+    private final SceneManager sceneManager;
+    private final ImageUtils imageUtils;
+    private final EncryptionDataSerializer serializer;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
     }
 
-    private String getTempPath() {
+    public String getTempPath() {
         return getProjectRootPath() + "temp" + File.separator;
-    }
-
-    public TempFileManager() {
-        createTempFolder();
     }
 
     public void createTempFolder() {
@@ -33,162 +38,211 @@ public class TempFileManager {
         File tempDir = new File(tempPath);
 
         if (!tempDir.exists()) {
-            boolean created = tempDir.mkdir();
+            boolean created = tempDir.mkdirs();
             if (!created) {
                 logger.error("Не удалось создать временную директорию: {}", tempPath);
                 throw new RuntimeException("Не удалось создать временную директорию");
             }
         }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            boolean deleted = deleteFolder(tempDir);
-            if (!deleted) {
-                logger.warn("Не удалось полностью удалить временную директорию: {}", tempPath);
-            }
-        }));
     }
 
-    public boolean deleteFolder(File folder) {
-        boolean success = true;
-
-        if (folder.isDirectory()) {
-            File[] files = folder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    success &= deleteFolder(file);
-                }
-            }
-        }
-
-        boolean deleted = folder.delete();
-        if (!deleted) {
-            logger.warn("Не удалось удалить: {}", folder.getAbsolutePath());
-        }
-
-        return success && deleted;
-    }
-
-    public void saveInputImageToTemp(File selectedFile) {
-        String tempPath = getTempPath();
-
+    /**
+     * Сохраняет EncryptedData в файл .bin в temp папке
+     */
+    public File saveEncryptedData(EncryptedData data) throws IOException {
         createTempFolder();
 
-        String tempFilePath = tempPath + "input.png";
-        File tempFile = new File(tempFilePath);
+        String fileName = "encrypted_" + System.currentTimeMillis() + ".bin";
+        File outputFile = new File(getTempPath(), fileName);
+
+        byte[] serializedData = serializer.serialize(data);
+        Files.write(outputFile.toPath(), serializedData);
+
+        logger.info("Зашифрованные данные сохранены в: {}", outputFile.getAbsolutePath());
+        return outputFile;
+    }
+
+    /**
+     * Загружает EncryptedData из файла .bin
+     */
+    public EncryptedData loadEncryptedData(File file) throws IOException {
+        byte[] fileData = Files.readAllBytes(file.toPath());
+        return serializer.deserialize(fileData);
+    }
+
+    /**
+     * Выбор файла .bin для дешифрования
+     */
+    public File selectEncryptedFileForDecrypt() {
+        try {
+            Stage primaryStage = sceneManager.getPrimaryStage();
+            if (primaryStage == null) {
+                logger.error("Primary stage is not set!");
+                return null;
+            }
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Выберите зашифрованный файл для расшифрования");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Зашифрованные файлы", "*.bin")
+            );
+            return fileChooser.showOpenDialog(primaryStage);
+        } catch (Exception e) {
+            logger.error("Ошибка при выборе файла: {}", e.getMessage(), e);
+            displayer.showErrorDialog("Ошибка при выборе файла: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Выбор изображения для шифрования
+     */
+    public void selectImageForEncrypt() {
+        try {
+            Stage primaryStage = sceneManager.getPrimaryStage();
+            if (primaryStage == null) {
+                logger.error("Primary stage is not set!");
+                displayer.showErrorDialog("Ошибка: главное окно не инициализировано");
+            }
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Выберите изображение для шифрования");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg"));
+
+            File selectedFile = fileChooser.showOpenDialog(primaryStage);
+
+            if (selectedFile != null) {
+                saveInputImageToMemory(selectedFile);
+                logger.info("Файл выбран: {}", selectedFile.getAbsolutePath());
+            } else {
+                logger.info("Файл не выбран.");
+            }
+        } catch (Exception e) {
+            logger.error("Ошибка при выборе файла для шифрования: {}", e.getMessage(), e);
+            displayer.showErrorDialog("Ошибка при выборе файла: " + e.getMessage());
+        }
+    }
+
+    private void saveInputImageToMemory(File selectedFile) {
+        try {
+            BufferedImage image = ImageIO.read(selectedFile);
+            if (image == null) {
+                throw new IOException("Не удалось прочитать изображение");
+            }
+            imageUtils.setOriginalImage(image);
+        } catch (IOException e) {
+            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
+            displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Сохраняет расшифрованное изображение
+     */
+    public void saveDecryptedImage(BufferedImage image) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить расшифрованное изображение");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PNG изображение", "*.png")
+        );
+        fileChooser.setInitialFileName("decrypted_image.png");
 
         try {
-            try (InputStream inputStream = new FileInputStream(selectedFile);
-                 OutputStream outputStream = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
+            Stage primaryStage = sceneManager.getPrimaryStage();
+            File fileToSave = fileChooser.showSaveDialog(primaryStage);
+
+            if (fileToSave != null) {
+                String filePath = fileToSave.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".png")) {
+                    filePath += ".png";
                 }
-            }
 
-            logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
+                ImageIO.write(image, "png", new File(filePath));
 
-            if (tempFile.exists() && tempFile.canRead()) {
-                logger.info("Файл существует: {}", tempFile.getAbsolutePath());
-            } else {
-                logger.error("Файл не существует или не доступен для чтения: {}", tempFile.getAbsolutePath());
-                displayer.showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
+                // Сохраняем копию в temp для предпросмотра
+                ImageIO.write(image, "png", new File(getTempPath() + "decrypted_image.png"));
+
+                displayer.showSuccessDialog("Изображение успешно сохранено в: " + filePath);
+                logger.info("Изображение сохранено в: {}", filePath);
             }
         } catch (IOException e) {
             logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-            displayer.showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
+            displayer.showErrorDialog("Ошибка при сохранении изображения: " + e.getMessage());
+        } catch (Exception e) {
+            displayer.showErrorAlert("Ошибка сохранения", "Ошибка сохранения изображения: " + e.getMessage());
         }
     }
 
-    public ImageView loadInputImageFromTemp() {
-        String tempPath = getTempPath();
-        String tempFilePath = tempPath + "input.png";
-        File tempFile = new File(tempFilePath);
-
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", tempFilePath);
-            displayer.showErrorDialog("Файл изображения не найден: " + tempFilePath);
-            return null;
+    /**
+     * Сохраняет BufferedImage в temp папку
+     */
+    public void saveBufferedImageToTemp(BufferedImage image, String filename) {
+        createTempFolder();
+        File tempFile = new File(getTempPath(), filename);
+        try {
+            ImageIO.write(image, "png", tempFile);
+            logger.info("Изображение сохранено в temp: {}", tempFile.getAbsolutePath());
+        } catch (IOException e) {
+            logger.error("Ошибка при сохранении изображения в temp: {}", e.getMessage());
         }
-
-        Image image = new Image(tempFile.toURI().toString());
-        ImageView imageView = new ImageView(image);
-        imageView.setFitWidth(640);
-        imageView.setFitHeight(480);
-        imageView.setTranslateX(150); // Выглядывание на 50px
-
-        return imageView;
     }
 
-    public BufferedImage loadBufferedImageFromTemp(String filePath) {
-        File tempFile = new File(filePath);
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", filePath);
-            displayer.showErrorDialog("Файл изображения не найден: " + filePath);
+    /**
+     * Загружает изображение из temp папки
+     */
+    public Image loadImageFromTemp(String filename) {
+        File tempFile = new File(getTempPath(), filename);
+        if (!tempFile.exists()) {
+            logger.warn("Файл не найден в temp: {}", filename);
             return null;
         }
+        return new Image(tempFile.toURI().toString());
+    }
 
+    /**
+     * Загружает BufferedImage из temp папки
+     */
+    public BufferedImage loadBufferedImageFromTemp(String filename) {
+        File tempFile = new File(getTempPath(), filename);
+        if (!tempFile.exists()) {
+            logger.warn("Файл не найден в temp: {}", filename);
+            return null;
+        }
         try {
             return ImageIO.read(tempFile);
         } catch (IOException e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            displayer.showErrorDialog("Ошибка при загрузке изображения: " + e.getMessage());
+            logger.error("Ошибка при загрузке BufferedImage из temp: {}", e.getMessage());
             return null;
         }
     }
 
-    public Image loadImageFromTemp(String filePath) {
-        File tempFile = new File(filePath);
-        if (!tempFile.exists() || !tempFile.canRead()) {
-            logger.error("Файл изображения не найден: {}", filePath);
-            displayer.showErrorMessage("Файл изображения не найден: " + filePath);
-            return null;
-        }
-
+    /**
+     * Очистка temp папки (кроме текущих файлов)
+     */
+    @PreDestroy
+    public void cleanupTemp() {
         try {
-            return new Image(tempFile.toURI().toString());
-        } catch (Exception e) {
-            logger.error("Ошибка при загрузке изображения: {}", e.getMessage());
-            displayer.showErrorMessage("Ошибка при загрузке изображения: " + e.getMessage());
-            return null;
-        }
-    }
-
-    public void saveMandelbrotToTemp(BufferedImage image) {
-        String tempPath = getTempPath();
-
-        createTempFolder();
-
-        String tempFilePath = tempPath + "mandelbrot.png";
-        File tempFile = new File(tempFilePath);
-
-        try {
-            ImageIO.write(image, "png", tempFile);
-            logger.info("Изображение сохранено в папку temp: {}", tempFile.getAbsolutePath());
-
-            if (tempFile.exists() && tempFile.canRead()) {
-                logger.info("Файл существует: {}", tempFile.getAbsolutePath());
-            } else {
-                logger.error("Файл не существует или не доступен для чтения: {}", tempFile.getAbsolutePath());
-                displayer.showErrorMessage("Файл не существует или не доступен для чтения: " + tempFile.getAbsolutePath());
+            File tempDir = new File(getTempPath());
+            if (tempDir.exists() && tempDir.isDirectory()) {
+                File[] files = tempDir.listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                        // Не удаляем файлы, которые могут понадобиться в текущей сессии
+                        if (!file.getName().startsWith("input") &&
+                                !file.getName().startsWith("decrypted")) {
+                            file.delete();
+                        }
+                    }
+                }
             }
-        } catch (IOException e) {
-            logger.error("Ошибка при сохранении изображения: {}", e.getMessage());
-            displayer.showErrorMessage("Ошибка при сохранении изображения: " + e.getMessage());
+        } catch (Exception e) {
+            logger.error("Ошибка при очистке temp папки: {}", e.getMessage());
         }
     }
 
-    public Image loadImageResource(String resourcePath) {
-        try {
-            InputStream inputStream = getClass().getResourceAsStream(resourcePath);
-            if (inputStream == null) {
-                displayer.showErrorAlert("Ошибка ресурса", "Ресурс не найден: " + resourcePath);
-                return null;
-            }
-            return new Image(inputStream);
-        } catch (Exception e) {
-            displayer.showErrorAlert("Ошибка загрузки", "Ошибка загрузки изображения: " + e.getMessage());
-            return null;
-        }
+    public File saveBytesToFile(byte[] data, String filename) throws IOException {
+        createTempFolder(); // создаёт папку temp, если её нет
+        File file = new File(getTempPath(), filename);
+        Files.write(file.toPath(), data);
+        logger.info("Saved encrypted file: {}", file.getAbsolutePath());
+        return file;
     }
 }

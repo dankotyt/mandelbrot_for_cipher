@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<StackPane styleClass="hint-container" stylesheets="@../../css/styles.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+
+    <Region styleClass="hint-background" />
+
+    <VBox styleClass="hint-content">
+        <Text styleClass="hint-title" text="Подсказка" />
+
+        <HBox styleClass="hint-row">
+            <ImageView fitHeight="30.0" fitWidth="30.0" styleClass="repeat-icon">
+                <Image url="@../../elements/icon_repeat.png" />
+            </ImageView>
+            <TextFlow prefHeight="30.0" prefWidth="231.0" styleClass="hint-text-flow">
+                <Text styleClass="hint-text" text="пересоздать ключ;"/>
+            </TextFlow>
+        </HBox>
+
+        <HBox styleClass="hint-row">
+            <ImageView fitHeight="30.0" fitWidth="30.0" styleClass="manual-icon">
+                <Image url="@../../elements/icon_writeParams.png" />
+            </ImageView>
+            <TextFlow styleClass="hint-text-flow">
+                <Text styleClass="hint-text" text="создать ключ по заданным вручную параметрам;" />
+            </TextFlow>
+        </HBox>
+
+        <HBox styleClass="hint-row">
+            <ImageView fitHeight="30.0" fitWidth="30.0" styleClass="next-icon">
+                <Image url="@../../elements/icon_next.png" />
+            </ImageView>
+            <TextFlow styleClass="hint-text-flow">
+                <Text styleClass="hint-text" text="зашифровать изображение полностью;"/>
+            </TextFlow>
+        </HBox>
+
+        <HBox styleClass="hint-row">
+            <ImageView fitHeight="30.0" fitWidth="30.0" styleClass="swap-icon">
+                <Image url="@../../elements/icon_swap.png" />
+            </ImageView>
+            <TextFlow styleClass="hint-text-flow">
+                <Text styleClass="hint-text" text="свапнуть картинку;"/>
+            </TextFlow>
+        </HBox>
+
+        <TextFlow styleClass="hint-text-flow">
+            <Text styleClass="hint-description" text="Для шифрования части изображения - перейдите на исходную картинку и выделите желаемую часть"/>
+        </TextFlow>
+    </VBox>
+</StackPane>

@@ -12,6 +12,7 @@ import java.security.SecureRandom;
  * @implSpec Важно: один и тот же seed всегда produces одинаковую последовательность,
  *           что является expected behavior для детерминистичной генерации ключей.
  */
+@Deprecated
 public final class DeterministicRandomUtils {
 
     private DeterministicRandomUtils() {

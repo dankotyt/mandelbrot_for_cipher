@@ -1,0 +1,1935 @@
+/* Основной градиентный фон */
+.main-container {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%, #011324FF 0%, #011A30FF 100%);
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+    -fx-min-width: 100%;
+    -fx-min-height: 100%;
+}
+
+/* Заголовок */
+.top-center-container {
+    -fx-alignment: center;
+    -fx-padding: 80 0 0 0;
+}
+
+.main-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 72px;
+}
+
+/* Центральный вертикальный контейнер */
+.center-vbox {
+    -fx-alignment: center;
+    -fx-spacing: 0;
+}
+
+/* Контейнер для кнопок шифрования/дешифрования */
+.encrypt-decrypt-hbox {
+    -fx-alignment: center;
+    -fx-spacing: 50;
+    -fx-padding: 0;
+}
+
+/* Контейнеры для отдельных кнопок с отступами */
+.encrypt-button-box {
+    -fx-alignment: center;
+    -fx-padding: 0 0 0 250;
+}
+
+.decrypt-button-box {
+    -fx-alignment: center;
+    -fx-padding: 0 250 0 0;
+}
+
+.connect-button-box {
+    -fx-alignment: center;
+    -fx-padding: 30 0 0 0;
+}
+
+.exit-button-box {
+    -fx-alignment: center;
+    -fx-padding: 30 0 50 0;
+}
+
+/* Стили кнопок */
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-content-display: graphic-only;
+    -fx-min-width: 310px;
+}
+
+/* Кнопка назад */
+.icon-back-button {
+    -fx-background-color: transparent;
+    -fx-background-image: url('../elements/icon_back.png');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-border-width: 0;
+}
+
+.icon-button:hover {
+    -fx-opacity: 0.8;
+}
+
+.icon-button:pressed {
+    -fx-opacity: 0.6;
+}
+
+.action-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: #3A5975;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-alignment: center;
+}
+
+.action-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: #4A6985;
+    -fx-cursor: hand;
+}
+
+.action-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-border-color: #5A7985;
+}
+
+/* Невидимые прямоугольники для выравнивания */
+.spacer {
+    -fx-min-width: 250px;
+    -fx-max-width: 250px;
+    -fx-pref-width: 250px;
+    -fx-background-color: transparent;
+}
+
+/* ===== CONNECTION PANEL STYLES ===== */
+
+/* Заголовок подключения */
+.connection-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+}
+
+/* Кнопки подключения */
+.connection-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-alignment: center;
+    -fx-min-width: 200px;
+    -fx-min-height: 60px;
+}
+
+.connection-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.connection-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== LOCAL NETWORK ===== */
+/* styles.css - дополнительные стили для экрана подключения */
+
+/* Status Label */
+/*.status-label {*/
+/*    -fx-text-fill: #90caf9;*/
+/*    -fx-font-size: 14px;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-font-weight: normal;*/
+/*    -fx-padding: 5px 0;*/
+/*}*/
+
+/*.status-label.success {*/
+/*    -fx-text-fill: #81c784;*/
+/*}*/
+
+/*.status-label.error {*/
+/*    -fx-text-fill: #e57373;*/
+/*}*/
+
+/*.status-label.warning {*/
+/*    -fx-text-fill: #ffb74d;*/
+/*}*/
+
+/*!* Devices Container *!*/
+/*.devices-container {*/
+/*    -fx-background-color: #37474f;*/
+/*    -fx-background-radius: 10px;*/
+/*    -fx-border-color: #546e7a;*/
+/*    -fx-border-radius: 10px;*/
+/*    -fx-border-width: 1px;*/
+/*    -fx-padding: 20px;*/
+/*    -fx-spacing: 15px;*/
+/*    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);*/
+/*}*/
+
+/*.devices-container:hover {*/
+/*    -fx-border-color: #78909c;*/
+/*}*/
+
+/*!* Section Title *!*/
+/*.section-title {*/
+/*    -fx-text-fill: #e3f2fd;*/
+/*    -fx-font-size: 18px;*/
+/*    -fx-font-weight: bold;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-padding: 0 0 10px 0;*/
+/*    -fx-border-color: #455a64;*/
+/*    -fx-border-width: 0 0 2px 0;*/
+/*}*/
+
+/*!* Devices List *!*/
+/*.devices-list {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-border-color: #455a64;*/
+/*    -fx-border-radius: 8px;*/
+/*    -fx-background-radius: 8px;*/
+/*    -fx-border-width: 1px;*/
+/*}*/
+
+/*.devices-list .list-cell {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-text-fill: #e0e0e0;*/
+/*    -fx-font-size: 14px;*/
+/*    -fx-font-family: "Arial";*/
+/*    -fx-padding: 12px 15px;*/
+/*    -fx-border-color: transparent;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:hover {*/
+/*    -fx-background-color: #37474f;*/
+/*    -fx-text-fill: #ffffff;*/
+/*    -fx-cursor: hand;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:selected {*/
+/*    -fx-background-color: #007acc;*/
+/*    -fx-text-fill: #ffffff;*/
+/*}*/
+
+/*.devices-list .list-cell:filled:selected:hover {*/
+/*    -fx-background-color: #0088ee;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical {*/
+/*    -fx-background-color: #263238;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .thumb {*/
+/*    -fx-background-color: #546e7a;*/
+/*    -fx-background-radius: 4px;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .thumb:hover {*/
+/*    -fx-background-color: #78909c;*/
+/*}*/
+
+/*.devices-list .scroll-bar:vertical .track {*/
+/*    -fx-background-color: #263238;*/
+/*    -fx-border-color: transparent;*/
+/*}*/
+
+/* Primary Button */
+.primary-button {
+    -fx-background-color: linear-gradient(to bottom, #007acc, #005a9e);
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial";
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #004d80;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,122,204,0.4), 8, 0, 0, 2);
+    -fx-padding: 12px 25px;
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #0088ee, #0066cc);
+    -fx-border-color: #005599;
+    -fx-scale-x: 1.03;
+    -fx-scale-y: 1.03;
+    -fx-effect: dropshadow(gaussian, rgba(0,136,238,0.5), 10, 0, 0, 3);
+}
+
+.primary-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #005a9e, #004880);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+    -fx-effect: dropshadow(gaussian, rgba(0,90,158,0.3), 5, 0, 0, 1);
+}
+
+.primary-button:disabled {
+    -fx-background-color: #546e7a;
+    -fx-text-fill: #b0bec5;
+    -fx-border-color: #455a64;
+    -fx-effect: none;
+}
+
+/* Info Container */
+.info-container {
+    -fx-background-color: #1e272c;
+    -fx-background-radius: 10px;
+    -fx-border-color: #007acc;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-padding: 15px;
+    -fx-spacing: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0,122,204,0.2), 8, 0, 0, 2);
+}
+
+.info-container.connected {
+    -fx-border-color: #81c784;
+}
+
+.info-container.error {
+    -fx-border-color: #e57373;
+}
+
+/* Стили для контейнера устройств */
+.devices-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 20px;
+}
+
+.devices-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.devices-container {
+    -fx-padding: 20px;
+}
+
+/* Стили для кнопок устройств */
+.device-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 15px 30px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);
+    -fx-cursor: hand;
+    -fx-min-width: 300px;
+    -fx-max-width: 300px;
+}
+
+.device-button:hover {
+    -fx-background-color: #45a049;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);
+}
+
+.device-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 1);
+}
+
+/* Стили для сообщения об отсутствии устройств */
+.no-devices-container {
+    -fx-alignment: center;
+}
+
+.no-devices-label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+/* Info Text Area */
+.info-text-area {
+    -fx-background-color: #263238;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-border-color: #455a64;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 10px;
+}
+
+.info-text-area .content {
+    -fx-background-color: #263238;
+    -fx-background-radius: 5px;
+}
+
+.info-text-area .scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.info-text-area .scroll-bar:vertical {
+    -fx-background-color: #263238;
+}
+
+.info-text-area .scroll-bar:vertical .thumb {
+    -fx-background-color: #546e7a;
+    -fx-background-radius: 4px;
+}
+
+.info-text-area .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #78909c;
+}
+
+.info-text-area .scroll-bar:vertical .track {
+    -fx-background-color: #263238;
+}
+
+/* Дополнительные утилитарные классы */
+.space-below-title {
+    -fx-pref-height: 30px;
+}
+
+.spacer {
+    -fx-pref-height: 20px;
+}
+
+/* Анимации */
+@keyframes pulse {
+    0% { -fx-opacity: 1; }
+    50% { -fx-opacity: 0.7; }
+    100% { -fx-opacity: 1; }
+}
+
+.connecting {
+    -fx-animation: pulse 1.5s infinite;
+}
+
+/* Стили для состояний подключения */
+.connected-device {
+    -fx-background-color: #1b5e20;
+    -fx-text-fill: #c8e6c9;
+}
+
+.connecting-device {
+    -fx-background-color: #ff8f00;
+    -fx-text-fill: #fff3e0;
+}
+
+.error-device {
+    -fx-background-color: #c62828;
+    -fx-text-fill: #ffcdd2;
+}
+
+/* ===== SEED GENERATION PANEL STYLES ===== */
+
+/* Title */
+.seed-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+}
+
+/* Center container */
+.seed-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: center;
+}
+
+/* Grid for words */
+.seed-grid {
+    -fx-alignment: center;
+    -fx-padding: 30px;
+}
+
+.seed-number {
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-font-family: 'Intro Regular';
+    -fx-min-width: 50px;
+    -fx-alignment: center-right;
+}
+
+.seed-word {
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+    -fx-font-family: 'Intro Regular';
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-padding: 10px 15px;
+    -fx-background-radius: 8px;
+}
+
+/* Warning label */
+.seed-warning {
+    -fx-text-fill: #FF6B6B;
+    -fx-font-size: 20px;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+}
+
+/* Confirm button */
+.seed-confirm-button {
+    -fx-background-color: #4CAF50;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-background-radius: 10px;
+    -fx-padding: 15px 30px;
+    -fx-min-width: 250px;
+}
+
+.seed-confirm-button:hover {
+    -fx-background-color: #45a049;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.seed-confirm-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Word container */
+.word-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 15px;
+}
+
+/* ===== LOGIN PANEL STYLES ===== */
+
+/* Top container */
+.login-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.login-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+}
+
+/* Center container */
+.login-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: center;
+}
+
+/* Grid for word fields */
+.login-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+/* Number label for login fields */
+.login-number {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-family: 'Intro Regular';
+    -fx-min-width: 30px;
+}
+
+/* Text field for login */
+.login-field {
+    -fx-font-size: 16px;
+    -fx-font-family: 'Intro Regular';
+    -fx-background-radius: 5px;
+    -fx-pref-width: 150px;
+    -fx-prompt-text-fill: #cccccc;
+}
+
+.login-field:focused {
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+}
+
+/* Word container */
+.login-word-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 5px;
+}
+
+/* Confirm button */
+.login-confirm-button {
+    -fx-background-color: #4CAF50;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 200px;
+}
+
+.login-confirm-button:hover {
+    -fx-background-color: #45a049;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.login-confirm-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ACCOUNT PANEL STYLES ===== */
+
+/* Top container */
+.account-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.account-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 36px;
+}
+
+/* Center container */
+.account-center-container {
+    -fx-padding: 40px;
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+}
+
+/* Welcome text */
+.account-welcome {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-padding: 20px;
+}
+
+/* Account buttons */
+.account-button {
+    -fx-background-color: #2196F3;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 150px;
+}
+
+.account-button:hover {
+    -fx-background-color: #1976D2;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.account-button:pressed {
+    -fx-background-color: #0D47A1;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Logout button special style */
+.logout-button {
+    -fx-background-color: #F44336;
+}
+
+.logout-button:hover {
+    -fx-background-color: #D32F2F;
+}
+
+/* ===== ENCRYPT BEGIN PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 72px;
+    -fx-alignment: top-center;
+}
+
+/* Center container */
+.encrypt-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Space elements */
+.space-below-title {
+    -fx-background-color: transparent;
+    -fx-pref-height: 100px; /*мб нужно 50*/
+}
+
+.space-in-bottom {
+    -fx-background-color: transparent;
+    -fx-pref-height: 120px;
+}
+
+/* Rectangle styles */
+.light-gray-rect {
+    -fx-background-color: #494949;
+    -fx-pref-width: 720px;
+    -fx-pref-height: 540px;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-max-width: 720px;
+    -fx-max-height: 540px;
+}
+
+.dark-gray-rect {
+    -fx-background-color: #373737;
+    -fx-pref-width: 640px;
+    -fx-pref-height: 480px;
+    -fx-min-width: 640px;
+    -fx-min-height: 480px;
+    -fx-max-width: 640px;
+    -fx-max-height: 480px;
+    -fx-translate-x: 150px;
+}
+
+.dark-gray-rect-without-translate {
+    -fx-background-color: #373737;
+    -fx-pref-width: 720px;
+    -fx-pref-height: 540px;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-max-width: 720px;
+    -fx-max-height: 540px;
+}
+
+/* Container for rectangles */
+.rect-container {
+    -fx-alignment: center;
+}
+
+/* Upload button */
+.encrypt-upload-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-pref-width: 257px;
+    -fx-pref-height: 68px;
+}
+
+.encrypt-upload-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-upload-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* Button container */
+.button-container {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+/* ===== ENCRYPT LOAD PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-load-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.encrypt-load-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: top-center;
+    -fx-text-alignment: center;
+}
+
+/* Center container */
+.encrypt-load-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Container for rectangles */
+.encrypt-load-rect-container {
+    -fx-alignment: center;
+}
+
+/* Image container */
+.image-container {
+    -fx-alignment: center;
+}
+
+/* Continue button */
+.encrypt-load-continue-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 290px;
+    -fx-pref-height: 50px;
+}
+
+.encrypt-load-continue-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-load-continue-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT MODE PANEL STYLES ===== */
+
+/* Top container */
+.encrypt-mode-top-container {
+    -fx-padding: 0;
+}
+
+/* Title */
+.encrypt-mode-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: top-center;
+    -fx-text-alignment: center;
+}
+
+/* Center container */
+.encrypt-mode-center-container {
+    -fx-padding: 20px;
+    -fx-alignment: top-center;
+}
+
+/* Content container */
+.encrypt-mode-content-container {
+    -fx-alignment: center;
+}
+
+/* Mode buttons */
+.encrypt-mode-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 400px;
+    -fx-pref-height: 65px;
+    -fx-min-width: 400px;
+    -fx-min-height: 65px;
+}
+
+.encrypt-mode-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-mode-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT GENERATE PANEL STYLES ===== */
+
+.encrypt-generate-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-generate-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-generate-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.hint-console-container {
+    -fx-spacing: 30px;
+    -fx-alignment: center;
+}
+
+.hint-box {
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-background-color: transparent;
+    -fx-pref-width: 300px;
+    -fx-pref-height: 230px;
+}
+
+.encrypt-generate-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.loading-container {
+    -fx-alignment: center;
+}
+
+.loading-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+}
+
+.encrypt-generate-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+.icon-repeat-button,
+.icon-write-params-button,
+.icon-next-button,
+.icon-swap-button,
+.icon-encrypt-whole-button,
+.icon-encrypt-part-button,
+.icon-reset-part-button,
+.icon-button-small {
+    -fx-background-color: transparent;
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-pref-width: 50px;
+    -fx-pref-height: 50px;
+    -fx-max-width: 70px;
+    -fx-max-height: 70px;
+    -fx-border-width: 0;
+}
+
+.generate-console {
+    -fx-font-family: monospace;
+    -fx-font-size: 14px;
+    -fx-text-fill: white;
+    -fx-control-inner-background: #001F3D;
+    -fx-background-color: #001F3D;
+    -fx-pref-width: 600px;
+    -fx-pref-height: 400px;
+}
+
+.generate-console .scroll-bar:vertical {
+    -fx-background-color: #001F3D;
+    -fx-pref-width: 10px;
+}
+
+.generate-console .scroll-bar:vertical .track {
+    -fx-background-color: #001F3D;
+}
+
+.generate-console .scroll-bar:vertical .thumb {
+    -fx-background-color: #004488;
+    -fx-background-radius: 5px;
+}
+
+.generate-console .scroll-bar:vertical .increment-button,
+.generate-console .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.generate-console .scroll-bar:vertical .increment-arrow,
+.generate-console .scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: transparent;
+}
+
+/* Горизонтальный скроллбар */
+.generate-console .scroll-bar:horizontal {
+    -fx-background-color: #001F3D;
+    -fx-pref-height: 10px;
+}
+
+.generate-console .scroll-bar:horizontal .track {
+    -fx-background-color: #001F3D;
+    -fx-border-color: transparent;
+}
+
+.generate-console .scroll-bar:horizontal .thumb {
+    -fx-background-color: #004488;
+    -fx-background-radius: 5px;
+}
+
+/* Конкретные иконки */
+.icon-repeat-button {
+    -fx-background-image: url('../elements/icon_repeat.png');
+}
+
+.icon-write-params-button {
+    -fx-background-image: url('../elements/icon_writeParams.png');
+}
+
+.icon-next-button {
+    -fx-background-image: url('../elements/icon_next.png');
+}
+
+.icon-swap-button {
+    -fx-background-image: url('../elements/icon_swap.png');
+}
+
+/* ===== HINT BOX STYLES ===== */
+
+.hint-container {
+    -fx-pref-width: 320px;
+    -fx-max-width: 640px;
+    -fx-min-width: 280px;
+    -fx-padding: 10px;
+}
+
+.hint-background {
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-background-color: transparent;
+}
+
+.hint-content {
+    -fx-alignment: top-left;
+    -fx-spacing: 8px;
+    -fx-padding: 10 15 10 15;
+}
+
+.hint-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-font-weight: bold;
+    -fx-fill: white;
+    -fx-font-size: 22px;
+}
+
+.hint-row {
+    -fx-spacing: 8px;
+    -fx-alignment: center-left;
+}
+
+.repeat-icon {
+    -fx-pref-width: 26px;
+    -fx-pref-height: 26px;
+    -fx-min-width: 26px;
+    -fx-min-height: 26px;
+}
+
+.manual-icon {
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+.next-icon {
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+.swap-icon {
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+.icon-encrypt-whole {
+    -fx-image: url('../elements/icon_encryptWhole.png');
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+.icon-encrypt-part {
+    -fx-image: url('../elements/icon_encryptPart.png');
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+.icon-reset-part {
+    -fx-image: url('../elements/icon_resetPart.png');
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+}
+
+/* TextFlow для автоматического переноса */
+.hint-text-flow {
+    -fx-max-width: infinity;/*240px;  300px - 30px(иконка) - 10px(отступы) */
+
+}
+
+.hint-text {
+    -fx-font-family: 'Intro Regular';
+    -fx-fill: white;
+    -fx-font-size: 18px;
+}
+
+.hint-description {
+    -fx-font-family: 'Intro Regular';
+    -fx-fill: white;
+    -fx-font-size: 16px;
+    -fx-line-spacing: 1px;
+    -fx-padding: 5px 0 0 0;
+}
+
+/* Масштабируемая версия */
+.hint-container.scalable {
+    -fx-scale-x: 1;
+    -fx-scale-y: 1;
+}
+
+/* Медиа-запросы для разных размеров экрана */
+@media (max-width: 800px) {
+    .hint-container {
+        -fx-pref-width: 320px;
+        -fx-scale-x: 0.9;
+        -fx-scale-y: 0.9;
+    }
+}
+
+@media (min-width: 1200px) {
+    .hint-container {
+        -fx-pref-width: 400px;
+        -fx-scale-x: 1.1;
+        -fx-scale-y: 1.1;
+    }
+}
+
+/* ===== ENCRYPT CHOOSE AREA PANEL STYLES ===== */
+
+.encrypt-choose-area-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-choose-area-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-choose-area-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.encrypt-choose-area-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.encrypt-choose-area-image-container {
+    -fx-alignment: center;
+}
+
+.main-image-container {
+    -fx-alignment: center;
+}
+
+.selection-canvas {
+    -fx-cursor: crosshair;
+}
+
+.encrypt-choose-area-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+/* Стили для кнопок */
+.icon-encrypt-whole-button {
+    -fx-background-image: url('../elements/icon_encryptWhole.png');
+}
+
+.icon-encrypt-part-button {
+    -fx-background-image: url('../elements/icon_encryptPart.png');
+}
+
+.icon-reset-part-button {
+    -fx-background-image: url('../elements/icon_resetPart.png');
+}
+
+/* Эффекты при наведении */
+.icon-encrypt-whole-button:hover,
+.icon-encrypt-part-button:hover,
+.icon-reset-part-button:hover,
+.icon-swap-button:hover,
+.icon-repeat-button:hover,
+.icon-write-params-button:hover,
+.icon-next-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-opacity: 0.8;
+}
+
+/* ===== ENCRYPT GENERATE PARAMS PANEL STYLES ===== */
+
+.encrypt-generate-params-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-generate-params-grid {
+    -fx-alignment: center;
+    -fx-padding: 20px;
+}
+
+.encrypt-generate-params-content {
+    -fx-alignment: top-center;
+    -fx-spacing: 10px;
+}
+
+.encrypt-generate-params-image-container {
+    -fx-alignment: center;
+}
+
+.encrypt-generate-params-buttons {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 0 0 30 0;
+}
+
+/* ===== ENCRYPT MANUAL PANEL STYLES ===== */
+
+.encrypt-manual-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-manual-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.encrypt-manual-grid {
+    -fx-alignment: center;
+    -fx-padding: 40px;
+    -fx-hgap: 15px;
+    -fx-vgap: 15px;
+}
+
+.encrypt-manual-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-alignment: center-right;
+}
+
+.encrypt-manual-field {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: black;
+    -fx-font-size: 22px;
+    -fx-background-color: white;
+    -fx-background-radius: 5px;
+    -fx-padding: 5px 10px;
+    -fx-pref-width: 300px;
+}
+
+.encrypt-manual-field:focused {
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+}
+
+.encrypt-manual-save-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-border-radius: 10px;
+    -fx-border-width: 5px;
+    -fx-border-color: white;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 400px;
+}
+
+.encrypt-manual-save-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.encrypt-manual-save-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== ENCRYPT FINAL PANEL STYLES ===== */
+
+.encrypt-final-top-container {
+    -fx-padding: 0;
+}
+
+.encrypt-final-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+.encrypt-final-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.encrypt-final-image-container {
+    -fx-alignment: center;
+    -fx-background-color: #373737;
+    -fx-padding: 20px;
+}
+
+/* Кнопка сохранения */
+.icon-save-button {
+    -fx-background-color: transparent;
+    -fx-background-image: url('../elements/icon_save.png');
+    -fx-background-size: cover;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+    -fx-min-width: 50px;
+    -fx-min-height: 50px;
+    -fx-border-width: 0;
+}
+
+.icon-save-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-opacity: 0.8;
+}
+
+.icon-save-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-opacity: 0.6;
+}
+
+/* ===== DECRYPT BEGIN PANEL STYLES ===== */
+
+.decrypt-top-container {
+    -fx-padding: 0;
+}
+
+.decrypt-begin-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 64px;
+    -fx-alignment: center;
+}
+
+.decrypt-begin-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-begin-rect-container {
+    -fx-alignment: center;
+}
+
+.decrypt-begin-button-container {
+    -fx-alignment: center;
+}
+
+.decrypt-begin-upload-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-pref-width: 257px;
+    -fx-pref-height: 68px;
+}
+
+.decrypt-begin-upload-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-begin-upload-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+.space-in-bottom {
+    -fx-background-color: transparent;
+    -fx-pref-height: 120px;
+}
+
+/* ===== DECRYPT LOAD PANEL STYLES ===== */
+
+.decrypt-top-container {
+    -fx-padding: 0;
+}
+
+.decrypt-load-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+.decrypt-load-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-load-image-container {
+    -fx-alignment: center;
+}
+
+.decrypt-load-continue-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-pref-width: 320px;
+    -fx-pref-height: 50px;
+}
+
+.decrypt-load-continue-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-load-continue-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== DECRYPT MODE PANEL STYLES ===== */
+
+.decrypt-mode-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 64px;
+    -fx-alignment: center;
+}
+
+.decrypt-mode-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-mode-image-container {
+    -fx-alignment: center;
+}
+
+.decrypt-mode-button-container {
+    -fx-alignment: center;
+}
+
+.decrypt-mode-manual-button {
+    -fx-background-color: transparent;
+    -fx-font-family: 'Intro Regular';
+    -fx-border-color: white;
+    -fx-border-width: 5px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+    -fx-pref-width: 287px;
+    -fx-pref-height: 68px;
+}
+
+.decrypt-mode-manual-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.decrypt-mode-manual-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ===== DECRYPT FINAL PANEL STYLES ===== */
+
+.decrypt-final-title {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 48px;
+    -fx-alignment: center;
+}
+
+.decrypt-final-content {
+    -fx-alignment: top-center;
+    -fx-padding: 20px;
+}
+
+.decrypt-final-image-container {
+    -fx-alignment: center;
+    -fx-min-width: 720px;
+    -fx-min-height: 540px;
+    -fx-background-color: #373737;
+}
+
+.decrypt-final-loading-label {
+    -fx-font-family: 'Intro Regular';
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-padding: 20px;
+}
+
+.decrypt-final-save-container {
+    -fx-alignment: bottom-center;
+    -fx-padding: 0 0 30 0;
+}
+
+/* Refresh Button */
+.refresh-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 20px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 2);
+}
+
+.refresh-button:hover {
+    -fx-background-color: #45a049;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 3);
+}
+
+.refresh-button:pressed {
+    -fx-background-color: #3d8b40;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);
+}
+
+.refresh-button:disabled {
+    -fx-background-color: #cccccc;
+    -fx-text-fill: #666666;
+    -fx-cursor: default;
+}
+
+/* Current Device Label */
+.current-device-label {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 8px 16px;
+    -fx-background-color: #ecf0f1;
+    -fx-background-radius: 6px;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-alignment: center;
+}
+
+.current-device-label:hover {
+    -fx-background-color: #d5dbdb;
+    -fx-border-color: #95a5a6;
+}
+
+/* Status Label */
+.status-label {
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #34495e;
+    -fx-padding: 6px 12px;
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 4px;
+    -fx-border-color: #dee2e6;
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+}
+
+/* Используем классы вместо псевдоклассов */
+.status-waiting {
+    -fx-text-fill: #6c757d;
+    -fx-background-color: #f8f9fa;
+}
+
+.status-searching {
+    -fx-text-fill: #856404;
+    -fx-background-color: #fff3cd;
+    -fx-border-color: #ffeaa7;
+}
+
+.status-success {
+    -fx-text-fill: #155724;
+    -fx-background-color: #d4edda;
+    -fx-border-color: #c3e6cb;
+}
+
+.status-error {
+    -fx-text-fill: #721c24;
+    -fx-background-color: #f8d7da;
+    -fx-border-color: #f5c6cb;
+}
+
+.status-connected {
+    -fx-text-fill: #0c5460;
+    -fx-background-color: #d1ecf1;
+    -fx-border-color: #bee5eb;
+}
+.manual-ip-field {
+    -fx-pref-width: 200px;
+    -fx-pref-height: 35px;
+    -fx-font-size: 14px;
+}
+
+.manual-connect-button {
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
+    -fx-font-size: 14px;
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+}
+
+.manual-connect-button:hover {
+    -fx-background-color: #45a049;
+}
+
+/* Стили для чата */
+.chat-top-container {
+    -fx-background-color: #2c3e50;
+    -fx-border-color: #34495e;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.chat-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.connection-info {
+    -fx-font-size: 12px;
+    -fx-text-fill: #bdc3c7;
+}
+
+.chat-center-container {
+    -fx-background-color: #ecf0f1;
+    -fx-padding: 10px;
+}
+
+.messages-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 5px;
+}
+
+.messages-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.messages-container {
+    -fx-padding: 10px;
+}
+
+.no-messages-container {
+    -fx-alignment: center;
+}
+
+.no-messages-icon {
+    -fx-font-size: 48px;
+    -fx-text-fill: #bdc3c7;
+}
+
+.no-messages-label {
+    -fx-font-size: 16px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.no-messages-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #95a5a6;
+}
+
+/* Стили сообщений */
+.message-box {
+    -fx-padding: 5px;
+}
+
+.message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.own-message .message-content {
+    -fx-background-color: #3498db;
+}
+
+.own-message .message-text {
+    -fx-fill: white;
+}
+
+.received-message .message-content {
+    -fx-background-color: white;
+}
+
+.received-message .message-text {
+    -fx-fill: #2c3e50;
+}
+
+.message-text {
+    -fx-font-size: 14px;
+    -fx-font-family: "Arial";
+}
+
+.message-meta {
+    -fx-padding: 5px 0 0 0;
+}
+
+.message-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.own-message .message-time {
+    -fx-text-fill: #ecf0f1;
+}
+
+.message-status {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+/* Стили для изображений и файлов */
+.image-message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.message-image {
+    -fx-border-radius: 5px;
+    -fx-border-color: #bdc3c7;
+}
+
+.image-file-name {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.image-file-size {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.file-message-content {
+    -fx-padding: 10px;
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.file-icon {
+    -fx-font-size: 24px;
+}
+
+.file-name {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.file-size {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.file-info {
+    -fx-padding: 0 0 0 10px;
+}
+
+.file-content {
+    -fx-alignment: center-left;
+}
+
+/* Стили для нижней панели */
+.chat-bottom-container {
+    -fx-background-color: #34495e;
+    -fx-border-color: #2c3e50;
+    -fx-border-width: 1px 0 0 0;
+}
+
+.chat-status-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #ecf0f1;
+}
+
+.encryption-status-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #2ecc71;
+}
+
+.message-text-area {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px;
+    -fx-font-size: 14px;
+}
+
+.message-text-area:focused {
+    -fx-border-color: #3498db;
+}
+
+/* Стили кнопок */
+.send-button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.send-button:hover {
+    -fx-background-color: #2980b9;
+}
+
+.send-button:pressed {
+    -fx-background-color: #21618c;
+}
+
+.file-button {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.file-button:hover {
+    -fx-background-color: #7f8c8d;
+}
+
+.image-button {
+    -fx-background-color: #9b59b6;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.image-button:hover {
+    -fx-background-color: #8e44ad;
+}
+
+.clear-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.clear-button:hover {
+    -fx-background-color: #c0392b;
+}
+
+.info-button {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.info-button:hover {
+    -fx-background-color: #d35400;
+}
+
+.icon-back-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #ecf0f1;
+    -fx-border-radius: 5px;
+    -fx-text-fill: #ecf0f1;
+    -fx-font-size: 14px;
+}
+
+.icon-back-button:hover {
+    -fx-background-color: rgba(236, 240, 241, 0.1);
+}
+
+/* Стили статусов */
+.status-connected {
+    -fx-text-fill: #2ecc71;
+}
+
+.status-error {
+    -fx-text-fill: #e74c3c;
+}
+
+.status-waiting {
+    -fx-text-fill: #f39c12;
+}
+
+.status-success {
+    -fx-text-fill: #27ae60;
+}
+

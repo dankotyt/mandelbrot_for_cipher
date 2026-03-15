@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 
 @Component
 public class XOR {
-    protected static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
+    public static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
         int width = image1.getWidth();
         int height = image1.getHeight();
 
@@ -31,5 +31,16 @@ public class XOR {
             }
         }
         return resultImage;
+    }
+
+    /**
+     * XOR для байтовых массивов
+     */
+    public static byte[] xorBytes(byte[] data, byte[] key) {
+        byte[] result = new byte[data.length];
+        for (int i = 0; i < data.length; i++) {
+            result[i] = (byte) (data[i] ^ key[i % key.length]);
+        }
+        return result;
     }
 }

@@ -2,192 +2,144 @@ package com.cipher.core.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.RasterFormatException;
 import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
-import java.util.Map;
+import java.nio.ByteBuffer;
 
-import com.cipher.core.dto.KeyDecoderParams;
-import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.utils.BinaryFile;
-import com.cipher.core.utils.ImageUtils;
-import com.cipher.core.service.MandelbrotService;
-import com.cipher.core.utils.Pair;
+import com.cipher.core.dto.*;
+import com.cipher.core.dto.segmentation.SegmentationResult;
+import com.cipher.core.utils.*;
+import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class ImageEncrypt {
-    private static final Logger logger = LoggerFactory.getLogger(ImageEncrypt.class);
-    private static BufferedImage encryptedWholeImage;
 
-    private static String getProjectRootPath() {
-        return new File("").getAbsolutePath() + File.separator;
+    private final MandelbrotService mandelbrotService;
+    private final ImageSegmentShuffler imageSegmentShuffler;
+    private final SceneManager sceneManager;
+    private final TempFileManager tempFileManager;
+    private final ImageUtils imageUtils;
+
+    /**
+     * Выполняет полное шифрование изображения.
+     * Процесс включает:
+     * <ol>
+     *   <li>Генерацию фрактала с текущими параметрами</li>
+     *   <li>Применение XOR к оригинальному изображению и фракталу</li>
+     *   <li>Сегментацию и перемешивание результата XOR</li>
+     *   <li>Сохранение в бинарный файл с метаданными</li>
+     * </ol>
+     *
+     * @param originalImage оригинальное изображение для шифрования
+     * @throws Exception если возникает ошибка при генерации фрактала или записи файла
+     */
+    public void encryptWhole(BufferedImage originalImage) throws Exception {
+        byte[] salt = mandelbrotService.getSessionSalt();
+        int attempts = mandelbrotService.getAttemptCount();
+        MandelbrotParams params = mandelbrotService.getCurrentParams();
+
+        int originalWidth = originalImage.getWidth();
+        int originalHeight = originalImage.getHeight();
+
+        BufferedImage fractal = mandelbrotService.generateImage(
+                originalWidth, originalHeight,
+                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
+        );
+
+        log.info("Encrypt: attempts={}, params: zoom={}, offsetX={}, offsetY={}, maxIter={}",
+                attempts, params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
+
+        BufferedImage xored = XOR.performXOR(originalImage, fractal);
+        SegmentationResult segResult = imageSegmentShuffler.segmentAndShuffle(xored);
+        BufferedImage finalImage = segResult.shuffledImage();
+
+        byte[] imageBytes = imageUtils.imageToBytes(finalImage);
+        log.info("encryptWhole: finalImage размер {}x{}, байт = {}, ожидалось {}",
+                finalImage.getWidth(), finalImage.getHeight(),
+                imageBytes.length, finalImage.getWidth() * finalImage.getHeight() * 3);
+
+        int fullWidth = finalImage.getWidth();
+        int fullHeight = finalImage.getHeight();
+        int startX = 0;
+        int startY = 0;
+        int areaWidth = fullWidth;
+        int areaHeight = fullHeight;
+
+        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 * 7 + imageBytes.length);
+        buffer.put(salt);
+        buffer.putInt(attempts);
+        buffer.putInt(startX);
+        buffer.putInt(startY);
+        buffer.putInt(areaWidth);
+        buffer.putInt(areaHeight);
+        buffer.putInt(fullWidth);
+        buffer.putInt(fullHeight);
+        buffer.put(imageBytes);
+
+        log.info("Encrypt: attempts={}", attempts);
+
+        File out = tempFileManager.saveBytesToFile(buffer.array(),
+                "encrypted_whole_" + System.currentTimeMillis() + ".bin");
+        sceneManager.showEncryptFinalPanel(finalImage, out);
     }
 
-    private static String getTempPath() {
-        return getProjectRootPath() + "temp" + File.separator;
-    }
+    /**
+     * Выполняет частичное шифрование выбранной области изображения.
+     * Шифруется только указанная область, остальная часть изображения остаётся неизменной.
+     *
+     * @param originalImage оригинальное изображение
+     * @param selectedArea  прямоугольная область для шифрования
+     * @throws Exception если возникает ошибка при шифровании или записи файла
+     */
+    public void encryptPart(BufferedImage originalImage, Rectangle2D selectedArea) throws Exception {
+        byte[] salt = mandelbrotService.getSessionSalt();
+        int attempts = mandelbrotService.getAttemptCount();
+        MandelbrotParams params = mandelbrotService.getCurrentParams();
 
-    public static BufferedImage encryptSelectedArea(BufferedImage originalImage, Rectangle2D selectedArea)
-            throws IllegalArgumentException, RasterFormatException, IOException {
+        int sx = (int) selectedArea.getMinX();
+        int sy = (int) selectedArea.getMinY();
+        int areaWidth = (int) selectedArea.getWidth();
+        int areaHeight = (int) selectedArea.getHeight();
 
-        // Проверка входных параметров
-        if (originalImage == null) {
-            throw new IllegalArgumentException("Original image cannot be null");
-        }
-        if (selectedArea == null) {
-            throw new IllegalArgumentException("Selected area cannot be null");
-        }
+        BufferedImage fractal = mandelbrotService.generateImage(
+                areaWidth, areaHeight,
+                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
+        );
 
-        int startX = (int) selectedArea.getMinX();
-        int startY = (int) selectedArea.getMinY();
-        int width = (int) selectedArea.getWidth();
-        int height = (int) selectedArea.getHeight();
+        BufferedImage areaImage = originalImage.getSubimage(sx, sy, areaWidth, areaHeight);
+        BufferedImage xoredArea = XOR.performXOR(areaImage, fractal);
+        SegmentationResult segResult = imageSegmentShuffler.segmentAndShuffle(xoredArea);
+        BufferedImage shuffledArea = segResult.shuffledImage();
 
-        // Проверка границ выбранной области
-        if (startX < 0 || startY < 0 ||
-                startX + width > originalImage.getWidth() ||
-                startY + height > originalImage.getHeight()) {
-            throw new RasterFormatException("Selected area is out of image bounds");
-        }
+        BufferedImage finalImage = new BufferedImage(
+                originalImage.getWidth(), originalImage.getHeight(),
+                BufferedImage.TYPE_INT_RGB
+        );
+        Graphics2D g = finalImage.createGraphics();
+        g.drawImage(originalImage, 0, 0, null);
+        g.drawImage(shuffledArea, sx, sy, null);
+        g.dispose();
 
-        // Выделяем выбранную область
-        BufferedImage selectedImage = originalImage.getSubimage(startX, startY, width, height);
+        byte[] imageBytes = imageUtils.imageToBytes(finalImage);
 
-        // Определяем размеры сегментов
-        int segmentWidthSize = 4;
-        int segmentHeightSize = 4;
+        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 + 4*4 + 4 + 4 + imageBytes.length);
+        buffer.put(salt);
+        buffer.putInt(attempts);
+        buffer.putInt(sx);
+        buffer.putInt(sy);
+        buffer.putInt(areaWidth);
+        buffer.putInt(areaHeight);
+        buffer.putInt(finalImage.getWidth());
+        buffer.putInt(finalImage.getHeight());
+        buffer.put(imageBytes);
 
-        // Корректируем размеры сегментов, если необходимо
-        while (width % segmentWidthSize != 0) {
-            segmentWidthSize--;
-        }
-        while (height % segmentHeightSize != 0) {
-            segmentHeightSize--;
-        }
-
-        // 1. Сначала сегментируем и перемешиваем исходное изображение
-        ImageSegmentShuffler shuffler = new ImageSegmentShuffler(selectedImage);
-        Pair<BufferedImage, Map<Integer, Integer>> shuffledResult =
-                shuffler.shuffleSegments(selectedImage, segmentWidthSize, segmentHeightSize);
-        BufferedImage shuffledImage = shuffledResult.getKey();
-        Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
-
-        // Получаем новые размеры после сегментации
-        int newWidth = shuffledImage.getWidth();
-        int newHeight = shuffledImage.getHeight();
-
-        // 2. Загружаем параметры из предварительно сгенерированного Мандельброта
-        MandelbrotParams mandelbrotParams = BinaryFile.loadMandelbrotParamsFromBinaryFile(
-                getTempPath() + "mandelbrot_params.bin");
-
-        // 3. Генерируем Мандельброт с теми же параметрами, но под новые размеры
-        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
-        BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
-                newWidth, newHeight,
-                mandelbrotParams.zoom(),
-                mandelbrotParams.offsetX(),
-                mandelbrotParams.offsetY(),
-                mandelbrotParams.maxIter());
-
-        // 4. Выполняем XOR между сегментированным изображением и Мандельбротом
-        shuffledImage = ImageUtils.convertToARGB(shuffledImage);
-        mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
-        BufferedImage encryptedXORImage = XOR.performXOR(shuffledImage, mandelbrotImage);
-
-        // 5. Вставляем зашифрованную область обратно в исходное изображение
-        Graphics2D g2d = originalImage.createGraphics();
-        g2d.drawImage(encryptedXORImage, startX, startY, null);
-        g2d.dispose();
-
-        // 6. Сохраняем параметры для дешифрации
-        KeyDecoderParams keyDecoderParams = new KeyDecoderParams(
-                mandelbrotParams.zoom(),
-                mandelbrotParams.offsetX(),
-                mandelbrotParams.offsetY(),
-                mandelbrotParams.maxIter(),
-                segmentWidthSize,
-                segmentHeightSize,
-                segmentMapping,
-                startX,
-                startY,
-                newWidth,
-                newHeight);
-
-        BinaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin", keyDecoderParams);
-
-        return originalImage;
-    }
-
-    public void encryptWholeImage(BufferedImage image) throws IOException {
-        MandelbrotParams previewParams = BinaryFile
-                .loadMandelbrotParamsFromBinaryFile(getTempPath() + "mandelbrot_params.bin");
-
-        // 2. Подготовка изображения и сегментация (как было)
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        int segmentWidthSize = 4;
-        int segmentHeightSize = 4;
-
-        if (width % segmentWidthSize != 0) {
-            width = (width / segmentWidthSize + 1) * segmentWidthSize;
-        }
-        if (height % segmentHeightSize != 0) {
-            height = (height / segmentHeightSize + 1) * segmentHeightSize;
-        }
-
-        if (image.getWidth() != width || image.getHeight() != height) {
-            image = resizeImage(image, width, height);
-        }
-
-        Pair<BufferedImage, Map<Integer, Integer>> shuffledResult =
-                ImageSegmentShuffler.shuffleSegments(image, segmentWidthSize, segmentHeightSize);
-        BufferedImage shuffledImage = shuffledResult.getKey();
-        Map<Integer, Integer> segmentMapping = shuffledResult.getValue();
-
-        int newWidth = shuffledImage.getWidth();
-        int newHeight = shuffledImage.getHeight();
-
-        // 3. Генерируем финальный Мандельброт с теми же параметрами, но новыми размерами
-        MandelbrotService mandelbrotServiceGenerator = new MandelbrotService(newWidth, newHeight);
-        BufferedImage mandelbrotImage = mandelbrotServiceGenerator.generateImage(
-                newWidth, newHeight,
-                previewParams.zoom(),
-                previewParams.offsetX(),
-                previewParams.offsetY(),
-                previewParams.maxIter());
-
-        // Сохраняем финальный ключ для дешифрации
-        ImageIO.write(mandelbrotImage, "png", new File(getTempPath() + "mandelbrot_final.png"));
-
-        // 4. Продолжаем шифрование как раньше
-        shuffledImage = ImageUtils.convertToARGB(shuffledImage);
-        mandelbrotImage = ImageUtils.convertToARGB(mandelbrotImage);
-
-        encryptedWholeImage = XOR.performXOR(shuffledImage, mandelbrotImage);
-
-        KeyDecoderParams keyDecoderParams = new KeyDecoderParams(
-                previewParams.zoom(), previewParams.offsetX(), previewParams.offsetY(),
-                previewParams.maxIter(), segmentWidthSize, segmentHeightSize, segmentMapping,
-                0, 0, newWidth, newHeight);
-
-        BinaryFile.saveKeyDecoderToBinaryFile(getTempPath() + "key_decoder.bin", keyDecoderParams);
-    }
-
-    public BufferedImage getEncryptedImage() {
-        return encryptedWholeImage;
-    }
-
-    public static BufferedImage resizeImage(BufferedImage image, int width, int height) {
-        BufferedImage resizedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = resizedImage.createGraphics();
-        g2d.drawImage(image, 0, 0, width, height, null);
-        g2d.dispose();
-        return resizedImage;
+        File out = tempFileManager.saveBytesToFile(buffer.array(),
+                "encrypted_partial_" + System.currentTimeMillis() + ".bin");
+        sceneManager.showEncryptFinalPanel(finalImage, out);
     }
 }

@@ -1,4 +1,3 @@
 package com.cipher.core.dto;
 
-public record MandelbrotParams(int startMandelbrotWidth, int startMandelbrotHeight,
-                               double zoom, double offsetX, double offsetY, int maxIter) { }
+public record MandelbrotParams(double zoom, double offsetX, double offsetY, int maxIter) { }

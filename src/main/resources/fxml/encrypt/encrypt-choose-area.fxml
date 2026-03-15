@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane styleClass="main-container"
+            stylesheets="@../../css/styles.css"
+            xmlns="http://javafx.com/javafx/17.0.12"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.cipher.core.controller.encrypt.EncryptChooseAreaController">
+
+    <top>
+        <BorderPane styleClass="encrypt-choose-area-top-container">
+            <left>
+                <HBox style="-fx-padding: 20 0 0 20;">
+                    <Button fx:id="backButton" styleClass="icon-back-button" />
+                </HBox>
+            </left>
+            <center>
+                <HBox alignment="CENTER" style="-fx-padding: 80 0 0 0;">
+                    <Label styleClass="encrypt-choose-area-title" text="Шифруемое изображение:" />
+                    <Region prefHeight="100" />
+                </HBox>
+            </center>
+        </BorderPane>
+    </top>
+
+    <center>
+        <GridPane styleClass="encrypt-choose-area-grid">
+            <columnConstraints>
+            <ColumnConstraints hgrow="NEVER" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="NEVER" prefWidth="350.0" />
+                <ColumnConstraints hgrow="ALWAYS" prefWidth="150.0" />
+            <ColumnConstraints />
+            <ColumnConstraints minWidth="10.0" prefWidth="250.0" />
+            </columnConstraints>
+
+            <VBox styleClass="hint-console-container" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <StackPane fx:id="hintBoxContainer" />
+            </VBox>
+
+            <HBox GridPane.columnIndex="2" GridPane.rowIndex="0">
+                <Region prefWidth="200" />
+            </HBox>
+
+            <!-- Правая колонка - контент -->
+            <VBox styleClass="encrypt-choose-area-content" GridPane.columnIndex="3" GridPane.rowIndex="0">
+
+                <StackPane styleClass="encrypt-choose-area-image-container">
+                    <ImageView fx:id="mandelbrotImageView" fitHeight="480" fitWidth="640" translateX="150" />
+
+                    <StackPane styleClass="main-image-container">
+                        <ImageView fx:id="imageView" fitHeight="540" fitWidth="720" />
+                        <Canvas fx:id="canvas" height="540" styleClass="selection-canvas" width="720" />
+                    </StackPane>
+                </StackPane>
+                <Region prefHeight="15" />
+                <HBox styleClass="encrypt-choose-area-buttons">
+                    <Button fx:id="encryptWholeButton" styleClass="icon-encrypt-whole-button" />
+                    <Button fx:id="encryptPartButton" styleClass="icon-encrypt-part-button" />
+                    <Button fx:id="resetPartButton" styleClass="icon-reset-part-button" />
+                    <Button fx:id="swapButton" styleClass="icon-swap-button" />
+                </HBox>
+            </VBox>
+         <rowConstraints>
+            <RowConstraints />
+         </rowConstraints>
+        </GridPane>
+    </center>
+</BorderPane>
