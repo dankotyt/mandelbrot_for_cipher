@@ -23,7 +23,7 @@ java {
     }
 }
 
-version = '1.0.1'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -46,13 +46,13 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+//    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+//    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+//    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+//    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
     //=======================
 
@@ -99,7 +99,7 @@ jlink {
     jpackage {
         def semver = project.version.toString()
         def m = (semver =~ /(\d+)\.(\d+)\.(\d+)/)
-        appVersion = m ? "${m[0][1]}.${m[0][2]}.${m[0][3]}" : "1.0.0"
+        appVersion = m ? "${m[0][1]}.${m[0][2]}.${m[0][3]}" : "1.1.0"
 
         vendor = 'dankotyt'
         description = 'Mandelbrot For Cipher Application'

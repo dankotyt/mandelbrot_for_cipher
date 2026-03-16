@@ -115,10 +115,6 @@ public class SceneManager {
         showScreen("/fxml/encrypt/encrypt-choose-area.fxml");
     }
 
-    public void showChoosenMandelbrotPanel() {
-        showScreen("/fxml/encrypt/encrypt-choose-area.fxml");
-    }
-
     public void showEncryptGenerateParamsPanel(MandelbrotParams mandelbrotParams) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-generate-params.fxml"));
@@ -153,44 +149,9 @@ public class SceneManager {
         }
     }
 
-//    public void showEncryptFinalPanel(EncryptionPreviewResult previewResult) {
-//        try {
-//            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final.fxml"));
-//            loader.setControllerFactory(controllerFactory);
-//            Parent root = loader.load();
-//
-//            EncryptFinalController controller = loader.getController();
-//            controller.setPreviewResult(previewResult);
-//
-//            primaryStage.getScene().setRoot(root);
-//        } catch (Exception e) {
-//            logger.error("Error loading encrypt final screen", e);
-//            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
-//        }
-//    }
-
-    @Deprecated
-    public void showEncryptFinalSelectedPanel(BufferedImage encryptedImage) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final-selected.fxml"));
-            loader.setControllerFactory(controllerFactory);
-            Parent root = loader.load();
-
-            EncryptFinalSelectedController controller = loader.getController();
-            controller.setEncryptedImage(encryptedImage);
-
-            primaryStage.getScene().setRoot(root);
-        } catch (Exception e) {
-            logger.error("Error loading encrypt final selected screen", e);
-            dialogDisplayer.showErrorAlert("Ошибка", "Не удалось загрузить интерфейс: " + e.getMessage());
-        }
-    }
-
     public void showDecryptBeginPanel() {
         showScreen("/fxml/decrypt/decrypt-begin.fxml");
     }
-
-    public void showDecryptLoadPanel() {showScreen("/fxml/decrypt/decrypt-load.fxml");}
 
     public void showDecryptModePanel() {
         showScreen("/fxml/decrypt/decrypt-mode.fxml");

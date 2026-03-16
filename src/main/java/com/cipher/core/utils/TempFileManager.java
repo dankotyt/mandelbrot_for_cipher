@@ -1,6 +1,5 @@
 package com.cipher.core.utils;
 
-import com.cipher.core.dto.encryption.EncryptedData;
 import jakarta.annotation.PreDestroy;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
@@ -23,7 +22,6 @@ public class TempFileManager {
     private final DialogDisplayer displayer;
     private final SceneManager sceneManager;
     private final ImageUtils imageUtils;
-    private final EncryptionDataSerializer serializer;
 
     private String getProjectRootPath() {
         return new File("").getAbsolutePath() + File.separator;
@@ -44,30 +42,6 @@ public class TempFileManager {
                 throw new RuntimeException("Не удалось создать временную директорию");
             }
         }
-    }
-
-    /**
-     * Сохраняет EncryptedData в файл .bin в temp папке
-     */
-    public File saveEncryptedData(EncryptedData data) throws IOException {
-        createTempFolder();
-
-        String fileName = "encrypted_" + System.currentTimeMillis() + ".bin";
-        File outputFile = new File(getTempPath(), fileName);
-
-        byte[] serializedData = serializer.serialize(data);
-        Files.write(outputFile.toPath(), serializedData);
-
-        logger.info("Зашифрованные данные сохранены в: {}", outputFile.getAbsolutePath());
-        return outputFile;
-    }
-
-    /**
-     * Загружает EncryptedData из файла .bin
-     */
-    public EncryptedData loadEncryptedData(File file) throws IOException {
-        byte[] fileData = Files.readAllBytes(file.toPath());
-        return serializer.deserialize(fileData);
     }
 
     /**

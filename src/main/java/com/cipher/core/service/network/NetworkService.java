@@ -60,60 +60,6 @@ public class NetworkService {
         }
     }
 
-    @Deprecated
-    public List<DeviceDTO> discoverLocalDevices() {
-        List<DeviceDTO> devices = new ArrayList<>();
-        List<CompletableFuture<DeviceDTO>> futures = new ArrayList<>();
-
-        try {
-            String localNetworkPrefix = getLocalNetworkPrefix();
-            log.info("Сканирование сети на порту {}: {}1-254", APP_PORT, localNetworkPrefix);
-
-            ExecutorService executor = Executors.newFixedThreadPool(50);
-
-            for (int i = 1; i <= 254; i++) {
-                String ip = localNetworkPrefix + i;
-                CompletableFuture<DeviceDTO> future = CompletableFuture.supplyAsync(() -> {
-                    if (isAppRunning(ip)) {
-                        String hostname = getHostname(ip);
-                        log.info("✅ Найдено устройство с программой: {} ({})", ip, hostname);
-                        return new DeviceDTO(hostname, ip);
-                    }
-                    return null;
-                }, executor);
-                futures.add(future);
-            }
-
-            CompletableFuture<Void> allFutures = CompletableFuture.allOf(
-                    futures.toArray(new CompletableFuture[0])
-            );
-
-            try {
-                allFutures.get(30, TimeUnit.SECONDS);
-            } catch (TimeoutException e) {
-                log.warn("Сканирование завершено по таймауту, но некоторые устройства могут быть найдены");
-            }
-
-            for (CompletableFuture<DeviceDTO> future : futures) {
-                try {
-                    DeviceDTO device = future.getNow(null);
-                    if (device != null) {
-                        devices.add(device);
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-
-            executor.shutdown();
-            log.info("Найдено устройств с программой: {}", devices.size());
-
-        } catch (Exception e) {
-            log.error("Ошибка при сканировании сети: {}", e.getMessage());
-        }
-
-        return devices;
-    }
-
     public boolean isAppRunning(String ip) {
         return isPortOpen(ip, APP_PORT, 1000);
     }

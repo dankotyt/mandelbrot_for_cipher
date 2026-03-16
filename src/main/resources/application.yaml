@@ -1,4 +1,7 @@
 spring:
+  cloud:
+    refresh:
+      enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5432/com_db?currentSchema=public
     username: ${BD_LOGIN}
@@ -20,7 +23,7 @@ spring:
 #      port: ${REDIS_PORT}
       # password:
       # database: 0
-
-server:
-  port: 8080
-  url: "http://localhost:8080"
+management:
+  endpoint:
+    refresh:
+      enabled: false
