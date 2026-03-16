@@ -6,12 +6,13 @@ import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.threading.MandelbrotThread;
 
 import javax.swing.*;
-import java.awt.Graphics;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 
 import lombok.Getter;
@@ -110,15 +111,15 @@ public class MandelbrotService extends JPanel {
      * @return объект MandelbrotParams со сгенерированными параметрами
      */
     public MandelbrotParams generateParams(SecureRandom prng) {
-        double zoom = 1000 + (prng.nextInt(1000) * 100);
-        double offsetX = -0.9998 + prng.nextDouble() * (0.45 - (-0.9998));
+        double zoom = 10_000 + (prng.nextInt(701) * 140); // можно уменьшить - вырастет скорость
+        double offsetX = -0.9998 + prng.nextDouble() * (0.45 + 0.9998);
         double offsetY;
         if (prng.nextBoolean()) {
             offsetY = -0.7 + prng.nextDouble() * 0.6; // интервал [-0.7, -0.1]
         } else {
             offsetY = 0.1 + prng.nextDouble() * 0.6;  // интервал [0.1, 0.7]
         }
-        int maxIter = 300;
+        int maxIter = 250;
         return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
     }
 
@@ -193,80 +194,96 @@ public class MandelbrotService extends JPanel {
     }
 
     /**
-     * Проверяет, удовлетворяет ли изображение критериям разнообразия.
+     * Проверяет, является ли сгенерированное изображение фрактала пригодным для использования в шифровании.
      * <p>
-     * Критерии могут включать:
+     * Критерии проверки:
      * <ul>
-     *   <li>Достаточное количество цветов</li>
-     *   <li>Баланс между тёмными и светлыми областями</li>
-     *   <li>Отсутствие слишком больших монотонных областей</li>
+     *   <li>Доля пикселей внутренней области (цвет 0x000040) не должна превышать 25%.</li>
+     *   <li>Распределение цветовых тонов должно быть достаточно широким и равномерным согласно
+     *       {@link #checkHueDistribution(BufferedImage, int, double)}.</li>
      * </ul>
+     * </p>
      *
-     * @param image изображение для проверки
-     * @return true если изображение удовлетворяет критериям, иначе false
+     * @param fractal изображение фрактала Мандельброта для проверки
+     * @return true, если фрактал проходит все критерии качества; false в противном случае
      */
-    public boolean checkImageDiversity(BufferedImage image) {
-        if (isImageBlackPercentageAboveThreshold(image, 0.05)) { //todo попробовать меньше значение
-            return false;
+    public boolean isFractalValid(BufferedImage fractal) {
+        int[] pixels = ((DataBufferInt) fractal.getRaster().getDataBuffer()).getData();
+        int total = pixels.length;
+
+        // Проверка на слишком много внутренних точек (цвет 0x000040)
+        int darkBlueCount = 0;
+        for (int p : pixels) {
+            if ((p & 0x00FFFFFF) == 0x000040) darkBlueCount++;
         }
+        if ((double) darkBlueCount / total > 0.25) return false;
 
-        // Оптимизированная проверка уникальности цветов
-        Set<Integer> uniqueColors = new HashSet<>();
-        int[] pixelBuffer = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
-
-        for (int j : pixelBuffer) {
-            int color = j & 0x00FFFFFF;
-            uniqueColors.add(color);
-
-            // Быстрый выход если уже много уникальных цветов
-            if (uniqueColors.size() > 1000) {
-                break;
-            }
-        }
-
-        // Проверка доминирующего цвета
-        return uniqueColors.size() >= 250;
+        // Проверка распределения тонов
+        return checkHueDistribution(fractal, 20, 0.25);
     }
 
     /**
-     * Проверяет, превышает ли процент чёрных пикселей в изображении заданный порог.
+     * Анализирует распределение цветовых тонов (hue) в изображении фрактала, исключая пиксели внутренней области.
+     * <p>
+     * Метод преобразует каждый пиксель (кроме имеющих фиксированный цвет внутренней области 0x000040)
+     * в цветовое пространство HSB и извлекает компонент тона (hue). Диапазон тона [0,1) делится на
+     * {@code BINS} равных интервалов (в текущей реализации 36). Для каждого пикселя отмечается
+     * соответствующий интервал. После обработки всех пикселей проверяются два условия:
+     * <ul>
+     *   <li>Количество интервалов, в которые попал хотя бы один пиксель, должно быть не меньше {@code minBins}.</li>
+     *   <li>Доля пикселей в любом одном интервале не должна превышать {@code maxBinRatio}.</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Пиксели внутренней области (цвет 0x000040) исключаются из анализа, так как они не несут информации
+     * о цветовом разнообразии фрактала и могут искажать гистограмму.
+     * </p>
      *
-     * @param image изображение для анализа
-     * @param threshold пороговое значение (от 0.0 до 1.0)
-     * @return true, если процент чёрных пикселей превышает порог, иначе false
+     * @param img         изображение фрактала для анализа
+     * @param minBins     минимальное допустимое количество интервалов тона, которые должны быть заняты
+     *                    (должно быть в диапазоне от 1 до {@code BINS})
+     * @param maxBinRatio максимально допустимая доля пикселей, попадающих в один интервал тона
+     *                    (значение от 0 до 1, например 0.25 означает не более 25%)
+     * @return true, если распределение тонов удовлетворяет обоим условиям; false в противном случае
      */
-    private static boolean isImageBlackPercentageAboveThreshold(BufferedImage image, double threshold) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int totalPixels = width * height;
-        int blackPixelCount = 0;
-        int maxBlackPixels = (int) (totalPixels * threshold) + 1;
+    private boolean checkHueDistribution(BufferedImage img, int minBins, double maxBinRatio) {
+        int[] pixels = ((DataBufferInt) img.getRaster().getDataBuffer()).getData();
+        final int BINS = 36;
+        int[] binCounts = new int[BINS];
+        int totalConsidered = 0;
 
-        int[] pixelBuffer = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+        for (int p : pixels) {
+            int rgb = p & 0x00FFFFFF;
+            // Пропускаем внутренние точки (настраиваем под ваш код)
+            if (rgb == 0x000040 || rgb == 0x000000) continue;
 
-        for (int pixel : pixelBuffer) {
-            if (isBlackPixel(pixel)) {
-                blackPixelCount++;
-                if (blackPixelCount >= maxBlackPixels) {
-                    return true;
-                }
+            int r = (rgb >> 16) & 0xFF;
+            int g = (rgb >> 8) & 0xFF;
+            int b = rgb & 0xFF;
+
+            float[] hsv = new float[3];
+            Color.RGBtoHSB(r, g, b, hsv);
+            int bin = (int) (hsv[0] * BINS);
+            if (bin >= 0 && bin < BINS) {
+                binCounts[bin]++;
+                totalConsidered++;
             }
         }
 
-        return false;
-    }
+        if (totalConsidered == 0) {
+            return false; // нет внешних точек с цветом
+        }
 
-    /**
-     * Определяет, является ли пиксель чёрным (RGB = 0,0,0).
-     *
-     * @param pixel значение пикселя в формате RGB
-     * @return true если пиксель полностью чёрный, иначе false
-     */
-    private static boolean isBlackPixel(int pixel) {
-        int red = (pixel >> 16) & 0xFF;
-        int green = (pixel >> 8) & 0xFF;
-        int blue = pixel & 0xFF;
+        // Подсчет занятых бинов
+        int nonEmpty = 0;
+        int maxCount = 0;
+        for (int count : binCounts) {
+            if (count > 0) nonEmpty++;
+            if (count > maxCount) maxCount = count;
+        }
 
-        return red == 0 && green == 0 && blue == 0;
+        double maxRatio = (double) maxCount / totalConsidered;
+
+        return nonEmpty >= minBins && maxRatio <= maxBinRatio;
     }
 }

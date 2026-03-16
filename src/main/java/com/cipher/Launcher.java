@@ -41,7 +41,6 @@ public class Launcher implements CommandLineRunner {
      * @param args аргументы командной строки
      */
     public static void main(String[] args) {
-        // 1. Загружаем .env переменные
         Dotenv dotenv = Dotenv.configure().load();
         dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 

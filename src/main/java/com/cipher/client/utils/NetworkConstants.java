@@ -3,9 +3,9 @@ package com.cipher.client.utils;
 public class NetworkConstants {
     public static final String BROADCAST_ADDRESS = "255.255.255.255";
 
-    public static final int DISCOVERY_PORT = 8888;
-    public static final int SIGNED_PACKET_PORT = 8889;
-    public static final int KEY_INVALIDATION_PORT = 8890;
+    public static final int DISCOVERY_PORT = 25562;
+    public static final int SIGNED_PACKET_PORT = 25563;
+    public static final int KEY_INVALIDATION_PORT = 25564;
     public static final int APP_PORT = 25565;
     public static final int CONNECTION_PORT = 25565;
     public static final int CHAT_PORT = 25566;

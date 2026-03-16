@@ -119,7 +119,7 @@ public class EncryptGenerateController {
                     if (isCancelled()) return null;
 
                     BufferedImage fractal = mandelbrotService.generateImage();
-                    if (!mandelbrotService.checkImageDiversity(fractal)) {
+                    if (!mandelbrotService.isFractalValid(fractal)) {
                         ConsoleManager.log("Попытка " + (i+1) + ": фрактал не подходит, продолжаем...");
                         continue;
                     }

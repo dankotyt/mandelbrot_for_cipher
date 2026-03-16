@@ -23,7 +23,7 @@ java {
     }
 }
 
-version = '1.0.0-beta.1'
+version = '1.0.1'
 
 repositories {
     mavenCentral()
@@ -101,7 +101,7 @@ jlink {
         def m = (semver =~ /(\d+)\.(\d+)\.(\d+)/)
         appVersion = m ? "${m[0][1]}.${m[0][2]}.${m[0][3]}" : "1.0.0"
 
-        vendor = 'BODROST'
+        vendor = 'dankotyt'
         description = 'Mandelbrot For Cipher Application'
         skipInstaller = false
 
@@ -149,6 +149,15 @@ tasks.register('fatJar', Jar) {
     from sourceSets.main.output
 
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.register('zip', Zip) {
+    dependsOn fatJar
+    from layout.buildDirectory.dir('libs')
+    from 'README.md'
+    from 'LICENSE'
+    archiveFileName = "mandelbrot_for_cipher-${version}.zip"
+    destinationDirectory = layout.buildDirectory.dir('dist')
 }
 
 // Для запуска в IDE через Gradle

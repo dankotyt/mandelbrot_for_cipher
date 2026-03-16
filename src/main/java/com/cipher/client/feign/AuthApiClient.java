@@ -16,7 +16,7 @@ import org.springframework.web.client.HttpServerErrorException;
  *
  * @see FeignClient
  */
-@FeignClient(name = "auth-client", url = "${server.url}")
+//@FeignClient(name = "auth-client", url = "${server.url}")
 public interface AuthApiClient {
 
     /**
