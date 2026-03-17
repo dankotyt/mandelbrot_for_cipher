@@ -17,20 +17,6 @@ import java.util.List;
 @Slf4j
 public class ImageSegmentShuffler {
 
-    private SecureRandom segmentPrng;
-
-    /**
-     * Инициализирует генератор псевдослучайных чисел для перемешивания сегментов
-     * с использованием предоставленного ключа.
-     *
-     * @param key ключ для инициализации PRNG
-     * @throws Exception если возникает ошибка при создании экземпляра SecureRandom
-     */
-    public void initialize(byte[] key) throws Exception {
-        this.segmentPrng = SecureRandom.getInstance("SHA1PRNG");
-        this.segmentPrng.setSeed(key);
-    }
-
     /**
      * Создает список сегментов изображения заданного размера
      * @param image исходное изображение
@@ -66,12 +52,12 @@ public class ImageSegmentShuffler {
      * @return результат перемешивания, включающий перемешанное изображение,
      *         размер сегмента и карту соответствия
      */
-    public SegmentationResult segmentAndShuffle(BufferedImage image) {
+    public SegmentationResult segmentAndShuffle(BufferedImage image, SecureRandom prng) {
         int segmentSize = generateSegmentSize(image.getWidth(), image.getHeight());
         log.info("Segment size used: {}", segmentSize);
         BufferedImage paddedImage = padImageToSegmentSize(image, segmentSize);
         List<Rectangle> segments = createSegments(paddedImage, segmentSize);
-        List<Integer> indices = getShuffledIndices(segments.size());
+        List<Integer> indices = getShuffledIndices(segments.size(), prng);
 
         BufferedImage result = new BufferedImage(paddedImage.getWidth(), paddedImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = result.createGraphics();
@@ -98,11 +84,11 @@ public class ImageSegmentShuffler {
      * @param originalHeight оригинальная высота изображения (до дополнения)
      * @return изображение с восстановленным порядком сегментов
      */
-    public BufferedImage unshuffle(BufferedImage shuffledImage, int originalWidth, int originalHeight) {
+    public BufferedImage unshuffle(BufferedImage shuffledImage, int originalWidth, int originalHeight, SecureRandom prng) {
         int segmentSize = generateSegmentSize(originalWidth, originalHeight);
         log.info("Segment size used: {}", segmentSize);
         List<Rectangle> segments = createSegments(shuffledImage, segmentSize);
-        List<Integer> indices = getShuffledIndices(segments.size());
+        List<Integer> indices = getShuffledIndices(segments.size(), prng);
 
         Map<Integer, Integer> reverse = new HashMap<>();
         for (int i = 0; i < indices.size(); i++) reverse.put(indices.get(i), i);
@@ -167,20 +153,19 @@ public class ImageSegmentShuffler {
     /**
      * Перемешивает список детерминированным образом
      */
-    public <T> void shuffleList(List<T> list) {
-        if (segmentPrng == null) throw new IllegalStateException("Segment PRNG not initialized");
+    private <T> void shuffleList(List<T> list, SecureRandom prng) {
         for (int i = list.size() - 1; i > 0; i--) {
-            int j = segmentPrng.nextInt(i + 1);
+            int j = prng.nextInt(i + 1);
             T temp = list.get(i);
             list.set(i, list.get(j));
             list.set(j, temp);
         }
     }
 
-    private List<Integer> getShuffledIndices(int size) {
+    private List<Integer> getShuffledIndices(int size, SecureRandom prng) {
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < size; i++) indices.add(i);
-        shuffleList(indices);
+        shuffleList(indices, prng);
         return indices;
     }
 }

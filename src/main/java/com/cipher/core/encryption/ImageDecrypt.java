@@ -92,7 +92,8 @@ public class ImageDecrypt {
         log.info("Decrypt: attempts={}, params: zoom={}, offsetX={}, offsetY={}, maxIter={}",
                 attempts, params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
 
-        imageSegmentShuffler.initialize(keySegmentation);
+        SecureRandom segPrng = SecureRandom.getInstance("SHA1PRNG");
+        segPrng.setSeed(keySegmentation);
 
         // Извлекаем область, которая подвергалась шифрованию
         BufferedImage encryptedArea = encryptedImage.getSubimage(startX, startY, areaWidth, areaHeight);
@@ -104,7 +105,9 @@ public class ImageDecrypt {
         );
 
         // Обратная сегментация области
-        BufferedImage unshuffledArea = imageSegmentShuffler.unshuffle(encryptedArea, areaWidth, areaHeight);
+        BufferedImage unshuffledArea = imageSegmentShuffler.unshuffle(
+                encryptedArea, areaWidth, areaHeight, segPrng
+        );
 
         // XOR области с фракталом
         BufferedImage decryptedArea = XOR.performXOR(unshuffledArea, fractal);

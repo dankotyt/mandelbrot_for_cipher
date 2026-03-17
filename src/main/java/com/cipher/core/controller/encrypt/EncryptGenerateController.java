@@ -28,7 +28,6 @@ import java.net.InetAddress;
 @RequiredArgsConstructor
 public class EncryptGenerateController {
     private static final Logger logger = LoggerFactory.getLogger(EncryptGenerateController.class);
-    private final ImageEncrypt imageEncrypt;
 
     @FXML private ImageView imageView;
     @FXML private StackPane loadingContainer;
@@ -41,6 +40,7 @@ public class EncryptGenerateController {
     @FXML private Button swapButton;
     @FXML private Button backButton;
 
+    private final ImageEncrypt imageEncrypt;
     private final SceneManager sceneManager;
     private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
@@ -59,8 +59,12 @@ public class EncryptGenerateController {
         try {
             InetAddress peer = cryptoKeyManager.getConnectedPeer();
             byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
-            mandelbrotService.setTargetSize(originalImage.getWidth(), originalImage.getHeight());
-            mandelbrotService.prepareSession(sharedSecret);
+
+            imageEncrypt.prepareSession(sharedSecret);
+
+            mandelbrotService.setTargetWidth(originalImage.getWidth());
+            mandelbrotService.setTargetHeight(originalImage.getHeight());
+
             generateUntilGood();
         } catch (Exception e) {
             logger.error("Ошибка подготовки сессии", e);
@@ -118,7 +122,8 @@ public class EncryptGenerateController {
                 for (int i = 0; i < maxAttempts; i++) {
                     if (isCancelled()) return null;
 
-                    BufferedImage fractal = mandelbrotService.generateImage();
+                    BufferedImage fractal = imageEncrypt.generateNextFractal(
+                            originalImage.getWidth(), originalImage.getHeight());
                     if (!mandelbrotService.isFractalValid(fractal)) {
                         ConsoleManager.log("Попытка " + (i+1) + ": фрактал не подходит, продолжаем...");
                         continue;
@@ -172,7 +177,7 @@ public class EncryptGenerateController {
         try {
             InetAddress peer = cryptoKeyManager.getConnectedPeer();
             byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
-            mandelbrotService.prepareSession(sharedSecret); // новая соль, сброс attemptCount
+            imageEncrypt.prepareSession(sharedSecret); // новая соль, сброс attemptCount
             generateUntilGood();
         } catch (Exception e) {
             logger.error("Ошибка при регенерации", e);

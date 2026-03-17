@@ -3,10 +3,12 @@ package com.cipher.core.encryption;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 
 import com.cipher.core.dto.*;
-import com.cipher.core.dto.segmentation.SegmentationResult;
 import com.cipher.core.utils.*;
 import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
@@ -25,6 +27,81 @@ public class ImageEncrypt {
     private final TempFileManager tempFileManager;
     private final ImageUtils imageUtils;
 
+    private byte[] sessionSalt;
+    private SecureRandom paramsPrng;
+    private SecureRandom segmentationPrng;
+    private int attemptCount;
+
+    private static final int MAX_FRACTAL_ATTEMPTS = 50;
+
+    /**
+     * Подготавливает сессию шифрования на основе общего секрета.
+     * Все криптографические материалы хранятся внутри ImageEncrypt.
+     *
+     * @param sharedSecret общий секрет от DH
+     * @throws Exception если ошибка инициализации
+     */
+    public void prepareSession(byte[] sharedSecret) throws Exception {
+        // 1. Генерируем соль криптостойким генератором
+        byte[] salt = new byte[16];
+        SecureRandom secureRandom = new SecureRandom();
+        secureRandom.nextBytes(salt);
+        this.sessionSalt = salt.clone();
+
+        // 2. HKDF выработка ключей
+        byte[] prk = HKDF.extract(salt, sharedSecret);
+        byte[] keyFractalParams = HKDF.expand(prk, "fractal-params".getBytes(StandardCharsets.UTF_8), 32);
+        byte[] keySegmentation = HKDF.expand(prk, "segmentation".getBytes(StandardCharsets.UTF_8), 32);
+
+        // 3. Инициализируем PRNG для параметров фрактала
+        this.paramsPrng = SecureRandom.getInstance("SHA1PRNG");
+        this.paramsPrng.setSeed(keyFractalParams);
+
+        // 4. Инициализируем PRNG для перемешивания
+        this.segmentationPrng = SecureRandom.getInstance("SHA1PRNG");
+        this.segmentationPrng.setSeed(keySegmentation);
+
+        // 5. Сбрасываем счётчик попыток
+        this.attemptCount = 0;
+
+        log.info("Сессия подготовлена, сгенерирована новая соль");
+    }
+
+    /**
+     * Генерирует следующий фрактал для текущей сессии.
+     * Увеличивает счётчик попыток.
+     */
+    public BufferedImage generateNextFractal(int width, int height) {
+        attemptCount++;
+        MandelbrotParams params = mandelbrotService.generateParams(paramsPrng);
+        log.debug("Генерация фрактала: попытка {}, params={}", attemptCount, params);
+
+        return mandelbrotService.generateImage(
+                width, height,
+                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
+        );
+    }
+
+    /**
+     * Генерирует валидный фрактал с повторными попытками.
+     */
+    private BufferedImage generateValidFractal(int width, int height) {
+        BufferedImage lastFractal = null;
+
+        for (int attempt = 1; attempt <= MAX_FRACTAL_ATTEMPTS; attempt++) {
+            BufferedImage fractal = generateNextFractal(width, height);
+            if (mandelbrotService.isFractalValid(fractal)) {
+                log.info("Валидный фрактал получен с попытки {}", attempt);
+                return fractal;
+            } else {
+                lastFractal = fractal;
+            }
+        }
+
+        log.warn("Используется последний фрактал после {} попыток", MAX_FRACTAL_ATTEMPTS);
+        return lastFractal;
+    }
+
     /**
      * Выполняет полное шифрование изображения.
      * Процесс включает:
@@ -39,53 +116,22 @@ public class ImageEncrypt {
      * @throws Exception если возникает ошибка при генерации фрактала или записи файла
      */
     public void encryptWhole(BufferedImage originalImage) throws Exception {
-        byte[] salt = mandelbrotService.getSessionSalt();
-        int attempts = mandelbrotService.getAttemptCount();
-        MandelbrotParams params = mandelbrotService.getCurrentParams();
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
 
-        int originalWidth = originalImage.getWidth();
-        int originalHeight = originalImage.getHeight();
+        // Генерируем валидный фрактал
+        BufferedImage fractal = generateValidFractal(width, height);
 
-        BufferedImage fractal = mandelbrotService.generateImage(
-                originalWidth, originalHeight,
-                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
-        );
-
-        log.info("Encrypt: attempts={}, params: zoom={}, offsetX={}, offsetY={}, maxIter={}",
-                attempts, params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
-
+        // Применяем XOR
         BufferedImage xored = XOR.performXOR(originalImage, fractal);
-        SegmentationResult segResult = imageSegmentShuffler.segmentAndShuffle(xored);
-        BufferedImage finalImage = segResult.shuffledImage();
 
-        byte[] imageBytes = imageUtils.imageToBytes(finalImage);
-        log.info("encryptWhole: finalImage размер {}x{}, байт = {}, ожидалось {}",
-                finalImage.getWidth(), finalImage.getHeight(),
-                imageBytes.length, finalImage.getWidth() * finalImage.getHeight() * 3);
+        // Перемешиваем сегменты
+        BufferedImage shuffled = imageSegmentShuffler.segmentAndShuffle(xored, segmentationPrng).shuffledImage();
 
-        int fullWidth = finalImage.getWidth();
-        int fullHeight = finalImage.getHeight();
-        int startX = 0;
-        int startY = 0;
-        int areaWidth = fullWidth;
-        int areaHeight = fullHeight;
+        // Сохраняем результат
+        File outFile = saveEncryptedImage(shuffled, width, height, 0, 0, width, height);
 
-        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 * 7 + imageBytes.length);
-        buffer.put(salt);
-        buffer.putInt(attempts);
-        buffer.putInt(startX);
-        buffer.putInt(startY);
-        buffer.putInt(areaWidth);
-        buffer.putInt(areaHeight);
-        buffer.putInt(fullWidth);
-        buffer.putInt(fullHeight);
-        buffer.put(imageBytes);
-
-        log.info("Encrypt: attempts={}", attempts);
-
-        File out = tempFileManager.saveBytesToFile(buffer.array(),
-                "encrypted_whole_" + System.currentTimeMillis() + ".bin");
-        sceneManager.showEncryptFinalPanel(finalImage, out);
+        sceneManager.showEncryptFinalPanel(shuffled, outFile);
     }
 
     /**
@@ -97,49 +143,58 @@ public class ImageEncrypt {
      * @throws Exception если возникает ошибка при шифровании или записи файла
      */
     public void encryptPart(BufferedImage originalImage, Rectangle2D selectedArea) throws Exception {
-        byte[] salt = mandelbrotService.getSessionSalt();
-        int attempts = mandelbrotService.getAttemptCount();
-        MandelbrotParams params = mandelbrotService.getCurrentParams();
+        int origWidth = originalImage.getWidth();
+        int origHeight = originalImage.getHeight();
 
         int sx = (int) selectedArea.getMinX();
         int sy = (int) selectedArea.getMinY();
         int areaWidth = (int) selectedArea.getWidth();
         int areaHeight = (int) selectedArea.getHeight();
 
-        BufferedImage fractal = mandelbrotService.generateImage(
-                areaWidth, areaHeight,
-                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
-        );
+        // Генерируем фрактал размером с выделенную область
+        BufferedImage fractal = generateValidFractal(areaWidth, areaHeight);
 
+        // Извлекаем и шифруем область
         BufferedImage areaImage = originalImage.getSubimage(sx, sy, areaWidth, areaHeight);
         BufferedImage xoredArea = XOR.performXOR(areaImage, fractal);
-        SegmentationResult segResult = imageSegmentShuffler.segmentAndShuffle(xoredArea);
-        BufferedImage shuffledArea = segResult.shuffledImage();
+        BufferedImage shuffledArea = imageSegmentShuffler.segmentAndShuffle(xoredArea, segmentationPrng).shuffledImage();
 
-        BufferedImage finalImage = new BufferedImage(
-                originalImage.getWidth(), originalImage.getHeight(),
-                BufferedImage.TYPE_INT_RGB
-        );
+        // Собираем итоговое изображение
+        BufferedImage finalImage = new BufferedImage(origWidth, origHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = finalImage.createGraphics();
         g.drawImage(originalImage, 0, 0, null);
         g.drawImage(shuffledArea, sx, sy, null);
         g.dispose();
 
-        byte[] imageBytes = imageUtils.imageToBytes(finalImage);
+        // Сохраняем результат
+        File outFile = saveEncryptedImage(finalImage, origWidth, origHeight, sx, sy, areaWidth, areaHeight);
 
-        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 + 4*4 + 4 + 4 + imageBytes.length);
-        buffer.put(salt);
-        buffer.putInt(attempts);
-        buffer.putInt(sx);
-        buffer.putInt(sy);
+        sceneManager.showEncryptFinalPanel(finalImage, outFile);
+    }
+
+    /**
+     * Сохраняет зашифрованное изображение с метаданными
+     */
+    private File saveEncryptedImage(BufferedImage image, int originalWidth, int originalHeight,
+                                    int startX, int startY, int areaWidth, int areaHeight) throws IOException {
+        byte[] imageBytes = imageUtils.imageToBytes(image);
+
+        // Формат: соль(16) + attempts(4) + координаты и размеры(6 int) + данные
+        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 + 24 + imageBytes.length);
+        buffer.put(sessionSalt);
+        buffer.putInt(attemptCount);
+        buffer.putInt(startX);
+        buffer.putInt(startY);
         buffer.putInt(areaWidth);
         buffer.putInt(areaHeight);
-        buffer.putInt(finalImage.getWidth());
-        buffer.putInt(finalImage.getHeight());
+        buffer.putInt(originalWidth);
+        buffer.putInt(originalHeight);
         buffer.put(imageBytes);
 
-        File out = tempFileManager.saveBytesToFile(buffer.array(),
-                "encrypted_partial_" + System.currentTimeMillis() + ".bin");
-        sceneManager.showEncryptFinalPanel(finalImage, out);
+        File outFile = tempFileManager.saveBytesToFile(buffer.array(),
+                "encrypted_" + System.currentTimeMillis() + ".bin");
+        log.info("Зашифрованный файл сохранён: {}, размер данных {} байт",
+                outFile.getName(), imageBytes.length);
+        return outFile;
     }
 }

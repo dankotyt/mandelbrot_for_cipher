@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@Deprecated
 public class ChatHistoryService {
     private final Map<String, List<HBox>> chatHistories = new ConcurrentHashMap<>();
     @Getter

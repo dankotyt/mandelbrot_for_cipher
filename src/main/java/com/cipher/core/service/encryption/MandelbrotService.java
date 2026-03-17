@@ -1,22 +1,20 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.encryption.HKDF;
-import com.cipher.core.encryption.ImageSegmentShuffler;
 import com.cipher.core.threading.MandelbrotThread;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
+import java.security.SecureRandom;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -32,18 +30,12 @@ import org.springframework.stereotype.Component;
 public class MandelbrotService extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
 
-    private final ImageSegmentShuffler imageSegmentShuffler;
-
-    private SecureRandom paramsPrng;
-    @Getter
-    private int attemptCount;
-    @Getter
-    private byte[] sessionSalt;
+    @Getter @Setter
     private int targetWidth;
+    @Getter @Setter
     private int targetHeight;
+
     private BufferedImage image;
-    @Getter
-    private MandelbrotParams currentParams;
 
     /**
      * Переопределяет метод paintComponent для отрисовки сгенерированного изображения множества Мандельброта.
@@ -59,87 +51,16 @@ public class MandelbrotService extends JPanel {
     }
 
     /**
-     * Устанавливает целевой размер изображения для генерации фрактала.
-     * Этот размер будет использоваться при вызове generateImage() без параметров.
-     *
-     * @param width  целевая ширина изображения
-     * @param height целевая высота изображения
-     */
-    public void setTargetSize(int width, int height) {
-        this.targetWidth = width;
-        this.targetHeight = height;
-    }
-
-    /**
-     * Подготавливает сессию для генерации фракталов на основе общего секрета.
-     * Генерирует случайную соль, создаёт ключи для генерации параметров фрактала
-     * и инициализирует генератор псевдослучайных чисел.
-     *
-     * @param sharedSecret общий секрет, полученный в результате DH обмена
-     * @throws Exception если возникает ошибка при инициализации криптографических компонентов
-     */
-    public void prepareSession(byte[] sharedSecret) throws Exception {
-        byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
-        this.sessionSalt = salt;
-
-        byte[] prk = HKDF.extract(salt, sharedSecret);
-        byte[] keyFractalParams = HKDF.expand(prk, "fractal-params".getBytes(StandardCharsets.UTF_8), 32);
-        byte[] keySegmentation = HKDF.expand(prk, "segmentation".getBytes(StandardCharsets.UTF_8), 32);
-
-        this.paramsPrng = SecureRandom.getInstance("SHA1PRNG");
-        this.paramsPrng.setSeed(keyFractalParams);
-
-        imageSegmentShuffler.initialize(keySegmentation);
-
-        this.attemptCount = 0;
-    }
-
-    /**
-     * Генерирует параметры множества Мандельброта с использованием предоставленного
-     * генератора псевдослучайных чисел.
-     * <p>
-     * Параметры включают:
-     * <ul>
-     *   <li>zoom - коэффициент масштабирования от 1000 до 101000</li>
-     *   <li>offsetX - смещение по оси X в диапазоне [-0.9998, 0.45)</li>
-     *   <li>offsetY - смещение по оси Y либо в [-0.7, -0.1], либо в [0.1, 0.7]</li>
-     *   <li>maxIter - максимальное количество итераций (всегда 300)</li>
-     * </ul>
-     *
-     * @param prng генератор псевдослучайных чисел для детерминированной генерации
-     * @return объект MandelbrotParams со сгенерированными параметрами
+     * Генерирует параметры множества Мандельброта.
      */
     public MandelbrotParams generateParams(SecureRandom prng) {
-        double zoom = 10_000 + (prng.nextInt(701) * 140); // можно уменьшить - вырастет скорость
+        double zoom = 10_000 + prng.nextInt(701) * 140;
         double offsetX = -0.9998 + prng.nextDouble() * (0.45 + 0.9998);
-        double offsetY;
-        if (prng.nextBoolean()) {
-            offsetY = -0.7 + prng.nextDouble() * 0.6; // интервал [-0.7, -0.1]
-        } else {
-            offsetY = 0.1 + prng.nextDouble() * 0.6;  // интервал [0.1, 0.7]
-        }
+        double offsetY = prng.nextBoolean()
+                ? -0.7 + prng.nextDouble() * 0.6
+                : 0.1 + prng.nextDouble() * 0.6;
         int maxIter = 250;
         return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
-    }
-
-    /**
-     * Генерирует изображение множества Мандельброта с использованием текущих параметров.
-     * Увеличивает счётчик попыток (attemptCount) и сохраняет сгенерированные параметры
-     * как currentParams.
-     *
-     * @return сгенерированное изображение фрактала
-     * @throws IllegalStateException если сессия не была подготовлена вызовом prepareSession()
-     */
-    public BufferedImage generateImage() {
-        if (paramsPrng == null) {
-            throw new IllegalStateException("Session not prepared. Call prepareSession first.");
-        }
-        MandelbrotParams params = generateParams(paramsPrng);
-        this.currentParams = params;
-        this.attemptCount++;
-        return generateImage(targetWidth, targetHeight,
-                params.zoom(), params.offsetX(), params.offsetY(), params.maxIter());
     }
 
     /**
@@ -148,35 +69,34 @@ public class MandelbrotService extends JPanel {
      * Использует многопоточную обработку для ускорения генерации. Разделяет изображение
      * на вертикальные полосы по количеству доступных процессоров.
      *
-     * @param startMandelbrotWidth ширина генерируемого изображения
-     * @param startMandelbrotHeight высота генерируемого изображения
+     * @param width ширина генерируемого изображения
+     * @param height высота генерируемого изображения
      * @param ZOOM коэффициент масштабирования
      * @param offsetX смещение по оси X
      * @param offsetY смещение по оси Y
      * @param MAX_ITER максимальное количество итераций для алгоритма
      * @return сгенерированное изображение
      */
-    public BufferedImage generateImage(int startMandelbrotWidth, int startMandelbrotHeight,
+    public BufferedImage generateImage(int width, int height,
                                        double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
 
-        image = new BufferedImage(startMandelbrotWidth, startMandelbrotHeight, BufferedImage.TYPE_INT_RGB);
+        BufferedImage resultImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
             int processors = Runtime.getRuntime().availableProcessors();
-            int chunkWidth = startMandelbrotWidth / processors;
+            int chunkWidth = width / processors;
 
             List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < processors; i++) {
                 int startX = i * chunkWidth;
-                int width = (i == processors - 1) ? startMandelbrotWidth - startX : chunkWidth;
+                int w = (i == processors - 1) ? width - startX : chunkWidth;
 
                 futures.add(executor.submit(new MandelbrotThread(
-                        startX, 0, width, startMandelbrotHeight,
-                        ZOOM, MAX_ITER, offsetX, offsetY, image
+                        startX, 0, w, height,
+                        ZOOM, MAX_ITER, offsetX, offsetY, resultImage
                 )));
             }
 
-            // Ожидаем завершения всех задач
             for (Future<?> future : futures) {
                 future.get();
             }
@@ -189,8 +109,9 @@ public class MandelbrotService extends JPanel {
             throw new RuntimeException("Ошибка генерации фрактала", e);
         }
 
+        this.image = resultImage;
         repaint();
-        return image;
+        return resultImage;
     }
 
     /**
