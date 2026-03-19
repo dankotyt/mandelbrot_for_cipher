@@ -68,18 +68,16 @@ public class DevicesController implements ConnectionService.ConnectionListener {
         try {
             logger.info("Инициализация DevicesController");
 
-            // СТАНОВИМСЯ ВИДИМЫМИ В СЕТИ
-            networkVisibilityService.becomeVisible();
-
             currentDevice = networkService.getCurrentDevice();
             currentDeviceLabel.setText("Ваше устройство: " + currentDevice);
 
             setupEventHandlers();
-            connectionService.addListener(this);
 
+            connectionService.addListener(this);
             subscribeToDeviceEvents();
 
-            // Первоначальная загрузка устройств
+            networkVisibilityService.becomeVisible();
+
             refreshDevices();
 
             logger.info("DevicesController инициализирован успешно");
