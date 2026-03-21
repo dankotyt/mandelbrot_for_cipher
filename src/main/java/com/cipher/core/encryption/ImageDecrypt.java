@@ -83,10 +83,7 @@ public class ImageDecrypt {
         SecureRandom paramsPrng = SecureRandom.getInstance("SHA1PRNG");
         paramsPrng.setSeed(keyFractalParams);
         MandelbrotParams params = null;
-        for (int i = 0; i < attempts; i++) {
-            params = mandelbrotService.generateParams(paramsPrng);
-        }
-        if (params == null) { // attempts == 0
+        for (int i = 0; i < Math.max(1, attempts); i++) {
             params = mandelbrotService.generateParams(paramsPrng);
         }
         log.info("Decrypt: attempts={}, params: zoom={}, offsetX={}, offsetY={}, maxIter={}",
