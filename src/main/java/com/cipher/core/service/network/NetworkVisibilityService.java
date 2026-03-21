@@ -83,11 +83,6 @@ public class NetworkVisibilityService {
     @PreDestroy
     public void shutdown() {
         becomeInvisible();
-        try {
-            discoveryClient.stop();
-        } catch (Exception e) {
-            log.warn("Ошибка остановки клиента: {}", e.getMessage());
-        }
         log.info("NetworkVisibilityService остановлен");
     }
 }
