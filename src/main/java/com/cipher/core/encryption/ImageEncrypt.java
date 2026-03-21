@@ -31,8 +31,7 @@ public class ImageEncrypt {
     private SecureRandom paramsPrng;
     private SecureRandom segmentationPrng;
     private int attemptCount;
-
-    private static final int MAX_FRACTAL_ATTEMPTS = 50;
+    private BufferedImage fractal;
 
     /**
      * Подготавливает сессию шифрования на основе общего секрета.
@@ -63,6 +62,7 @@ public class ImageEncrypt {
 
         // 5. Сбрасываем счётчик попыток
         this.attemptCount = 0;
+        this.fractal = null;
 
         log.info("Сессия подготовлена, сгенерирована новая соль");
     }
@@ -76,30 +76,12 @@ public class ImageEncrypt {
         MandelbrotParams params = mandelbrotService.generateParams(paramsPrng);
         log.debug("Генерация фрактала: попытка {}, params={}", attemptCount, params);
 
-        return mandelbrotService.generateImage(
+        fractal = mandelbrotService.generateImage(
                 width, height,
                 params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
         );
-    }
 
-    /**
-     * Генерирует валидный фрактал с повторными попытками.
-     */
-    private BufferedImage generateValidFractal(int width, int height) {
-        BufferedImage lastFractal = null;
-
-        for (int attempt = 1; attempt <= MAX_FRACTAL_ATTEMPTS; attempt++) {
-            BufferedImage fractal = generateNextFractal(width, height);
-            if (mandelbrotService.isFractalValid(fractal)) {
-                log.info("Валидный фрактал получен с попытки {}", attempt);
-                return fractal;
-            } else {
-                lastFractal = fractal;
-            }
-        }
-
-        log.warn("Используется последний фрактал после {} попыток", MAX_FRACTAL_ATTEMPTS);
-        return lastFractal;
+        return fractal;
     }
 
     /**
@@ -119,8 +101,10 @@ public class ImageEncrypt {
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
 
-        // Генерируем валидный фрактал
-        BufferedImage fractal = generateValidFractal(width, height);
+        if (fractal == null || fractal.getWidth() != width || fractal.getHeight() != height) {
+            log.warn("Фрактал отсутствует или не соответствует размеру, генерируем заново");
+            generateNextFractal(width, height);
+        }
 
         // Применяем XOR
         BufferedImage xored = XOR.performXOR(originalImage, fractal);
@@ -151,8 +135,10 @@ public class ImageEncrypt {
         int areaWidth = (int) selectedArea.getWidth();
         int areaHeight = (int) selectedArea.getHeight();
 
-        // Генерируем фрактал размером с выделенную область
-        BufferedImage fractal = generateValidFractal(areaWidth, areaHeight);
+        if (fractal == null || fractal.getWidth() != areaWidth || fractal.getHeight() != areaHeight) {
+            log.warn("Фрактал отсутствует или не соответствует размеру области, генерируем заново");
+            generateNextFractal(areaWidth, areaHeight);
+        }
 
         // Извлекаем и шифруем область
         BufferedImage areaImage = originalImage.getSubimage(sx, sy, areaWidth, areaHeight);
