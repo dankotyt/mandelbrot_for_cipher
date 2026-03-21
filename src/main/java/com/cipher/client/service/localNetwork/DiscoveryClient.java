@@ -61,7 +61,14 @@ public class DiscoveryClient implements Runnable {
                         }
                     }
                     else if (messageType == NetworkConstants.MSG_GOODBYE) {
-                        handleGoodbyeMessage(senderAddress);
+                        if (discoveredPeers.remove(senderAddress)) {
+                            log.info("👋 Пир покинул сеть: {}", senderAddress.getHostAddress());
+
+                            discoveryService.onPeerDisconnected(senderAddress);
+
+                            DeviceLostEvent event = new DeviceLostEvent(this, senderAddress);
+                            deviceEventListener.handleDeviceLost(event);
+                        }
                     }
 
                 } catch (SocketTimeoutException e) {
@@ -136,17 +143,6 @@ public class DiscoveryClient implements Runnable {
                 log.warn("Ошибка отправки discovery request: {}", e.getMessage());
             }
         }, "Discovery-Request").start();
-    }
-
-    private void handleGoodbyeMessage(InetAddress senderAddress) {
-        if (discoveredPeers.remove(senderAddress)) {
-            log.info("👋 Пир покинул сеть: {}", senderAddress.getHostAddress());
-
-            discoveryService.onPeerDisconnected(senderAddress);
-
-            DeviceLostEvent event = new DeviceLostEvent(this, senderAddress);
-            deviceEventListener.handleDeviceLost(event);
-        }
     }
 
     private boolean isOwnAddress(InetAddress address) {
