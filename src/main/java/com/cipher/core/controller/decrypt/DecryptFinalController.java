@@ -1,6 +1,6 @@
 package com.cipher.core.controller.decrypt;
 
-import com.cipher.core.encryption.ImageDecrypt;
+import com.cipher.core.service.encryption.ImageDecrypt;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -11,7 +11,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

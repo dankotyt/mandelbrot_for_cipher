@@ -1,6 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.encryption.ImageEncrypt;
+import com.cipher.core.service.encryption.ImageEncrypt;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

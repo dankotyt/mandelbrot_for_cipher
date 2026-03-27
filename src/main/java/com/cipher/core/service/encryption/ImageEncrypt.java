@@ -1,4 +1,4 @@
-package com.cipher.core.encryption;
+package com.cipher.core.service.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -10,7 +10,6 @@ import java.security.SecureRandom;
 
 import com.cipher.core.dto.*;
 import com.cipher.core.utils.*;
-import com.cipher.core.service.encryption.MandelbrotService;
 import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

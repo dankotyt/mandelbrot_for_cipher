@@ -1,4 +1,4 @@
-package com.cipher.core.encryption;
+package com.cipher.core.service.encryption;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;

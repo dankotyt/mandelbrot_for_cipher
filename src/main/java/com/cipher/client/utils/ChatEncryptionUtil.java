@@ -2,7 +2,7 @@ package com.cipher.client.utils;
 
 import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.core.service.network.CryptoKeyManager;
-import com.cipher.core.encryption.HKDF;
+import com.cipher.core.service.encryption.HKDF;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

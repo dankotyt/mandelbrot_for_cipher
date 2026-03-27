@@ -1,4 +1,4 @@
-package com.cipher.core.encryption;
+package com.cipher.core.service.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -11,7 +11,6 @@ import java.security.SecureRandom;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.network.CryptoKeyManager;
-import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.TempFileManager;
 import lombok.RequiredArgsConstructor;

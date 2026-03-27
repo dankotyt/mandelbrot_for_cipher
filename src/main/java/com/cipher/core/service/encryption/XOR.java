@@ -1,4 +1,4 @@
-package com.cipher.core.encryption;
+package com.cipher.core.service.encryption;
 
 import org.springframework.stereotype.Component;
 
