@@ -1522,7 +1522,6 @@
     -fx-alignment: center;
     -fx-min-width: 720px;
     -fx-min-height: 540px;
-    -fx-background-color: #373737;
 }
 
 .decrypt-final-loading-label {

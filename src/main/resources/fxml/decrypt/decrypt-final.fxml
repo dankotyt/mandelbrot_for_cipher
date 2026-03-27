@@ -8,6 +8,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Region?>
 
+<?import javafx.scene.image.ImageView?>
 <BorderPane xmlns="http://javafx.com/javafx/11.0.1"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.cipher.core.controller.decrypt.DecryptFinalController"
@@ -33,8 +34,8 @@
         <VBox alignment="TOP_CENTER" spacing="10" styleClass="decrypt-final-content">
             <Region styleClass="space-below-title"/>
 
-            <StackPane fx:id="imageContainer" styleClass="decrypt-final-image-container">
-                <Label text="Расшифровка изображения..." styleClass="decrypt-final-loading-label"/>
+            <StackPane>                <Label text="Расшифровка изображения..." styleClass="decrypt-final-loading-label"/>
+                <ImageView fx:id="imageContainer" fitWidth="720" fitHeight="540"/>
             </StackPane>
             <Region prefHeight="25"/>
             <HBox styleClass="decrypt-final-save-container">

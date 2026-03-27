@@ -34,17 +34,17 @@
     <center>
         <VBox alignment="TOP_CENTER" spacing="10" styleClass="encrypt-final-content">
             <Region styleClass="space-below-title"/>
-
-            <StackPane styleClass="encrypt-final-image-container">
-                <ImageView fx:id="imageView" preserveRatio="true"
-                           fitWidth="720" fitHeight="540"/>
-            </StackPane>
+            <ImageView fx:id="imageView" preserveRatio="true"
+                       fitWidth="720" fitHeight="540"/>
         </VBox>
     </center>
 
     <bottom>
-        <HBox alignment="CENTER" style="-fx-padding: 0 0 30 0;">
-            <Button fx:id="sendToChatButton" text="Отправить в чат" />
+        <HBox alignment="CENTER">
+            <Button fx:id="sendToChatButton"
+                    styleClass="action-button" prefWidth="380" prefHeight="68"
+                    text="Отправить в чат"/>
+            <Region styleClass="space-below-title"/>
         </HBox>
     </bottom>
 </BorderPane>

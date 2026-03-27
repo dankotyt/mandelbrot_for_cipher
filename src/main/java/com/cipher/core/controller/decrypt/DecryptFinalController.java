@@ -28,7 +28,7 @@ import java.net.InetAddress;
 public class DecryptFinalController {
     private final static Logger logger = LoggerFactory.getLogger(DecryptFinalController.class);
 
-    @FXML private StackPane imageContainer;
+    @FXML private ImageView imageContainer;
     @FXML private Button saveButton;
     @FXML private Button backButton;
 
@@ -129,8 +129,7 @@ public class DecryptFinalController {
             if (decryptedImage != null) {
                 ImageView imageView = new ImageView(decryptedImage);
 
-                imageContainer.getChildren().clear();
-                imageContainer.getChildren().add(imageView);
+                imageContainer.setImage(imageView.getImage());
             }
         } catch (Exception e) {
             logger.error("Ошибка отображения расшифрованного изображения", e);
