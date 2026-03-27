@@ -59,7 +59,7 @@ public class MandelbrotService extends JPanel {
         double offsetY = prng.nextBoolean()
                 ? -0.7 + prng.nextDouble() * 0.6
                 : 0.1 + prng.nextDouble() * 0.6;
-        int maxIter = 250;
+        int maxIter = 250 + prng.nextInt(101) * 10;
         return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
     }
 
