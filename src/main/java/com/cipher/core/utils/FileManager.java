@@ -16,8 +16,8 @@ import java.nio.file.Files;
 
 @Component
 @RequiredArgsConstructor
-public class TempFileManager {
-    private static final Logger logger = LoggerFactory.getLogger(TempFileManager.class);
+public class FileManager {
+    private static final Logger logger = LoggerFactory.getLogger(FileManager.class);
 
     private final DialogDisplayer displayer;
     private final SceneManager sceneManager;

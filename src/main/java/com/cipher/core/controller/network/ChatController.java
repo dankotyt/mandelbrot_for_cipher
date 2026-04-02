@@ -6,7 +6,7 @@ import com.cipher.common.dto.chat.ChatMessageDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -61,7 +61,7 @@ public class ChatController implements ChatService.ChatListener {
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
     private final ChatService chatService;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final ChatHistoryService chatHistoryService;
 
     private boolean isInitialized = false;
@@ -636,7 +636,7 @@ public class ChatController implements ChatService.ChatListener {
     private void handleSingleClick(byte[] fileData, String fileName) {
         if (fileName.endsWith(".bin")) {
             try {
-                File tempFile = new File(tempFileManager.getTempPath() + fileName);
+                File tempFile = new File(fileManager.getTempPath() + fileName);
                 Files.write(tempFile.toPath(), fileData);
                 sceneManager.showDecryptBeginPanel();
                 logger.info("Открыт экран дешифрования для файла: {}", fileName);

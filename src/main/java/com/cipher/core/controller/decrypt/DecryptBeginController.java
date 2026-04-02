@@ -2,7 +2,7 @@ package com.cipher.core.controller.decrypt;
 
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class DecryptBeginController {
     @FXML private Button backButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final DialogDisplayer dialogDisplayer;
 
     @FXML
@@ -43,7 +43,7 @@ public class DecryptBeginController {
         uploadButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Выбрать файл'");
-                var selectedFile = tempFileManager.selectEncryptedFileForDecrypt();
+                var selectedFile = fileManager.selectEncryptedFileForDecrypt();
                 if (selectedFile != null) {
                     sceneManager.showDecryptFinalPanel(selectedFile.getAbsolutePath());
                 }

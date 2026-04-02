@@ -2,7 +2,7 @@ package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
-
-import java.io.File;
 
 @Controller
 @Scope("prototype")
@@ -24,7 +22,7 @@ public class EncryptBeginController {
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
 
     @FXML
     public void initialize() {
@@ -63,7 +61,7 @@ public class EncryptBeginController {
         uploadButton.setOnAction(e -> {
             try {
                 logger.debug("Нажата кнопка 'Выбрать изображение'");
-                tempFileManager.selectImageForEncrypt();
+                fileManager.selectImageForEncrypt();
                 sceneManager.showEncryptLoadPanel();
             } catch (Exception ex) {
                 logger.error("Ошибка при выборе файла: {}", ex.getMessage(), ex);

@@ -12,7 +12,7 @@ import java.security.SecureRandom;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.ImageUtils;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ public class ImageDecrypt {
     private final MandelbrotService mandelbrotService;
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final ImageUtils imageUtils;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final CryptoKeyManager cryptoKeyManager;
 
     /**
@@ -115,7 +115,7 @@ public class ImageDecrypt {
         g.drawImage(decryptedArea, startX, startY, null);
         g.dispose();
 
-        tempFileManager.saveBufferedImageToTemp(result, "decrypted_image.png");
+        fileManager.saveBufferedImageToTemp(result, "decrypted_image.png");
         return result;
     }
 }

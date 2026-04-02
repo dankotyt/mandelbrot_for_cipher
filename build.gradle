@@ -30,7 +30,6 @@ repositories {
     maven { url 'https://repo.spring.io/milestone' }
 }
 
-// Настройка JavaFX для работы в IDE и JAR
 javafx {
     version = "21.0.8"
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing']
@@ -69,13 +68,32 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
 
     annotationProcessor 'org.projectlombok:lombok'
-    //========================
+    //===Тесты=====================
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+
+    // Mockito для моков
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+
+    // Для работы с временными файлами в тестах
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
 
     //===БД===================
     implementation 'org.postgresql:postgresql'
 
     runtimeOnly 'org.postgresql:postgresql'
     //=======================
+}
+
+test {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
 
 configurations {

@@ -2,7 +2,7 @@ package com.cipher.core.controller.encrypt;
 
 import com.cipher.client.service.chat.ChatService;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 import com.cipher.core.utils.DialogDisplayer;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
@@ -17,11 +17,8 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
-import javax.imageio.ImageIO;
 
 @Controller
 @Scope("singleton")
@@ -34,7 +31,7 @@ public class EncryptFinalController {
     @FXML private Button backButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final ChatService chatService;
     private final DialogDisplayer dialogDisplayer;
 
@@ -94,7 +91,7 @@ public class EncryptFinalController {
                 dialogDisplayer.showSuccessDialog(
                         "Зашифрованное изображение отправлено в чат!");
 
-                tempFileManager.cleanupTemp();
+                fileManager.cleanupTemp();
             } catch (Exception e) {
                 logger.error("Ошибка отправки в чат", e);
                 dialogDisplayer.showErrorDialog(

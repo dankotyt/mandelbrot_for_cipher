@@ -4,7 +4,7 @@ import com.cipher.core.service.encryption.ImageDecrypt;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
-import com.cipher.core.utils.TempFileManager;
+import com.cipher.core.utils.FileManager;
 
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -32,7 +32,7 @@ public class DecryptFinalController {
     @FXML private Button backButton;
 
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final DialogDisplayer dialogDisplayer;
     private final ImageDecrypt imageDecrypt;
     private final CryptoKeyManager cryptoKeyManager;
@@ -69,9 +69,9 @@ public class DecryptFinalController {
     private void setupEventHandlers() {
         backButton.setOnAction(e -> sceneManager.showDecryptBeginPanel());
         saveButton.setOnAction(e -> {
-            BufferedImage decryptedImage = tempFileManager.loadBufferedImageFromTemp("decrypted_image.png");
+            BufferedImage decryptedImage = fileManager.loadBufferedImageFromTemp("decrypted_image.png");
             if (decryptedImage != null) {
-                tempFileManager.saveDecryptedImage(decryptedImage);
+                fileManager.saveDecryptedImage(decryptedImage);
             } else {
                 dialogDisplayer.showErrorDialog("Нет расшифрованного изображения для сохранения");
             }
@@ -124,7 +124,7 @@ public class DecryptFinalController {
 
     private void displayDecryptedImage() {
         try {
-            Image decryptedImage = tempFileManager.loadImageFromTemp("decrypted_image.png");
+            Image decryptedImage = fileManager.loadImageFromTemp("decrypted_image.png");
             if (decryptedImage != null) {
                 ImageView imageView = new ImageView(decryptedImage);
 

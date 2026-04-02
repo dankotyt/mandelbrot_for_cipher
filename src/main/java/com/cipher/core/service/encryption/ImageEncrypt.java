@@ -23,7 +23,7 @@ public class ImageEncrypt {
     private final MandelbrotService mandelbrotService;
     private final ImageSegmentShuffler imageSegmentShuffler;
     private final SceneManager sceneManager;
-    private final TempFileManager tempFileManager;
+    private final FileManager fileManager;
     private final ImageUtils imageUtils;
 
     private byte[] sessionSalt;
@@ -176,7 +176,7 @@ public class ImageEncrypt {
         buffer.putInt(originalHeight);
         buffer.put(imageBytes);
 
-        File outFile = tempFileManager.saveBytesToFile(buffer.array(),
+        File outFile = fileManager.saveBytesToFile(buffer.array(),
                 "encrypted_" + System.currentTimeMillis() + ".bin");
         log.info("Зашифрованный файл сохранён: {}, размер данных {} байт",
                 outFile.getName(), imageBytes.length);
