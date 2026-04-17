@@ -9,10 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
 import com.cipher.core.dto.*;
-import com.cipher.core.service.encryption.HKDF;
-import com.cipher.core.service.encryption.ImageEncryptor;
-import com.cipher.core.service.encryption.SegmentShuffler;
-import com.cipher.core.service.encryption.XOR;
+import com.cipher.core.service.encryption.*;
+import com.cipher.core.service.encryption.util.HKDF;
+import com.cipher.core.service.encryption.util.XOR;
 import com.cipher.core.utils.*;
 import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;

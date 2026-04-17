@@ -1,7 +1,7 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.service.encryption.impl.MandelbrotService;
+import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;

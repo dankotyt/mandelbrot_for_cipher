@@ -1,7 +1,7 @@
 package com.cipher.core.controller.encrypt;
 
 import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
-import com.cipher.core.service.encryption.impl.MandelbrotService;
+import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.*;
 import javafx.concurrent.Task;

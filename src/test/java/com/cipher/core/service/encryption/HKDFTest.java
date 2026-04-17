@@ -1,5 +1,6 @@
 package com.cipher.core.service.encryption;
 
+import com.cipher.core.service.encryption.util.HKDF;
 import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.*;

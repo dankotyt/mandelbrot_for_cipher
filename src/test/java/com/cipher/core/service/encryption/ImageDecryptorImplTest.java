@@ -3,7 +3,6 @@ package com.cipher.core.service.encryption;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.encryption.impl.ImageDecryptorImpl;
 import com.cipher.core.service.encryption.impl.ImageSegmentShufflerImpl;
-import com.cipher.core.service.encryption.impl.MandelbrotService;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.FileManager;
 import com.cipher.core.utils.ImageUtils;

@@ -10,9 +10,10 @@ import java.nio.file.Files;
 import java.security.SecureRandom;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.service.encryption.HKDF;
+import com.cipher.core.service.encryption.util.HKDF;
 import com.cipher.core.service.encryption.ImageDecryptor;
-import com.cipher.core.service.encryption.XOR;
+import com.cipher.core.service.encryption.MandelbrotService;
+import com.cipher.core.service.encryption.util.XOR;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.FileManager;

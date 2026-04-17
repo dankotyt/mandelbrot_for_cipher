@@ -1,5 +1,6 @@
 package com.cipher.core.service.encryption;
 
+import com.cipher.core.service.encryption.util.XOR;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.awt.image.BufferedImage;

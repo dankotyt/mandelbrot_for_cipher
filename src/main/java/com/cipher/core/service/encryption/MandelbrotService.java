@@ -1,4 +1,4 @@
-package com.cipher.core.service.encryption.impl;
+package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.threading.MandelbrotThread;
