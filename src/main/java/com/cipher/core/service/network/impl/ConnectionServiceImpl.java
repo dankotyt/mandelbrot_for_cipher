@@ -7,6 +7,7 @@ import com.cipher.core.dto.connection.ConnectionRequestDTO;
 import com.cipher.core.dto.DeviceDTO;
 import com.cipher.core.model.ECDHKeyPair;
 import com.cipher.core.model.SignedConnectionPacket;
+import com.cipher.core.service.encryption.ECDHService;
 import com.cipher.core.service.network.ConnectionService;
 import com.cipher.core.service.network.DigitalSignatureService;
 import com.cipher.core.service.network.CryptoKeyManager;
@@ -47,6 +48,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final DigitalSignatureService signatureService;
     private final SceneManager sceneManager;
     private final ChatService chatService;
+    private final ECDHService ecdhService;
 
     private ServerSocket appServerSocket;
     private ServerSocket cryptoServerSocket;
@@ -267,7 +269,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                 SignedConnectionPacket packet = SignedConnectionPacket.createRequest(
                         currentDeviceIp,
                         networkService.getCurrentDevice().name(),
-                        currentKeys.getPublicKeyBytes(),
+                        ecdhService.serializePublicKey(currentKeys),
                         signatureService.publicKeyToBytes(signatureService.getSignatureKeyPair().getPublic())
                 );
 
@@ -296,7 +298,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                     );
                     rejectConnection(requestDTO);
                 }
-                currentKeys.computeSharedSecret(response.getDhPublicKey());
+                ecdhService.computeSharedSecret(currentKeys, response.getDhPublicKey());
 
                 // 7. Сохраняем соединение
                 cryptoKeyManager.addConnection(response.getSenderAddress(), currentKeys);
@@ -359,7 +361,7 @@ public class ConnectionServiceImpl implements ConnectionService {
 
                 ECDHKeyPair currentKeys = cryptoKeyManager.getCurrentKeys();
 
-                currentKeys.computeSharedSecret(packet.getDhPublicKey());
+                ecdhService.computeSharedSecret(currentKeys, packet.getDhPublicKey());
 
                 InetAddress currentDeviceIp = InetAddress.getByName(networkService.getCurrentDevice().ip());
 
@@ -368,7 +370,7 @@ public class ConnectionServiceImpl implements ConnectionService {
                         currentDeviceIp,
                         true,
                         "Crypto exchange successful",
-                        currentKeys.getPublicKeyBytes(),
+                        ecdhService.serializePublicKey(currentKeys),
                         signatureService.publicKeyToBytes(signatureService.getSignatureKeyPair().getPublic()),
                         0
                 );

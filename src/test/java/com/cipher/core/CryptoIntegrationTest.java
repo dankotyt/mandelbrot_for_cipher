@@ -2,6 +2,7 @@ package com.cipher.core;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.encryption.*;
+import com.cipher.core.service.encryption.impl.ECDHServiceImpl;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.service.network.impl.ECDHCryptoKeyManagerImpl;
 import com.cipher.core.utils.FileManager;
@@ -35,6 +36,7 @@ class CryptoIntegrationTest {
     private CryptoKeyManager aliceKeyManager;
     private CryptoKeyManager bobKeyManager;
     private InetAddress bobAddress;
+    private ECDHService ecdhService;
 
     // Заглушки UI (минимальные, без моков)
     private static class NoOpSceneManager extends com.cipher.core.utils.SceneManager {
@@ -61,13 +63,26 @@ class CryptoIntegrationTest {
         mandelbrotService = new MandelbrotService();
         shuffler = new ImageSegmentShuffler();
 
-        aliceKeyManager = new ECDHCryptoKeyManagerImpl();
-        bobKeyManager = new ECDHCryptoKeyManagerImpl();
+        // Создаём ECDH сервис
+        ecdhService = new ECDHServiceImpl();
 
+        // Инициализируем менеджеры ключей с внедрённым сервисом
+        aliceKeyManager = new ECDHCryptoKeyManagerImpl(ecdhService);
+        bobKeyManager = new ECDHCryptoKeyManagerImpl(ecdhService);
+
+        // Явно вызываем init() для запуска серверов инвалидации (заменяет @PostConstruct)
+        ((ECDHCryptoKeyManagerImpl) aliceKeyManager).init();
+        ((ECDHCryptoKeyManagerImpl) bobKeyManager).init();
+
+        // Получаем ключевые пары
         var aliceKeys = aliceKeyManager.getCurrentKeys();
         var bobKeys = bobKeyManager.getCurrentKeys();
-        aliceKeys.computeSharedSecret(bobKeys.getPublicKeyBytes());
-        bobKeys.computeSharedSecret(aliceKeys.getPublicKeyBytes());
+
+        // Выполняем обмен секретом через ECDHService
+        ecdhService.computeSharedSecret(aliceKeys, ecdhService.serializePublicKey(bobKeys));
+        ecdhService.computeSharedSecret(bobKeys, ecdhService.serializePublicKey(aliceKeys));
+
+        // Регистрируем соединения в менеджерах
         aliceKeyManager.addConnection(bobAddress, bobKeys);
         bobKeyManager.addConnection(aliceAddress, aliceKeys);
         aliceKeyManager.setConnectedPeer(bobAddress);
@@ -93,7 +108,7 @@ class CryptoIntegrationTest {
         }
     }
 
-    // ==================== ИНТЕГРАЦИОННЫЕ ТЕСТЫ (адаптированы под текущий код) ====================
+    // ==================== ИНТЕГРАЦИОННЫЕ ТЕСТЫ ====================
 
     @Test
     @DisplayName("ИТ-1: generateNextFractal возвращает фрактал и сохраняет его в поле")
@@ -120,15 +135,17 @@ class CryptoIntegrationTest {
     }
 
     @Test
-    @DisplayName("ИТ-2: encryptWhole успешно шифрует изображение (без проверки валидности фрактала)")
+    @DisplayName("ИТ-2: encryptWhole успешно шифрует изображение (автогенерация фрактала)")
     void testEncryptWholeCompletesSuccessfully() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
         ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage image = createTestImage(200, 200);
+        encrypt.generateNextFractal(image.getWidth(), image.getHeight());
+
         assertDoesNotThrow(() -> encrypt.encryptWhole(image),
-                "encryptWhole должен завершаться без исключений даже если фрактал невалиден");
+                "encryptWhole должен завершаться без исключений");
     }
 
     @Test
@@ -140,12 +157,15 @@ class CryptoIntegrationTest {
         encrypt.prepareSession(aliceSecret);
 
         BufferedImage original = createTestImage(300, 300);
+        // Генерируем фрактал, совпадающий по размеру с изображением
+        encrypt.generateNextFractal(original.getWidth(), original.getHeight());
         encrypt.encryptWhole(original);
 
         File encryptedFile = Files.list(tempDir)
                 .filter(p -> p.toString().endsWith(".bin"))
                 .findFirst()
-                .orElseThrow().toFile();
+                .orElseThrow(() -> new AssertionError("Encrypted file not found"))
+                .toFile();
 
         ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
@@ -163,12 +183,15 @@ class CryptoIntegrationTest {
         BufferedImage original = createTestImage(400, 300);
         javafx.geometry.Rectangle2D area = new javafx.geometry.Rectangle2D(50, 60, 200, 150);
 
+        // Для частичного шифрования также необходим фрактал
+        encrypt.generateNextFractal(original.getWidth(), original.getHeight());
         encrypt.encryptPart(original, area);
 
         File encryptedFile = Files.list(tempDir)
                 .filter(p -> p.toString().endsWith(".bin"))
                 .findFirst()
-                .orElseThrow().toFile();
+                .orElseThrow(() -> new AssertionError("Encrypted file not found"))
+                .toFile();
 
         ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
@@ -187,12 +210,14 @@ class CryptoIntegrationTest {
             encrypt.prepareSession(secret);
 
             BufferedImage original = createTestImage(size[0], size[1]);
+            encrypt.generateNextFractal(original.getWidth(), original.getHeight());
             encrypt.encryptWhole(original);
 
             File encryptedFile = Files.list(tempDir)
                     .filter(p -> p.toString().endsWith(".bin"))
                     .findFirst()
-                    .orElseThrow().toFile();
+                    .orElseThrow(() -> new AssertionError("Encrypted file not found for size " + size[0] + "x" + size[1]))
+                    .toFile();
 
             ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
             BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
@@ -209,7 +234,7 @@ class CryptoIntegrationTest {
     void testDecryptCorruptedFile() throws Exception {
         // Создаём заведомо битый файл (недостаточной длины)
         byte[] corrupted = new byte[100];
-        new java.security.SecureRandom().nextBytes(corrupted);
+        new SecureRandom().nextBytes(corrupted);
         File badFile = tempDir.resolve("corrupted.bin").toFile();
         Files.write(badFile.toPath(), corrupted);
 

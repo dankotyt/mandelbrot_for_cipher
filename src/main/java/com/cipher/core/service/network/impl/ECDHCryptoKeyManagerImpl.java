@@ -4,6 +4,7 @@ import com.cipher.client.utils.NetworkConstants;
 import com.cipher.core.model.ConnectionStatus;
 import com.cipher.core.model.ECDHKeyPair;
 import com.cipher.core.model.PeerInfo;
+import com.cipher.core.service.encryption.ECDHService;
 import com.cipher.core.service.network.CryptoKeyManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(ECDHCryptoKeyManagerImpl.class);
 
+    private final ECDHService ecdhService;
     private final AtomicReference<ECDHKeyPair> currentKeyExchange = new AtomicReference<>();
     private final Map<InetAddress, PeerInfo> activeConnections = new ConcurrentHashMap<>();
     private final Map<InetAddress, Boolean> connectionInProgress = new ConcurrentHashMap<>();
@@ -33,7 +35,8 @@ public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
     private final ExecutorService connectionPool = Executors.newCachedThreadPool();
     private volatile InetAddress currentPeer;
 
-    public ECDHCryptoKeyManagerImpl() {
+    public ECDHCryptoKeyManagerImpl(ECDHService ecdhService) {
+        this.ecdhService = ecdhService;
         generateNewKeys();
     }
 
@@ -204,7 +207,7 @@ public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
 
     @Override
     public void generateNewKeys() {
-        ECDHKeyPair newKeys = new ECDHKeyPair();
+        ECDHKeyPair newKeys = ecdhService.generateKeyPair();
         currentKeyExchange.set(newKeys);
         log.info("Generated new ECDH keys");
 
@@ -313,7 +316,7 @@ public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
     @Override
     public void sendKeyInvalidation(InetAddress peerAddress) {
         CompletableFuture.runAsync(() -> {
-            log.info("📤 Отправка инвалидации ключей для: {}", peerAddress.getHostAddress());
+            log.info("Отправка инвалидации ключей для: {}", peerAddress.getHostAddress());
 
             try (Socket socket = new Socket()) {
                 socket.connect(new InetSocketAddress(peerAddress, NetworkConstants.KEY_INVALIDATION_PORT), 5000);
@@ -322,10 +325,10 @@ public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
                 try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
                     out.writeByte(NetworkConstants.MSG_KEY_INVALIDATION);
                     out.flush();
-                    log.info("✅ Инвалидация ключей отправлена для: {}", peerAddress.getHostAddress());
+                    log.info("Инвалидация ключей отправлена для: {}", peerAddress.getHostAddress());
                 }
             } catch (IOException e) {
-                log.warn("⚠️ Не удалось отправить инвалидацию ключей для {}: {}",
+                log.warn("Не удалось отправить инвалидацию ключей для {}: {}",
                         peerAddress.getHostAddress(), e.getMessage());
             }
         }, connectionPool);
