@@ -1,4 +1,4 @@
-package com.cipher.core.service.encryption;
+package com.cipher.core.service.encryption.impl;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -9,6 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
 import com.cipher.core.dto.*;
+import com.cipher.core.service.encryption.HKDF;
+import com.cipher.core.service.encryption.ImageEncryptor;
+import com.cipher.core.service.encryption.XOR;
 import com.cipher.core.utils.*;
 import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ImageEncrypt {
+public class ImageEncryptorImpl implements ImageEncryptor {
 
     private final MandelbrotService mandelbrotService;
     private final ImageSegmentShuffler imageSegmentShuffler;
@@ -39,30 +42,26 @@ public class ImageEncrypt {
      * @param sharedSecret общий секрет от DH
      * @throws Exception если ошибка инициализации
      */
+    @Override
     public void prepareSession(byte[] sharedSecret) throws Exception {
         if (sharedSecret == null) {
             throw new IllegalArgumentException("Shared secret cannot be null");
         }
-        // 1. Генерируем соль криптостойким генератором
         byte[] salt = new byte[16];
         SecureRandom secureRandom = new SecureRandom();
         secureRandom.nextBytes(salt);
         this.sessionSalt = salt.clone();
 
-        // 2. HKDF выработка ключей
         byte[] prk = HKDF.extract(salt, sharedSecret);
         byte[] keyFractalParams = HKDF.expand(prk, "fractal-params".getBytes(StandardCharsets.UTF_8), 32);
         byte[] keySegmentation = HKDF.expand(prk, "segmentation".getBytes(StandardCharsets.UTF_8), 32);
 
-        // 3. Инициализируем PRNG для параметров фрактала
         this.paramsPrng = SecureRandom.getInstance("SHA1PRNG");
         this.paramsPrng.setSeed(keyFractalParams);
 
-        // 4. Инициализируем PRNG для перемешивания
         this.segmentationPrng = SecureRandom.getInstance("SHA1PRNG");
         this.segmentationPrng.setSeed(keySegmentation);
 
-        // 5. Сбрасываем счётчик попыток
         this.attemptCount = 0;
         this.fractal = null;
 
@@ -73,6 +72,7 @@ public class ImageEncrypt {
      * Генерирует следующий фрактал для текущей сессии.
      * Увеличивает счётчик попыток.
      */
+    @Override
     public BufferedImage generateNextFractal(int width, int height) {
         attemptCount++;
         MandelbrotParams params = mandelbrotService.generateParams(paramsPrng);
@@ -82,7 +82,6 @@ public class ImageEncrypt {
                 width, height,
                 params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
         );
-
         return fractal;
     }
 
@@ -99,6 +98,7 @@ public class ImageEncrypt {
      * @param originalImage оригинальное изображение для шифрования
      * @throws Exception если возникает ошибка при генерации фрактала или записи файла
      */
+    @Override
     public void encryptWhole(BufferedImage originalImage) throws Exception {
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
@@ -108,15 +108,10 @@ public class ImageEncrypt {
             generateNextFractal(width, height);
         }
 
-        // Применяем XOR
         BufferedImage xored = XOR.performXOR(originalImage, fractal);
-
-        // Перемешиваем сегменты
         BufferedImage shuffled = imageSegmentShuffler.segmentAndShuffle(xored, segmentationPrng).shuffledImage();
 
-        // Сохраняем результат
         File outFile = saveEncryptedImage(shuffled, width, height, 0, 0, width, height);
-
         sceneManager.showEncryptFinalPanel(shuffled, outFile);
     }
 
@@ -128,6 +123,7 @@ public class ImageEncrypt {
      * @param selectedArea  прямоугольная область для шифрования
      * @throws Exception если возникает ошибка при шифровании или записи файла
      */
+    @Override
     public void encryptPart(BufferedImage originalImage, Rectangle2D selectedArea) throws Exception {
         int origWidth = originalImage.getWidth();
         int origHeight = originalImage.getHeight();
@@ -142,21 +138,17 @@ public class ImageEncrypt {
             generateNextFractal(areaWidth, areaHeight);
         }
 
-        // Извлекаем и шифруем область
         BufferedImage areaImage = originalImage.getSubimage(sx, sy, areaWidth, areaHeight);
         BufferedImage xoredArea = XOR.performXOR(areaImage, fractal);
         BufferedImage shuffledArea = imageSegmentShuffler.segmentAndShuffle(xoredArea, segmentationPrng).shuffledImage();
 
-        // Собираем итоговое изображение
         BufferedImage finalImage = new BufferedImage(origWidth, origHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = finalImage.createGraphics();
         g.drawImage(originalImage, 0, 0, null);
         g.drawImage(shuffledArea, sx, sy, null);
         g.dispose();
 
-        // Сохраняем результат
         File outFile = saveEncryptedImage(finalImage, origWidth, origHeight, sx, sy, areaWidth, areaHeight);
-
         sceneManager.showEncryptFinalPanel(finalImage, outFile);
     }
 

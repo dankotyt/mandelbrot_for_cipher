@@ -2,6 +2,9 @@ package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.segmentation.SegmentationResult;
+import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
+import com.cipher.core.service.encryption.impl.ImageSegmentShuffler;
+import com.cipher.core.service.encryption.impl.MandelbrotService;
 import com.cipher.core.utils.FileManager;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.SceneManager;
@@ -19,7 +22,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class ImageEncryptTest {
+class ImageEncryptorImplTest {
 
     @Mock
     private MandelbrotService mandelbrotService;
@@ -33,7 +36,7 @@ class ImageEncryptTest {
     private ImageUtils imageUtils;
 
     @InjectMocks
-    private ImageEncrypt imageEncrypt;
+    private ImageEncryptorImpl imageEncryptorImpl;
 
     private byte[] sharedSecret;
     private BufferedImage testImage;
@@ -73,13 +76,13 @@ class ImageEncryptTest {
 
     @Test
     void prepareSession_shouldNotThrowException() throws Exception {
-        assertDoesNotThrow(() -> imageEncrypt.prepareSession(sharedSecret));
+        assertDoesNotThrow(() -> imageEncryptorImpl.prepareSession(sharedSecret));
     }
 
     @Test
     void generateNextFractal_shouldGenerateImage() throws Exception {
-        imageEncrypt.prepareSession(sharedSecret);
-        BufferedImage result = imageEncrypt.generateNextFractal(100, 80);
+        imageEncryptorImpl.prepareSession(sharedSecret);
+        BufferedImage result = imageEncryptorImpl.generateNextFractal(100, 80);
         assertNotNull(result);
         verify(mandelbrotService, times(1)).generateParams(any(SecureRandom.class));
         verify(mandelbrotService, times(1))
@@ -88,9 +91,9 @@ class ImageEncryptTest {
 
     @Test
     void encryptWhole_shouldEncryptAndSave() throws Exception {
-        imageEncrypt.prepareSession(sharedSecret);
-        imageEncrypt.generateNextFractal(100, 80);
-        imageEncrypt.encryptWhole(testImage);
+        imageEncryptorImpl.prepareSession(sharedSecret);
+        imageEncryptorImpl.generateNextFractal(100, 80);
+        imageEncryptorImpl.encryptWhole(testImage);
 
         verify(mandelbrotService, atLeastOnce())
                 .generateImage(eq(100), eq(80), anyDouble(), anyDouble(), anyDouble(), anyInt());
@@ -103,9 +106,9 @@ class ImageEncryptTest {
 
     @Test
     void encryptWhole_withoutFractal_shouldGenerate() throws Exception {
-        imageEncrypt.prepareSession(sharedSecret);
+        imageEncryptorImpl.prepareSession(sharedSecret);
         // Не вызываем generateNextFractal, пусть fractal == null
-        imageEncrypt.encryptWhole(testImage);
+        imageEncryptorImpl.encryptWhole(testImage);
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(100), eq(80), anyDouble(), anyDouble(), anyDouble(), anyInt());
@@ -116,7 +119,7 @@ class ImageEncryptTest {
 
     @Test
     void encryptPart_shouldEncryptArea() throws Exception {
-        imageEncrypt.prepareSession(sharedSecret);
+        imageEncryptorImpl.prepareSession(sharedSecret);
         Rectangle2D area = new Rectangle2D(10, 10, 50, 40);
 
         BufferedImage areaFractal = new BufferedImage(50, 40, BufferedImage.TYPE_INT_RGB);
@@ -127,7 +130,7 @@ class ImageEncryptTest {
         when(imageSegmentShuffler.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
                 .thenReturn(new SegmentationResult(areaShuffled, 1, 50, 40, null));
 
-        imageEncrypt.encryptPart(testImage, area);
+        imageEncryptorImpl.encryptPart(testImage, area);
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(50), eq(40), anyDouble(), anyDouble(), anyDouble(), anyInt());
@@ -140,8 +143,8 @@ class ImageEncryptTest {
 
     @Test
     void encryptPart_withFractalSizeMismatch_shouldGenerateNew() throws Exception {
-        imageEncrypt.prepareSession(sharedSecret);
-        imageEncrypt.generateNextFractal(100, 80);
+        imageEncryptorImpl.prepareSession(sharedSecret);
+        imageEncryptorImpl.generateNextFractal(100, 80);
         Rectangle2D area = new Rectangle2D(0, 0, 30, 30);
 
         BufferedImage areaFractal = new BufferedImage(30, 30, BufferedImage.TYPE_INT_RGB);
@@ -152,7 +155,7 @@ class ImageEncryptTest {
         when(imageSegmentShuffler.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
                 .thenReturn(new SegmentationResult(areaShuffled, 1, 30, 30, null));
 
-        imageEncrypt.encryptPart(testImage, area);
+        imageEncryptorImpl.encryptPart(testImage, area);
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(30), eq(30), anyDouble(), anyDouble(), anyDouble(), anyInt());
@@ -162,13 +165,13 @@ class ImageEncryptTest {
 
     @Test
     void prepareSession_withNullSharedSecret_shouldThrow() {
-        assertThrows(Exception.class, () -> imageEncrypt.prepareSession(null));
+        assertThrows(Exception.class, () -> imageEncryptorImpl.prepareSession(null));
     }
 
     @Test
     void encryptWhole_withNullImage_shouldThrow() throws Exception {
         byte[] secret = new byte[32];
-        imageEncrypt.prepareSession(secret);
-        assertThrows(Exception.class, () -> imageEncrypt.encryptWhole(null));
+        imageEncryptorImpl.prepareSession(secret);
+        assertThrows(Exception.class, () -> imageEncryptorImpl.encryptWhole(null));
     }
 }

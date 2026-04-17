@@ -1,4 +1,4 @@
-package com.cipher.core.service.encryption;
+package com.cipher.core.service.encryption.impl;
 
 import com.cipher.core.dto.segmentation.SegmentationResult;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,7 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.segmentation.SegmentationResult;
+import com.cipher.core.service.encryption.impl.ImageSegmentShuffler;
 import org.junit.jupiter.api.Test;
 import java.awt.image.BufferedImage;
 import java.security.SecureRandom;

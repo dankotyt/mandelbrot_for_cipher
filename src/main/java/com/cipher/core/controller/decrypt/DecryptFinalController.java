@@ -1,6 +1,6 @@
 package com.cipher.core.controller.decrypt;
 
-import com.cipher.core.service.encryption.ImageDecrypt;
+import com.cipher.core.service.encryption.impl.ImageDecrypt;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;

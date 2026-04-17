@@ -1,8 +1,7 @@
 package com.cipher.core;
 
-import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.service.encryption.*;
-import com.cipher.core.service.encryption.impl.ECDHServiceImpl;
+import com.cipher.core.service.encryption.impl.*;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.service.network.impl.ECDHCryptoKeyManagerImpl;
 import com.cipher.core.utils.FileManager;
@@ -11,8 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -114,7 +111,7 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-1: generateNextFractal возвращает фрактал и сохраняет его в поле")
     void testGenerateNextFractalReturnsAndSavesFractal() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage image = createTestImage(200, 200);
@@ -122,7 +119,7 @@ class CryptoIntegrationTest {
 
         assertNotNull(generatedFractal, "generateNextFractal должен возвращать не-null фрактал");
 
-        Field fractalField = ImageEncrypt.class.getDeclaredField("fractal");
+        Field fractalField = ImageEncryptorImpl.class.getDeclaredField("fractal");
         fractalField.setAccessible(true);
         BufferedImage savedFractal = (BufferedImage) fractalField.get(encrypt);
 
@@ -138,7 +135,7 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-2: encryptWhole успешно шифрует изображение (автогенерация фрактала)")
     void testEncryptWholeCompletesSuccessfully() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage image = createTestImage(200, 200);
@@ -153,7 +150,7 @@ class CryptoIntegrationTest {
     void testEndToEndEncryptDecrypt() throws Exception {
         byte[] aliceSecret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
 
-        ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
         encrypt.prepareSession(aliceSecret);
 
         BufferedImage original = createTestImage(300, 300);
@@ -177,7 +174,7 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-4: Частичное шифрование области и дешифрование")
     void testPartialEncryptDecrypt() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage original = createTestImage(400, 300);
@@ -206,7 +203,7 @@ class CryptoIntegrationTest {
         int[][] sizes = {{640, 480}, {1024, 768}, {1920, 1080}};
 
         for (int[] size : sizes) {
-            ImageEncrypt encrypt = new ImageEncrypt(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+            ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
             encrypt.prepareSession(secret);
 
             BufferedImage original = createTestImage(size[0], size[1]);
