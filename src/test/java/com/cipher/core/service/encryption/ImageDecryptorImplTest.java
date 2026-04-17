@@ -1,8 +1,8 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
-import com.cipher.core.service.encryption.impl.ImageDecrypt;
-import com.cipher.core.service.encryption.impl.ImageSegmentShuffler;
+import com.cipher.core.service.encryption.impl.ImageDecryptorImpl;
+import com.cipher.core.service.encryption.impl.ImageSegmentShufflerImpl;
 import com.cipher.core.service.encryption.impl.MandelbrotService;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.FileManager;
@@ -25,12 +25,12 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class ImageDecryptTest {
+class ImageDecryptorImplTest {
 
     @Mock
     private MandelbrotService mandelbrotService;
     @Mock
-    private ImageSegmentShuffler imageSegmentShuffler;
+    private ImageSegmentShufflerImpl imageSegmentShufflerImpl;
     @Mock
     private ImageUtils imageUtils;
     @Mock
@@ -39,7 +39,7 @@ class ImageDecryptTest {
     private CryptoKeyManager cryptoKeyManager;
 
     @InjectMocks
-    private ImageDecrypt imageDecrypt;
+    private ImageDecryptorImpl imageDecryptorImpl;
 
     private byte[] sharedSecret;
     private InetAddress peerAddress;
@@ -73,7 +73,7 @@ class ImageDecryptTest {
                 .thenReturn(encryptedImage);
         when(mandelbrotService.generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(fractalArea);
-        when(imageSegmentShuffler.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
                 .thenReturn(unshuffledArea);
 
         int attempts = 3;
@@ -93,7 +93,7 @@ class ImageDecryptTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecrypt.decryptImage(file);
+        BufferedImage result = imageDecryptorImpl.decryptImage(file);
         assertNotNull(result);
         assertEquals(fullWidth, result.getWidth());
         assertEquals(fullHeight, result.getHeight());
@@ -101,7 +101,7 @@ class ImageDecryptTest {
         verify(mandelbrotService, times(attempts)).generateParams(any(SecureRandom.class));
         verify(mandelbrotService, times(1))
                 .generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt());
-        verify(imageSegmentShuffler, times(1))
+        verify(imageSegmentShufflerImpl, times(1))
                 .unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class));
         verify(tempFileManager, times(1))
                 .saveBufferedImageToTemp(any(BufferedImage.class), eq("decrypted_image.png"));
@@ -127,7 +127,7 @@ class ImageDecryptTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        assertThrows(IllegalArgumentException.class, () -> imageDecrypt.decryptImage(file));
+        assertThrows(IllegalArgumentException.class, () -> imageDecryptorImpl.decryptImage(file));
         Files.deleteIfExists(tempFile);
     }
 
@@ -145,7 +145,7 @@ class ImageDecryptTest {
                 .thenReturn(encryptedImage);
         when(mandelbrotService.generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(fractalArea);
-        when(imageSegmentShuffler.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
                 .thenReturn(unshuffledArea);
 
         int attempts = 0;
@@ -165,7 +165,7 @@ class ImageDecryptTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        imageDecrypt.decryptImage(file);
+        imageDecryptorImpl.decryptImage(file);
         verify(mandelbrotService, times(1)).generateParams(any(SecureRandom.class));
         Files.deleteIfExists(tempFile);
     }
@@ -185,7 +185,7 @@ class ImageDecryptTest {
                 .thenReturn(encryptedImage);
         when(mandelbrotService.generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(fractalArea);
-        when(imageSegmentShuffler.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
                 .thenReturn(unshuffledArea);
 
         int attempts = 1;
@@ -204,14 +204,14 @@ class ImageDecryptTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecrypt.decryptImage(file);
+        BufferedImage result = imageDecryptorImpl.decryptImage(file);
         assertNotNull(result);
         assertEquals(fullWidth, result.getWidth());
         assertEquals(fullHeight, result.getHeight());
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt());
-        verify(imageSegmentShuffler, times(1))
+        verify(imageSegmentShufflerImpl, times(1))
                 .unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class));
 
         Files.deleteIfExists(tempFile);
@@ -232,7 +232,7 @@ class ImageDecryptTest {
                 .thenReturn(encryptedImage);
         when(mandelbrotService.generateImage(eq(areaWidth), eq(areaHeight), anyDouble(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(fractalArea);
-        when(imageSegmentShuffler.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.unshuffle(any(BufferedImage.class), eq(areaWidth), eq(areaHeight), any(SecureRandom.class)))
                 .thenReturn(unshuffledArea);
 
         int attempts = 2;
@@ -251,7 +251,7 @@ class ImageDecryptTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecrypt.decryptImage(file);
+        BufferedImage result = imageDecryptorImpl.decryptImage(file);
         assertNotNull(result);
         assertEquals(fullWidth, result.getWidth());
         assertEquals(fullHeight, result.getHeight());
@@ -261,14 +261,14 @@ class ImageDecryptTest {
 
     @Test
     void decryptImage_withNullFile_shouldThrow() {
-        assertThrows(NullPointerException.class, () -> imageDecrypt.decryptImage(null));
+        assertThrows(NullPointerException.class, () -> imageDecryptorImpl.decryptImage(null));
     }
 
     @Test
     void decryptImage_withEmptyFile_shouldThrow() throws Exception {
         Path emptyFile = Files.createTempFile("empty", ".bin");
         File file = emptyFile.toFile();
-        assertThrows(Exception.class, () -> imageDecrypt.decryptImage(file));
+        assertThrows(Exception.class, () -> imageDecryptorImpl.decryptImage(file));
         Files.deleteIfExists(emptyFile);
     }
 }

@@ -1,15 +1,15 @@
 package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.segmentation.SegmentationResult;
-import com.cipher.core.service.encryption.impl.ImageSegmentShuffler;
+import com.cipher.core.service.encryption.impl.ImageSegmentShufflerImpl;
 import org.junit.jupiter.api.Test;
 import java.awt.image.BufferedImage;
 import java.security.SecureRandom;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ImageSegmentShufflerTest {
+class ImageSegmentShufflerImplTest {
 
-    private final ImageSegmentShuffler shuffler = new ImageSegmentShuffler();
+    private final ImageSegmentShufflerImpl shuffler = new ImageSegmentShufflerImpl();
 
     @Test
     void generateSegmentSize_withSmallImage_shouldReturn1() {

@@ -7,7 +7,6 @@ import java.util.Map;
 
 public interface CryptoKeyManager {
 
-    // Основные методы для использования в ImageEncrypt/ImageDecrypt
     byte[] getMasterSeedFromDH(InetAddress peerAddress);
     void generateNewKeys();
     ECDHKeyPair getCurrentKeys();

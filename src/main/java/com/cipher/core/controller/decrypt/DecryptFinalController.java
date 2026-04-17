@@ -1,6 +1,6 @@
 package com.cipher.core.controller.decrypt;
 
-import com.cipher.core.service.encryption.impl.ImageDecrypt;
+import com.cipher.core.service.encryption.ImageDecryptor;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.DialogDisplayer;
 import com.cipher.core.utils.SceneManager;
@@ -34,7 +34,7 @@ public class DecryptFinalController {
     private final SceneManager sceneManager;
     private final FileManager fileManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ImageDecrypt imageDecrypt;
+    private final ImageDecryptor imageDecryptor;
     private final CryptoKeyManager cryptoKeyManager;
 
     private String keyFilePath;
@@ -102,7 +102,7 @@ public class DecryptFinalController {
         Task<BufferedImage> decryptTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
-                return imageDecrypt.decryptImage(file);
+                return imageDecryptor.decryptImage(file);
             }
         };
 

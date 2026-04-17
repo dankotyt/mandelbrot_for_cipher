@@ -11,6 +11,7 @@ import java.security.SecureRandom;
 import com.cipher.core.dto.*;
 import com.cipher.core.service.encryption.HKDF;
 import com.cipher.core.service.encryption.ImageEncryptor;
+import com.cipher.core.service.encryption.SegmentShuffler;
 import com.cipher.core.service.encryption.XOR;
 import com.cipher.core.utils.*;
 import javafx.geometry.Rectangle2D;
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Component;
 public class ImageEncryptorImpl implements ImageEncryptor {
 
     private final MandelbrotService mandelbrotService;
-    private final ImageSegmentShuffler imageSegmentShuffler;
+    private final SegmentShuffler segmentShuffler;
     private final SceneManager sceneManager;
     private final FileManager fileManager;
     private final ImageUtils imageUtils;
@@ -37,7 +38,7 @@ public class ImageEncryptorImpl implements ImageEncryptor {
 
     /**
      * Подготавливает сессию шифрования на основе общего секрета.
-     * Все криптографические материалы хранятся внутри ImageEncrypt.
+     * Все криптографические материалы хранятся внутри ImageEncryptor.
      *
      * @param sharedSecret общий секрет от DH
      * @throws Exception если ошибка инициализации
@@ -109,7 +110,7 @@ public class ImageEncryptorImpl implements ImageEncryptor {
         }
 
         BufferedImage xored = XOR.performXOR(originalImage, fractal);
-        BufferedImage shuffled = imageSegmentShuffler.segmentAndShuffle(xored, segmentationPrng).shuffledImage();
+        BufferedImage shuffled = segmentShuffler.segmentAndShuffle(xored, segmentationPrng).shuffledImage();
 
         File outFile = saveEncryptedImage(shuffled, width, height, 0, 0, width, height);
         sceneManager.showEncryptFinalPanel(shuffled, outFile);
@@ -140,7 +141,7 @@ public class ImageEncryptorImpl implements ImageEncryptor {
 
         BufferedImage areaImage = originalImage.getSubimage(sx, sy, areaWidth, areaHeight);
         BufferedImage xoredArea = XOR.performXOR(areaImage, fractal);
-        BufferedImage shuffledArea = imageSegmentShuffler.segmentAndShuffle(xoredArea, segmentationPrng).shuffledImage();
+        BufferedImage shuffledArea = segmentShuffler.segmentAndShuffle(xoredArea, segmentationPrng).shuffledImage();
 
         BufferedImage finalImage = new BufferedImage(origWidth, origHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = finalImage.createGraphics();

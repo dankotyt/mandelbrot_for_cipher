@@ -1,6 +1,7 @@
 package com.cipher.core.service.encryption.impl;
 
 import com.cipher.core.dto.segmentation.SegmentationResult;
+import com.cipher.core.service.encryption.SegmentShuffler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,7 +16,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ImageSegmentShuffler {
+public class ImageSegmentShufflerImpl implements SegmentShuffler {
 
     /**
      * Создает список сегментов изображения заданного размера
@@ -52,6 +53,7 @@ public class ImageSegmentShuffler {
      * @return результат перемешивания, включающий перемешанное изображение,
      *         размер сегмента и карту соответствия
      */
+    @Override
     public SegmentationResult segmentAndShuffle(BufferedImage image, SecureRandom prng) {
         if (image == null) {
             throw new IllegalArgumentException("Image cannot be null");
@@ -90,6 +92,7 @@ public class ImageSegmentShuffler {
      * @param originalHeight оригинальная высота изображения (до дополнения)
      * @return изображение с восстановленным порядком сегментов
      */
+    @Override
     public BufferedImage unshuffle(BufferedImage shuffledImage, int originalWidth, int originalHeight, SecureRandom prng) {
         if (shuffledImage == null) {
             throw new IllegalArgumentException("Shuffled image cannot be null");

@@ -29,7 +29,7 @@ class CryptoIntegrationTest {
     private FileManager fileManager;
     private ImageUtils imageUtils;
     private MandelbrotService mandelbrotService;
-    private ImageSegmentShuffler shuffler;
+    private ImageSegmentShufflerImpl shuffler;
     private CryptoKeyManager aliceKeyManager;
     private CryptoKeyManager bobKeyManager;
     private InetAddress bobAddress;
@@ -58,7 +58,7 @@ class CryptoIntegrationTest {
 
         imageUtils = new ImageUtils();
         mandelbrotService = new MandelbrotService();
-        shuffler = new ImageSegmentShuffler();
+        shuffler = new ImageSegmentShufflerImpl();
 
         // Создаём ECDH сервис
         ecdhService = new ECDHServiceImpl();
@@ -164,7 +164,7 @@ class CryptoIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Encrypted file not found"))
                 .toFile();
 
-        ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
         assertImagesEqual(original, decrypted);
@@ -190,7 +190,7 @@ class CryptoIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Encrypted file not found"))
                 .toFile();
 
-        ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
         assertImagesEqual(original, decrypted);
@@ -216,7 +216,7 @@ class CryptoIntegrationTest {
                     .orElseThrow(() -> new AssertionError("Encrypted file not found for size " + size[0] + "x" + size[1]))
                     .toFile();
 
-            ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+            ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
             BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
             assertImagesEqual(original, decrypted);
@@ -235,7 +235,7 @@ class CryptoIntegrationTest {
         File badFile = tempDir.resolve("corrupted.bin").toFile();
         Files.write(badFile.toPath(), corrupted);
 
-        ImageDecrypt decrypt = new ImageDecrypt(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
 
         assertThrows(Exception.class, () -> decrypt.decryptImage(badFile),
                 "Дешифрование битого файла должно выбрасывать исключение");

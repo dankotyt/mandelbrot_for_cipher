@@ -3,7 +3,7 @@ package com.cipher.core.service.encryption;
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.segmentation.SegmentationResult;
 import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
-import com.cipher.core.service.encryption.impl.ImageSegmentShuffler;
+import com.cipher.core.service.encryption.impl.ImageSegmentShufflerImpl;
 import com.cipher.core.service.encryption.impl.MandelbrotService;
 import com.cipher.core.utils.FileManager;
 import com.cipher.core.utils.ImageUtils;
@@ -27,7 +27,7 @@ class ImageEncryptorImplTest {
     @Mock
     private MandelbrotService mandelbrotService;
     @Mock
-    private ImageSegmentShuffler imageSegmentShuffler;
+    private ImageSegmentShufflerImpl imageSegmentShufflerImpl;
     @Mock
     private SceneManager sceneManager;
     @Mock
@@ -64,7 +64,7 @@ class ImageEncryptorImplTest {
         lenient().when(mandelbrotService.generateImage(anyInt(), anyInt(), anyDouble(), anyDouble(), anyDouble(), anyInt()))
                 .thenReturn(fractalImage);
 
-        lenient().when(imageSegmentShuffler.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
+        lenient().when(imageSegmentShufflerImpl.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
                 .thenReturn(new SegmentationResult(shuffledImage, 1, 100, 80, null));
 
         lenient().when(tempFileManager.saveBytesToFile(any(byte[].class), anyString()))
@@ -97,7 +97,7 @@ class ImageEncryptorImplTest {
 
         verify(mandelbrotService, atLeastOnce())
                 .generateImage(eq(100), eq(80), anyDouble(), anyDouble(), anyDouble(), anyInt());
-        verify(imageSegmentShuffler, times(1))
+        verify(imageSegmentShufflerImpl, times(1))
                 .segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class));
         verify(imageUtils, times(1)).imageToBytes(any(BufferedImage.class));
         verify(tempFileManager, times(1)).saveBytesToFile(any(byte[].class), anyString());
@@ -112,7 +112,7 @@ class ImageEncryptorImplTest {
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(100), eq(80), anyDouble(), anyDouble(), anyDouble(), anyInt());
-        verify(imageSegmentShuffler, times(1)).segmentAndShuffle(any(), any());
+        verify(imageSegmentShufflerImpl, times(1)).segmentAndShuffle(any(), any());
         verify(imageUtils, times(1)).imageToBytes(any(BufferedImage.class));
         verify(tempFileManager, times(1)).saveBytesToFile(any(), anyString());
     }
@@ -127,14 +127,14 @@ class ImageEncryptorImplTest {
                 .thenReturn(areaFractal);
 
         BufferedImage areaShuffled = new BufferedImage(50, 40, BufferedImage.TYPE_INT_RGB);
-        when(imageSegmentShuffler.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
                 .thenReturn(new SegmentationResult(areaShuffled, 1, 50, 40, null));
 
         imageEncryptorImpl.encryptPart(testImage, area);
 
         verify(mandelbrotService, times(1))
                 .generateImage(eq(50), eq(40), anyDouble(), anyDouble(), anyDouble(), anyInt());
-        verify(imageSegmentShuffler, times(1))
+        verify(imageSegmentShufflerImpl, times(1))
                 .segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class));
         verify(imageUtils, times(1)).imageToBytes(any(BufferedImage.class));
         verify(tempFileManager, times(1)).saveBytesToFile(any(byte[].class), anyString());
@@ -152,7 +152,7 @@ class ImageEncryptorImplTest {
                 .thenReturn(areaFractal);
 
         BufferedImage areaShuffled = new BufferedImage(30, 30, BufferedImage.TYPE_INT_RGB);
-        when(imageSegmentShuffler.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
+        when(imageSegmentShufflerImpl.segmentAndShuffle(any(BufferedImage.class), any(SecureRandom.class)))
                 .thenReturn(new SegmentationResult(areaShuffled, 1, 30, 30, null));
 
         imageEncryptorImpl.encryptPart(testImage, area);
