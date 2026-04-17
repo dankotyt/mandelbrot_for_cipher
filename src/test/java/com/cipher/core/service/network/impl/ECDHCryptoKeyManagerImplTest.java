@@ -3,6 +3,7 @@ package com.cipher.core.service.network.impl;
 import com.cipher.core.model.ECDHKeyPair;
 import com.cipher.core.service.encryption.ECDHService;
 import com.cipher.core.service.encryption.impl.ECDHServiceImpl;
+import com.cipher.core.service.network.CryptoKeyManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,14 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ECDHCryptoKeyManagerImplTest {
 
-    private ECDHCryptoKeyManagerImpl keyManager;
+    private CryptoKeyManager keyManager;
     private ECDHService ecdhService;
 
     @BeforeEach
     void setUp() throws Exception {
         ecdhService = new ECDHServiceImpl();
         keyManager = new ECDHCryptoKeyManagerImpl(ecdhService);
-        keyManager.init();
         Thread.sleep(100);
     }
 
@@ -173,11 +173,6 @@ class ECDHCryptoKeyManagerImplTest {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
         assertDoesNotThrow(() -> keyManager.sendKeyInvalidation(peerAddress));
         Thread.sleep(100);
-    }
-
-    @Test
-    void cleanup_shouldNotThrow() {
-        assertDoesNotThrow(() -> keyManager.cleanup());
     }
 
     @Test

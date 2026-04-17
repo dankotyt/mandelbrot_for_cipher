@@ -29,7 +29,7 @@ class CryptoIntegrationTest {
     private FileManager fileManager;
     private ImageUtils imageUtils;
     private MandelbrotService mandelbrotService;
-    private ImageSegmentShufflerImpl shuffler;
+    private SegmentShuffler shuffler;
     private CryptoKeyManager aliceKeyManager;
     private CryptoKeyManager bobKeyManager;
     private InetAddress bobAddress;

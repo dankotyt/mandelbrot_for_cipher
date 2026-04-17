@@ -2,8 +2,6 @@ package com.cipher.core.service.encryption;
 
 import com.cipher.core.dto.MandelbrotParams;
 import com.cipher.core.dto.segmentation.SegmentationResult;
-import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
-import com.cipher.core.service.encryption.impl.ImageSegmentShufflerImpl;
 import com.cipher.core.utils.FileManager;
 import com.cipher.core.utils.ImageUtils;
 import com.cipher.core.utils.SceneManager;
@@ -26,7 +24,7 @@ class ImageEncryptorImplTest {
     @Mock
     private MandelbrotService mandelbrotService;
     @Mock
-    private ImageSegmentShufflerImpl imageSegmentShufflerImpl;
+    private SegmentShuffler imageSegmentShufflerImpl;
     @Mock
     private SceneManager sceneManager;
     @Mock
@@ -35,7 +33,7 @@ class ImageEncryptorImplTest {
     private ImageUtils imageUtils;
 
     @InjectMocks
-    private ImageEncryptorImpl imageEncryptorImpl;
+    private ImageEncryptor imageEncryptorImpl;
 
     private byte[] sharedSecret;
     private BufferedImage testImage;

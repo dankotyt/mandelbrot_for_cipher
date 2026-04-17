@@ -1,6 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
+import com.cipher.core.service.encryption.ImageEncryptor;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -46,7 +46,7 @@ public class EncryptChooseAreaController {
 
     private final SceneManager sceneManager;
     private final DialogDisplayer dialogDisplayer;
-    private final ImageEncryptorImpl imageEncryptorImpl;
+    private final ImageEncryptor imageEncryptor;
 
     private Point2D startPoint;
     private Point2D endPoint;
@@ -234,7 +234,7 @@ public class EncryptChooseAreaController {
         try {
             BufferedImage originalImage = imageUtils.getOriginalImage();
             if (originalImage != null) {
-                imageEncryptorImpl.encryptWhole(originalImage);
+                imageEncryptor.encryptWhole(originalImage);
             }
         } catch (Exception e) {
             logger.error("Ошибка загрузки изображения", e);
@@ -260,7 +260,7 @@ public class EncryptChooseAreaController {
                 return;
             }
 
-            imageEncryptorImpl.encryptPart(imageToEncrypt, selectedRectangle);
+            imageEncryptor.encryptPart(imageToEncrypt, selectedRectangle);
             clearRectangles();
 
         } catch (Exception e) {

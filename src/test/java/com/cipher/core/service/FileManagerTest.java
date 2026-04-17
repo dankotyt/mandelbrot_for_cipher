@@ -35,8 +35,6 @@ class FileManagerTest {
     @Mock
     private SceneManager sceneManager;
     @Mock
-    private ImageUtils imageUtils;
-    @Mock
     private Stage primaryStage;
 
     @InjectMocks

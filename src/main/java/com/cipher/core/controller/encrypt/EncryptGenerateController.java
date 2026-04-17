@@ -1,6 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
-import com.cipher.core.service.encryption.impl.ImageEncryptorImpl;
+import com.cipher.core.service.encryption.ImageEncryptor;
 import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.*;
@@ -40,7 +40,7 @@ public class EncryptGenerateController {
     @FXML private Button swapButton;
     @FXML private Button backButton;
 
-    private final ImageEncryptorImpl imageEncryptorImpl;
+    private final ImageEncryptor imageEncryptor;
     private final SceneManager sceneManager;
     private final ImageUtils imageUtils;
     private final DialogDisplayer dialogDisplayer;
@@ -60,7 +60,7 @@ public class EncryptGenerateController {
             InetAddress peer = cryptoKeyManager.getConnectedPeer();
             byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
 
-            imageEncryptorImpl.prepareSession(sharedSecret);
+            imageEncryptor.prepareSession(sharedSecret);
 
             mandelbrotService.setTargetWidth(originalImage.getWidth());
             mandelbrotService.setTargetHeight(originalImage.getHeight());
@@ -122,7 +122,7 @@ public class EncryptGenerateController {
                 for (int i = 0; i < maxAttempts; i++) {
                     if (isCancelled()) return null;
 
-                    BufferedImage fractal = imageEncryptorImpl.generateNextFractal(
+                    BufferedImage fractal = imageEncryptor.generateNextFractal(
                             originalImage.getWidth(), originalImage.getHeight());
                     if (!mandelbrotService.isFractalValid(fractal)) {
                         ConsoleManager.log("Попытка " + (i+1) + ": фрактал не подходит, продолжаем...");
@@ -177,7 +177,7 @@ public class EncryptGenerateController {
         try {
             InetAddress peer = cryptoKeyManager.getConnectedPeer();
             byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
-            imageEncryptorImpl.prepareSession(sharedSecret); // новая соль, сброс attemptCount
+            imageEncryptor.prepareSession(sharedSecret); // новая соль, сброс attemptCount
             generateUntilGood();
         } catch (Exception e) {
             logger.error("Ошибка при регенерации", e);
@@ -190,7 +190,7 @@ public class EncryptGenerateController {
             if (!imageUtils.hasOriginalImage()) {
                 logger.error("original image is null");
             }
-            imageEncryptorImpl.encryptWhole(originalImage);
+            imageEncryptor.encryptWhole(originalImage);
         } catch (Exception e) {
             logger.error("Ошибка шифрования", e);
             dialogDisplayer.showErrorDialog("Ошибка шифрования: " + e.getMessage());

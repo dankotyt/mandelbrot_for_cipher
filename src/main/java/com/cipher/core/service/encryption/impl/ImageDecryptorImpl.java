@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.security.SecureRandom;
 
 import com.cipher.core.dto.MandelbrotParams;
+import com.cipher.core.service.encryption.SegmentShuffler;
 import com.cipher.core.service.encryption.util.HKDF;
 import com.cipher.core.service.encryption.ImageDecryptor;
 import com.cipher.core.service.encryption.MandelbrotService;
@@ -26,7 +27,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class ImageDecryptorImpl implements ImageDecryptor {
     private final MandelbrotService mandelbrotService;
-    private final ImageSegmentShufflerImpl imageSegmentShufflerImpl;
+    private final SegmentShuffler segmentShuffler;
     private final ImageUtils imageUtils;
     private final FileManager fileManager;
     private final CryptoKeyManager cryptoKeyManager;
@@ -106,7 +107,7 @@ public class ImageDecryptorImpl implements ImageDecryptor {
         );
 
         // Обратная сегментация области
-        BufferedImage unshuffledArea = imageSegmentShufflerImpl.unshuffle(
+        BufferedImage unshuffledArea = segmentShuffler.unshuffle(
                 encryptedArea, areaWidth, areaHeight, segPrng
         );
 
