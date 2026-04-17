@@ -33,4 +33,12 @@ class XORTest {
         int expected = (0x80 << 24) | ((0x112233 ^ 0x445566) & 0x00FFFFFF);
         assertEquals(expected, result);
     }
+
+    @Test
+    @DisplayName("XOR with different image sizes should throw")
+    void performXOR_withDifferentSizes_shouldThrow() {
+        BufferedImage img1 = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        BufferedImage img2 = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+        assertThrows(IllegalArgumentException.class, () -> XOR.performXOR(img1, img2));
+    }
 }

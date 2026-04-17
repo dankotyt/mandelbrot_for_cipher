@@ -54,6 +54,9 @@ public class MandelbrotService extends JPanel {
      * Генерирует параметры множества Мандельброта.
      */
     public MandelbrotParams generateParams(SecureRandom prng) {
+        if (prng == null) {
+            throw new IllegalArgumentException("PRNG cannot be null");
+        }
         double zoom = 10_000 + prng.nextInt(701) * 140;
         double offsetX = -0.9998 + prng.nextDouble() * (0.45 + 0.9998);
         double offsetY = prng.nextBoolean()
@@ -79,6 +82,15 @@ public class MandelbrotService extends JPanel {
      */
     public BufferedImage generateImage(int width, int height,
                                        double ZOOM, double offsetX, double offsetY, int MAX_ITER) {
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("Width and height must be positive");
+        }
+        if (ZOOM <= 0) {
+            throw new IllegalArgumentException("Zoom must be positive: " + ZOOM);
+        }
+        if (MAX_ITER <= 0) {
+            throw new IllegalArgumentException("MAX_ITER must be positive: " + MAX_ITER);
+        }
 
         BufferedImage resultImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 

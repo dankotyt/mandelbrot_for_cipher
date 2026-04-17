@@ -53,6 +53,12 @@ public class ImageSegmentShuffler {
      *         размер сегмента и карту соответствия
      */
     public SegmentationResult segmentAndShuffle(BufferedImage image, SecureRandom prng) {
+        if (image == null) {
+            throw new IllegalArgumentException("Image cannot be null");
+        }
+        if (prng == null) {
+            throw new IllegalArgumentException("PRNG cannot be null");
+        }
         int segmentSize = generateSegmentSize(image.getWidth(), image.getHeight());
         log.info("Segment size used: {}", segmentSize);
         BufferedImage paddedImage = padImageToSegmentSize(image, segmentSize);
@@ -85,6 +91,15 @@ public class ImageSegmentShuffler {
      * @return изображение с восстановленным порядком сегментов
      */
     public BufferedImage unshuffle(BufferedImage shuffledImage, int originalWidth, int originalHeight, SecureRandom prng) {
+        if (shuffledImage == null) {
+            throw new IllegalArgumentException("Shuffled image cannot be null");
+        }
+        if (originalWidth <= 0 || originalHeight <= 0) {
+            throw new IllegalArgumentException("Original dimensions must be positive");
+        }
+        if (prng == null) {
+            throw new IllegalArgumentException("PRNG cannot be null");
+        }
         int segmentSize = generateSegmentSize(originalWidth, originalHeight);
         log.info("Segment size used: {}", segmentSize);
         List<Rectangle> segments = createSegments(shuffledImage, segmentSize);
@@ -114,6 +129,12 @@ public class ImageSegmentShuffler {
      * @return дополненное изображение или исходное, если дополнение не требуется
      */
     public BufferedImage padImageToSegmentSize(BufferedImage image, int segmentSize) {
+        if (image == null) {
+            throw new IllegalArgumentException("Image cannot be null");
+        }
+        if (segmentSize <= 0) {
+            throw new IllegalArgumentException("Segment size must be positive");
+        }
         int newWidth = (int) Math.ceil((double) image.getWidth() / segmentSize) * segmentSize;
         int newHeight = (int) Math.ceil((double) image.getHeight() / segmentSize) * segmentSize;
 

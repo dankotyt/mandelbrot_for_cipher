@@ -9,6 +9,9 @@ public class HKDF {
     private static final String HMAC_ALGO = "HmacSHA256";
 
     public static byte[] extract(byte[] salt, byte[] ikm) throws NoSuchAlgorithmException, InvalidKeyException {
+        if (ikm == null) {
+            throw new IllegalArgumentException("IKM (input keying material) cannot be null");
+        }
         Mac mac = Mac.getInstance(HMAC_ALGO);
         if (salt == null || salt.length == 0) {
             salt = new byte[32];
@@ -18,6 +21,9 @@ public class HKDF {
     }
 
     public static byte[] expand(byte[] prk, byte[] info, int length) throws NoSuchAlgorithmException, InvalidKeyException {
+        if (prk == null) {
+            throw new IllegalArgumentException("PRK (pseudo-random key) cannot be null");
+        }
         Mac mac = Mac.getInstance(HMAC_ALGO);
         mac.init(new SecretKeySpec(prk, HMAC_ALGO));
         byte[] result = new byte[length];

@@ -40,6 +40,9 @@ public class ImageEncrypt {
      * @throws Exception если ошибка инициализации
      */
     public void prepareSession(byte[] sharedSecret) throws Exception {
+        if (sharedSecret == null) {
+            throw new IllegalArgumentException("Shared secret cannot be null");
+        }
         // 1. Генерируем соль криптостойким генератором
         byte[] salt = new byte[16];
         SecureRandom secureRandom = new SecureRandom();

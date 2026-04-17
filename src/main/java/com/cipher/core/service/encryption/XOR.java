@@ -7,6 +7,12 @@ import java.awt.image.BufferedImage;
 @Component
 public class XOR {
     public static BufferedImage performXOR(BufferedImage image1, BufferedImage image2) {
+        if (image1 == null || image2 == null) {
+            throw new IllegalArgumentException("Images cannot be null");
+        }
+        if (image1.getWidth() != image2.getWidth() || image1.getHeight() != image2.getHeight()) {
+            throw new IllegalArgumentException("Images must have the same dimensions");
+        }
         int width = image1.getWidth();
         int height = image1.getHeight();
 

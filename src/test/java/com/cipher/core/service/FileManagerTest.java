@@ -1,5 +1,9 @@
-package com.cipher.core.utils;
+package com.cipher.core.service;
 
+import com.cipher.core.utils.DialogDisplayer;
+import com.cipher.core.utils.FileManager;
+import com.cipher.core.utils.ImageUtils;
+import com.cipher.core.utils.SceneManager;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +17,7 @@ import javafx.stage.Stage;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
@@ -189,5 +194,10 @@ class FileManagerTest {
         assertArrayEquals(data, readData);
 
         result.delete();
+    }
+
+    @Test
+    void saveBytesToFile_withNullData_shouldThrow() {
+        assertThrows(NullPointerException.class, () -> fileManager.saveBytesToFile(null, "test.bin"));
     }
 }

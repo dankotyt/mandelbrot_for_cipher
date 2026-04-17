@@ -29,6 +29,16 @@ class HKDFTest {
     }
 
     @Test
+    void extract_withNullIkm_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> HKDF.extract(new byte[16], null));
+    }
+
+    @Test
+    void expand_withNullPrk_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> HKDF.expand(null, new byte[0], 32));
+    }
+
+    @Test
     void expand_withValidInput_shouldReturnCorrectLength() throws Exception {
         byte[] prk = new byte[32];
         byte[] info = "info".getBytes(StandardCharsets.UTF_8);

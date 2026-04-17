@@ -30,7 +30,7 @@ class ImageEncryptTest {
     @Mock
     private FileManager tempFileManager;
     @Mock
-    private ImageUtils imageUtils;  // Добавляем мок для ImageUtils
+    private ImageUtils imageUtils;
 
     @InjectMocks
     private ImageEncrypt imageEncrypt;
@@ -158,5 +158,17 @@ class ImageEncryptTest {
                 .generateImage(eq(30), eq(30), anyDouble(), anyDouble(), anyDouble(), anyInt());
         verify(imageUtils, times(1)).imageToBytes(any(BufferedImage.class));
         verify(tempFileManager, times(1)).saveBytesToFile(any(byte[].class), anyString());
+    }
+
+    @Test
+    void prepareSession_withNullSharedSecret_shouldThrow() {
+        assertThrows(Exception.class, () -> imageEncrypt.prepareSession(null));
+    }
+
+    @Test
+    void encryptWhole_withNullImage_shouldThrow() throws Exception {
+        byte[] secret = new byte[32];
+        imageEncrypt.prepareSession(secret);
+        assertThrows(Exception.class, () -> imageEncrypt.encryptWhole(null));
     }
 }

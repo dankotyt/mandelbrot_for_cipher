@@ -255,4 +255,17 @@ class ImageDecryptTest {
 
         Files.deleteIfExists(tempFile);
     }
+
+    @Test
+    void decryptImage_withNullFile_shouldThrow() {
+        assertThrows(NullPointerException.class, () -> imageDecrypt.decryptImage(null));
+    }
+
+    @Test
+    void decryptImage_withEmptyFile_shouldThrow() throws Exception {
+        Path emptyFile = Files.createTempFile("empty", ".bin");
+        File file = emptyFile.toFile();
+        assertThrows(Exception.class, () -> imageDecrypt.decryptImage(file));
+        Files.deleteIfExists(emptyFile);
+    }
 }

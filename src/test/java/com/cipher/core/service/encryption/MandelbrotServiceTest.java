@@ -42,7 +42,7 @@ class MandelbrotServiceTest {
 
     @Test
     void paintComponent_withValidImage_shouldDrawImage() {
-        BufferedImage testImage = service.generateImage(100, 100, 10000, -0.5, 0.0, 250);
+        service.generateImage(100, 100, 10000, -0.5, 0.0, 250);
         BufferedImage targetImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = targetImage.createGraphics();
         assertDoesNotThrow(() -> service.paintComponent(g2d));
@@ -204,5 +204,87 @@ class MandelbrotServiceTest {
 
         assertEquals(1024, service.getTargetWidth());
         assertEquals(768, service.getTargetHeight());
+    }
+
+    @Test
+    void offsetY_bothRangesOccur() {
+        SecureRandom prng = new SecureRandom();
+        boolean seenNegative = false, seenPositive = false;
+        for (int i = 0; i < 1000; i++) {
+            MandelbrotParams p = service.generateParams(prng);
+            if (p.offsetY() >= -0.7 && p.offsetY() <= -0.1) seenNegative = true;
+            if (p.offsetY() >= 0.1 && p.offsetY() <= 0.7) seenPositive = true;
+            if (seenNegative && seenPositive) break;
+        }
+        assertTrue(seenNegative && seenPositive, "Оба диапазона offsetY должны быть представлены");
+    }
+
+    @Test
+    void generateParams_boundaryZoom() {
+        SecureRandom prng = new SecureRandom();
+        // Проверка, что zoom всегда положительный и в диапазоне
+        for (int i = 0; i < 100; i++) {
+            MandelbrotParams params = service.generateParams(prng);
+            assertTrue(params.zoom() > 0);
+            assertTrue(params.zoom() >= 10_000);
+            assertTrue(params.zoom() <= 10_000 + 700 * 140);
+        }
+    }
+
+    @Test
+    void generateParams_negativeValuesNotProduced() {
+        SecureRandom prng = new SecureRandom();
+        for (int i = 0; i < 100; i++) {
+            MandelbrotParams params = service.generateParams(prng);
+            assertTrue(params.zoom() > 0);
+            assertTrue(params.maxIter() > 0);
+            // offsetX и offsetY могут быть отрицательными – это нормально
+            assertTrue(params.offsetX() >= -1.0 && params.offsetX() <= 0.5);
+            assertTrue(params.offsetY() >= -0.8 && params.offsetY() <= 0.8);
+        }
+    }
+
+    @Test
+    void generateImage_withNegativeWidth_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            service.generateImage(-100, 100, 10000, -0.5, 0.0, 250);
+        });
+    }
+
+    @Test
+    void generateImage_withZeroWidth_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            service.generateImage(0, 100, 10000, -0.5, 0.0, 250);
+        });
+    }
+
+    @Test
+    void generateImage_withZeroZoom_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.generateImage(100, 100, 0, -0.5, 0.0, 250));
+    }
+
+    @Test
+    void generateImage_withNegativeZoom_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.generateImage(100, 100, -1000, -0.5, 0.0, 250));
+    }
+
+    @Test
+    void generateImage_withZeroMaxIter_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.generateImage(100, 100, 10000, -0.5, 0.0, 0));
+    }
+
+    @Test
+    void generateImage_withNegativeMaxIter_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.generateImage(100, 100, 10000, -0.5, 0.0, -100));
+    }
+
+    @Test
+    void generateParams_withNullPrng_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.generateParams(null));
     }
 }

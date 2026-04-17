@@ -133,6 +133,9 @@ public class ECDHCryptoKeyManagerImpl implements CryptoKeyManager {
 
     @Override
     public byte[] getMasterSeedFromDH(InetAddress peerAddress) {
+        if (peerAddress == null) {
+            throw new IllegalStateException("Не установлен активный пир.");
+        }
         try {
             PeerInfo peerInfo = activeConnections.get(peerAddress);
             if (peerInfo != null && peerInfo.getEcdhKeys() != null) {

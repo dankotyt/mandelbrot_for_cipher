@@ -29,6 +29,14 @@ class ImageSegmentShufflerTest {
     }
 
     @Test
+    void generateSegmentSize_boundaryValues() {
+        assertEquals(1, shuffler.generateSegmentSize(768, 768));   // граница small/medium
+        assertEquals(4, shuffler.generateSegmentSize(769, 768));   // чуть выше границы
+        assertEquals(4, shuffler.generateSegmentSize(1920, 1080)); // граница medium/large
+        assertEquals(16, shuffler.generateSegmentSize(1921, 1080)); // выше границы
+    }
+
+    @Test
     void padImageToSegmentSize_whenNotAligned_shouldPad() {
         BufferedImage img = new BufferedImage(5, 7, BufferedImage.TYPE_INT_RGB);
         BufferedImage padded = shuffler.padImageToSegmentSize(img, 4);
@@ -96,5 +104,29 @@ class ImageSegmentShufflerTest {
                 assertEquals(original.getRGB(x, y), unshuffled.getRGB(x, y));
             }
         }
+    }
+
+    @Test
+    void generateSegmentSize_withNegativeDimensions_shouldReturn1() {
+        assertEquals(1, shuffler.generateSegmentSize(-100, -100));
+        assertEquals(1, shuffler.generateSegmentSize(-1, 100));
+    }
+
+    @Test
+    void padImageToSegmentSize_withNegativeSegmentSize_shouldThrow() {
+        BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        assertThrows(IllegalArgumentException.class, () -> shuffler.padImageToSegmentSize(img, -4));
+    }
+
+    @Test
+    void segmentAndShuffle_withNullImage_shouldThrow() {
+        SecureRandom prng = new SecureRandom();
+        assertThrows(IllegalArgumentException.class, () -> shuffler.segmentAndShuffle(null, prng));
+    }
+
+    @Test
+    void unshuffle_withNullImage_shouldThrow() {
+        SecureRandom prng = new SecureRandom();
+        assertThrows(IllegalArgumentException.class, () -> shuffler.unshuffle(null, 100, 100, prng));
     }
 }
