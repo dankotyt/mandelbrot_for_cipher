@@ -17,7 +17,6 @@ import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.service.encryption.util.XOR;
 import com.cipher.core.service.network.CryptoKeyManager;
 import com.cipher.core.utils.ImageUtils;
-import com.cipher.core.utils.FileManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,7 +28,6 @@ public class ImageDecryptorImpl implements ImageDecryptor {
     private final MandelbrotService mandelbrotService;
     private final SegmentShuffler segmentShuffler;
     private final ImageUtils imageUtils;
-    private final FileManager fileManager;
     private final CryptoKeyManager cryptoKeyManager;
 
     /**
@@ -121,7 +119,6 @@ public class ImageDecryptorImpl implements ImageDecryptor {
         g.drawImage(decryptedArea, startX, startY, null);
         g.dispose();
 
-        fileManager.saveBufferedImageToTemp(result, "decrypted_image.png");
         return result;
     }
 }

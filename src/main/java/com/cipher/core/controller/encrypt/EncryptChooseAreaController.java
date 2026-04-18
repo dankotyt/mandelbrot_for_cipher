@@ -1,5 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.encryption.EncryptedData;
 import com.cipher.core.service.encryption.ImageEncryptor;
 import com.cipher.core.utils.*;
 import javafx.fxml.FXML;
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +35,7 @@ public class EncryptChooseAreaController {
 
     private static final Logger logger = LoggerFactory.getLogger(EncryptChooseAreaController.class);
     private final ImageUtils imageUtils;
+    private final FileManager fileManager;
 
     @FXML private ImageView imageView;
     @FXML private ImageView mandelbrotImageView;
@@ -234,7 +237,12 @@ public class EncryptChooseAreaController {
         try {
             BufferedImage originalImage = imageUtils.getOriginalImage();
             if (originalImage != null) {
-                imageEncryptor.encryptWhole(originalImage);
+                EncryptedData data = imageEncryptor.encryptWhole(originalImage);
+                File outFile = fileManager.saveEncryptedImage(data.sessionSalt(), data.attemptCount(),
+                        data.imageBytes(), data.originalWidth(), data.originalHeight(),
+                        data.startX(), data.startY(), data.areaWidth(), data.areaHeight());
+                sceneManager.showEncryptFinalPanel(imageUtils.bytesToImage(data.imageBytes(),
+                        data.originalWidth(), data.originalHeight()), outFile);
             }
         } catch (Exception e) {
             logger.error("Ошибка загрузки изображения", e);
@@ -259,8 +267,12 @@ public class EncryptChooseAreaController {
                 dialogDisplayer.showErrorMessage("Не удалось получить выделенную область");
                 return;
             }
-
-            imageEncryptor.encryptPart(imageToEncrypt, selectedRectangle);
+            EncryptedData data = imageEncryptor.encryptPart(imageToEncrypt, selectedRectangle);
+            File outFile = fileManager.saveEncryptedImage(data.sessionSalt(), data.attemptCount(),
+                    data.imageBytes(), data.originalWidth(), data.originalHeight(),
+                    data.startX(), data.startY(), data.areaWidth(), data.areaHeight());
+            sceneManager.showEncryptFinalPanel(imageUtils.bytesToImage(data.imageBytes(),
+                    data.originalWidth(), data.originalHeight()), outFile);
             clearRectangles();
 
         } catch (Exception e) {

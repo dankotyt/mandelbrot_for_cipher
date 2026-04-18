@@ -102,7 +102,9 @@ public class DecryptFinalController {
         Task<BufferedImage> decryptTask = new Task<>() {
             @Override
             protected BufferedImage call() throws Exception {
-                return imageDecryptor.decryptImage(file);
+                BufferedImage result = imageDecryptor.decryptImage(file);
+                fileManager.saveBufferedImageToTemp(result, "decrypted_image.png");
+                return result;
             }
         };
 

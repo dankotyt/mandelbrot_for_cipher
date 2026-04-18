@@ -1,5 +1,6 @@
 package com.cipher.core.controller.encrypt;
 
+import com.cipher.core.dto.encryption.EncryptedData;
 import com.cipher.core.service.encryption.ImageEncryptor;
 import com.cipher.core.service.encryption.MandelbrotService;
 import com.cipher.core.service.network.CryptoKeyManager;
@@ -21,6 +22,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.net.InetAddress;
 
 @Controller
@@ -46,6 +48,7 @@ public class EncryptGenerateController {
     private final DialogDisplayer dialogDisplayer;
     private final MandelbrotService mandelbrotService;
     private final CryptoKeyManager cryptoKeyManager;
+    private final FileManager fileManager;
 
     private Task<Image> currentTask;
     private BufferedImage originalImage;
@@ -187,10 +190,16 @@ public class EncryptGenerateController {
 
     private void handleEncryptWholeImage() {
         try {
+            BufferedImage imageToEncrypt = imageUtils.getOriginalImage();
             if (!imageUtils.hasOriginalImage()) {
                 logger.error("original image is null");
             }
-            imageEncryptor.encryptWhole(originalImage);
+            EncryptedData data = imageEncryptor.encryptWhole(imageToEncrypt);
+            File outFile = fileManager.saveEncryptedImage(data.sessionSalt(), data.attemptCount(),
+                    data.imageBytes(), data.originalWidth(), data.originalHeight(),
+                    data.startX(), data.startY(), data.areaWidth(), data.areaHeight());
+            sceneManager.showEncryptFinalPanel(imageUtils.bytesToImage(data.imageBytes(),
+                    data.originalWidth(), data.originalHeight()), outFile);
         } catch (Exception e) {
             logger.error("Ошибка шифрования", e);
             dialogDisplayer.showErrorDialog("Ошибка шифрования: " + e.getMessage());

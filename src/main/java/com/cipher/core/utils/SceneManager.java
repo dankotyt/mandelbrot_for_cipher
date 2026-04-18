@@ -132,7 +132,7 @@ public class SceneManager {
         }
     }
 
-    public void showEncryptFinalPanel(BufferedImage encryptedImage, File result) {
+    public void showEncryptFinalPanel(BufferedImage encryptedImage, File outFile) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/encrypt/encrypt-final.fxml"));
             loader.setControllerFactory(controllerFactory);
@@ -140,7 +140,7 @@ public class SceneManager {
 
             EncryptFinalController controller = loader.getController();
             controller.setEncryptedImage(encryptedImage);
-            controller.setEncryptedFile(result);
+            controller.setEncryptedFile(outFile);
 
             primaryStage.getScene().setRoot(root);
         } catch (Exception e) {

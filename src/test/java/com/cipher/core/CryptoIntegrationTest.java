@@ -1,5 +1,6 @@
 package com.cipher.core;
 
+import com.cipher.core.dto.encryption.EncryptedData;
 import com.cipher.core.service.encryption.*;
 import com.cipher.core.service.encryption.impl.*;
 import com.cipher.core.service.network.CryptoKeyManager;
@@ -111,7 +112,7 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-1: generateNextFractal возвращает фрактал и сохраняет его в поле")
     void testGenerateNextFractalReturnsAndSavesFractal() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage image = createTestImage(200, 200);
@@ -135,7 +136,7 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-2: encryptWhole успешно шифрует изображение (автогенерация фрактала)")
     void testEncryptWholeCompletesSuccessfully() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage image = createTestImage(200, 200);
@@ -146,25 +147,31 @@ class CryptoIntegrationTest {
     }
 
     @Test
-    @DisplayName("ИТ-3: Сквозной сценарий шифрование → дешифрование (реальный ECDH)")
+    @DisplayName("ИТ-3: Сквозной сценарий шифрование → дешифрование")
     void testEndToEndEncryptDecrypt() throws Exception {
         byte[] aliceSecret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
 
-        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, imageUtils);
         encrypt.prepareSession(aliceSecret);
 
         BufferedImage original = createTestImage(300, 300);
-        // Генерируем фрактал, совпадающий по размеру с изображением
         encrypt.generateNextFractal(original.getWidth(), original.getHeight());
-        encrypt.encryptWhole(original);
+        EncryptedData encryptedData = encrypt.encryptWhole(original);
 
-        File encryptedFile = Files.list(tempDir)
-                .filter(p -> p.toString().endsWith(".bin"))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Encrypted file not found"))
-                .toFile();
+        // Сохраняем файл через FileManager
+        File encryptedFile = fileManager.saveEncryptedImage(
+                encryptedData.sessionSalt(),
+                encryptedData.attemptCount(),
+                encryptedData.imageBytes(),
+                encryptedData.originalWidth(),
+                encryptedData.originalHeight(),
+                encryptedData.startX(),
+                encryptedData.startY(),
+                encryptedData.areaWidth(),
+                encryptedData.areaHeight()
+        );
 
-        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
         assertImagesEqual(original, decrypted);
@@ -174,23 +181,28 @@ class CryptoIntegrationTest {
     @DisplayName("ИТ-4: Частичное шифрование области и дешифрование")
     void testPartialEncryptDecrypt() throws Exception {
         byte[] secret = aliceKeyManager.getMasterSeedFromDH(bobAddress);
-        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+        ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, imageUtils);
         encrypt.prepareSession(secret);
 
         BufferedImage original = createTestImage(400, 300);
         javafx.geometry.Rectangle2D area = new javafx.geometry.Rectangle2D(50, 60, 200, 150);
 
-        // Для частичного шифрования также необходим фрактал
         encrypt.generateNextFractal(original.getWidth(), original.getHeight());
-        encrypt.encryptPart(original, area);
+        EncryptedData encryptedData = encrypt.encryptPart(original, area);
 
-        File encryptedFile = Files.list(tempDir)
-                .filter(p -> p.toString().endsWith(".bin"))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Encrypted file not found"))
-                .toFile();
+        File encryptedFile = fileManager.saveEncryptedImage(
+                encryptedData.sessionSalt(),
+                encryptedData.attemptCount(),
+                encryptedData.imageBytes(),
+                encryptedData.originalWidth(),
+                encryptedData.originalHeight(),
+                encryptedData.startX(),
+                encryptedData.startY(),
+                encryptedData.areaWidth(),
+                encryptedData.areaHeight()
+        );
 
-        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, bobKeyManager);
         BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
         assertImagesEqual(original, decrypted);
@@ -203,25 +215,31 @@ class CryptoIntegrationTest {
         int[][] sizes = {{640, 480}, {1024, 768}, {1920, 1080}};
 
         for (int[] size : sizes) {
-            ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, new NoOpSceneManager(), fileManager, imageUtils);
+            ImageEncryptorImpl encrypt = new ImageEncryptorImpl(mandelbrotService, shuffler, imageUtils);
             encrypt.prepareSession(secret);
 
             BufferedImage original = createTestImage(size[0], size[1]);
             encrypt.generateNextFractal(original.getWidth(), original.getHeight());
-            encrypt.encryptWhole(original);
+            EncryptedData encryptedData = encrypt.encryptWhole(original);
 
-            File encryptedFile = Files.list(tempDir)
-                    .filter(p -> p.toString().endsWith(".bin"))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("Encrypted file not found for size " + size[0] + "x" + size[1]))
-                    .toFile();
+            File encryptedFile = fileManager.saveEncryptedImage(
+                    encryptedData.sessionSalt(),
+                    encryptedData.attemptCount(),
+                    encryptedData.imageBytes(),
+                    encryptedData.originalWidth(),
+                    encryptedData.originalHeight(),
+                    encryptedData.startX(),
+                    encryptedData.startY(),
+                    encryptedData.areaWidth(),
+                    encryptedData.areaHeight()
+            );
 
-            ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+            ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, bobKeyManager);
             BufferedImage decrypted = decrypt.decryptImage(encryptedFile);
 
             assertImagesEqual(original, decrypted);
 
-            // Очищаем temp для следующей итерации
+            // Очищаем temp
             Files.list(tempDir).filter(p -> p.toString().endsWith(".bin")).forEach(p -> p.toFile().delete());
         }
     }
@@ -235,7 +253,7 @@ class CryptoIntegrationTest {
         File badFile = tempDir.resolve("corrupted.bin").toFile();
         Files.write(badFile.toPath(), corrupted);
 
-        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, fileManager, bobKeyManager);
+        ImageDecryptorImpl decrypt = new ImageDecryptorImpl(mandelbrotService, shuffler, imageUtils, bobKeyManager);
 
         assertThrows(Exception.class, () -> decrypt.decryptImage(badFile),
                 "Дешифрование битого файла должно выбрасывать исключение");

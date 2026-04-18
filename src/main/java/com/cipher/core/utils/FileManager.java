@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 
 @Component
@@ -218,5 +219,31 @@ public class FileManager {
         Files.write(file.toPath(), data);
         logger.info("Saved encrypted file: {}", file.getAbsolutePath());
         return file;
+    }
+
+    /**
+     * Сохраняет зашифрованное изображение с метаданными
+     */
+    public File saveEncryptedImage(byte[] sessionSalt, int attemptCount,
+                                    byte[] imageBytes, int originalWidth, int originalHeight,
+                                    int startX, int startY, int areaWidth, int areaHeight) throws IOException {
+
+        // Формат: соль(16) + attempts(4) + координаты и размеры(6 int) + данные
+        ByteBuffer buffer = ByteBuffer.allocate(16 + 4 + 24 + imageBytes.length);
+        buffer.put(sessionSalt);
+        buffer.putInt(attemptCount);
+        buffer.putInt(startX);
+        buffer.putInt(startY);
+        buffer.putInt(areaWidth);
+        buffer.putInt(areaHeight);
+        buffer.putInt(originalWidth);
+        buffer.putInt(originalHeight);
+        buffer.put(imageBytes);
+
+        File outFile = saveBytesToFile(buffer.array(),
+                "encrypted_" + System.currentTimeMillis() + ".bin");
+        logger.info("Зашифрованный файл сохранён: {}, размер данных {} байт",
+                outFile.getName(), imageBytes.length);
+        return outFile;
     }
 }
