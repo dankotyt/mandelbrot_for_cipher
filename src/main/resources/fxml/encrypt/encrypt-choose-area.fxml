@@ -9,7 +9,7 @@
             stylesheets="@../../css/styles.css"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cipher.core.controller.encrypt.EncryptChooseAreaController">
+            fx:controller="com.dankotyt.core.controller.encrypt.EncryptChooseAreaController">
 
     <top>
         <BorderPane styleClass="encrypt-choose-area-top-container">

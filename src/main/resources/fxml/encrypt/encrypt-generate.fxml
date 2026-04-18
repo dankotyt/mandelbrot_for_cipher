@@ -4,7 +4,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane styleClass="main-container" stylesheets="@../../css/styles.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.cipher.core.controller.encrypt.EncryptGenerateController">
+<BorderPane styleClass="main-container" stylesheets="@../../css/styles.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dankotyt.core.controller.encrypt.EncryptGenerateController">
 
     <top>
         <BorderPane styleClass="encrypt-generate-top-container">

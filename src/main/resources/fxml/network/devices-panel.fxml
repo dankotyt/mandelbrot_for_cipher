@@ -7,7 +7,7 @@
             stylesheets="@../../css/styles.css"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cipher.core.controller.network.DevicesController">
+            fx:controller="com.dankotyt.core.controller.network.DevicesController">
 
     <top>
         <BorderPane styleClass="encrypt-top-container">

@@ -9,7 +9,7 @@
             stylesheets="@../../css/styles.css"
             xmlns="http://javafx.com/javafx/17.0.12"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.cipher.core.controller.network.ChatController">
+            fx:controller="com.dankotyt.core.controller.network.ChatController">
 
     <top>
         <BorderPane styleClass="chat-top-container">
