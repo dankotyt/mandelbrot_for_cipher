@@ -1,4 +1,3 @@
 rootProject.name = 'mandelbrot_for_cipher'
 include 'cipher-encryption-core'
-include 'cipher-desktop-app'
 

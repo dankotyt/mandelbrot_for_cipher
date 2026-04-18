@@ -1,20 +1,9 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.1.0'
     id 'org.beryx.jlink' version '3.1.1'
     id 'org.springframework.boot' version '3.2.0'
     id 'io.spring.dependency-management' version '1.1.4'
-}
-
-ext {
-    set('springCloudVersion', "2023.0.0")
-}
-
-dependencyManagement {
-    imports {
-        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-    }
 }
 
 java {
@@ -30,29 +19,11 @@ repositories {
     maven { url 'https://repo.spring.io/milestone' }
 }
 
-javafx {
-    version = "21.0.8"
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing']
-}
-
 dependencies {
-    //===JavaFX зависимости===========
-    implementation 'org.openjfx:javafx-controls:21.0.8'
-    implementation 'org.openjfx:javafx-fxml:21.0.8'
-    //=======================
-
     //===Spring зависимости=======================
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-//    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-//    implementation 'org.springframework.cloud:spring-cloud-starter-config'
-//    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-//    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-//    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-
+    implementation 'org.springframework.boot:spring-boot-starter'
     //=======================
 
     //===Другие зависимости============
@@ -62,7 +33,6 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot2:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-ratelimiter:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-framework-common:2.2.0'
-//    implementation 'org.redisson:redisson-spring-boot-starter:3.51.0'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.81'
 
     compileOnly 'org.projectlombok:lombok'
@@ -79,12 +49,6 @@ dependencies {
 
     // Для работы с временными файлами в тестах
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
-
-    //===БД===================
-    implementation 'org.postgresql:postgresql'
-
-    runtimeOnly 'org.postgresql:postgresql'
-    //=======================
 }
 
 test {
