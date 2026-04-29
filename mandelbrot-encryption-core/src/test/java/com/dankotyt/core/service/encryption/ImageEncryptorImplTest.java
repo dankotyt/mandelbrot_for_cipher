@@ -56,7 +56,7 @@ class ImageEncryptorImplTest {
     }
 
     @Test
-    void prepareSession_shouldNotThrowException() throws Exception {
+    void prepareSession_shouldNotThrowException() {
         assertDoesNotThrow(() -> imageEncryptor.prepareSession(sharedSecret));
     }
 

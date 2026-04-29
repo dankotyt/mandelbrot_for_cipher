@@ -43,35 +43,6 @@ class MandelbrotServiceTest {
     }
 
     @Test
-    void paintComponent_withValidImage_shouldDrawImage() {
-        service.generateImage(100, 100, 10000, -0.5, 0.0, 250);
-        BufferedImage targetImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = targetImage.createGraphics();
-        assertDoesNotThrow(() -> service.paintComponent(g2d));
-        g2d.dispose();
-        // Проверяем, что что-то нарисовалось
-        boolean hasContent = false;
-        for (int y = 0; y < 100; y++) {
-            for (int x = 0; x < 100; x++) {
-                if (targetImage.getRGB(x, y) != 0) {
-                    hasContent = true;
-                    break;
-                }
-            }
-        }
-        assertTrue(hasContent);
-    }
-
-    @Test
-    void paintComponent_withNullImage_shouldNotThrow() {
-        BufferedImage targetImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = targetImage.createGraphics();
-        // service.image = null (по умолчанию null)
-        assertDoesNotThrow(() -> service.paintComponent(g2d));
-        g2d.dispose();
-    }
-
-    @Test
     void isFractalValid_withValidFractal_shouldReturnTrue() {
         // Создаём изображение с равномерным распределением цветов
         BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);

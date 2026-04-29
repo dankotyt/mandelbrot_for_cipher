@@ -44,7 +44,6 @@ class ImageDecryptorImplTest {
         peerAddress = InetAddress.getByName("127.0.0.1");
         testParams = new MandelbrotParams(10000, -0.5, 0.0, 250);
 
-        lenient().when(cryptoKeyManager.getConnectedPeer()).thenReturn(peerAddress);
         lenient().when(cryptoKeyManager.getMasterSeedFromDH(peerAddress)).thenReturn(sharedSecret);
         lenient().when(mandelbrotService.generateParams(any(SecureRandom.class)))
                 .thenReturn(testParams);
@@ -83,7 +82,7 @@ class ImageDecryptorImplTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecryptor.decryptImage(file);
+        BufferedImage result = imageDecryptor.decryptImage(file, peerAddress);
         assertNotNull(result);
         assertEquals(fullWidth, result.getWidth());
         assertEquals(fullHeight, result.getHeight());
@@ -114,7 +113,7 @@ class ImageDecryptorImplTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        assertThrows(IllegalArgumentException.class, () -> imageDecryptor.decryptImage(file));
+        assertThrows(IllegalArgumentException.class, () -> imageDecryptor.decryptImage(file, peerAddress));
         Files.deleteIfExists(tempFile);
     }
 
@@ -150,7 +149,7 @@ class ImageDecryptorImplTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        imageDecryptor.decryptImage(file);
+        imageDecryptor.decryptImage(file, peerAddress);
         verify(mandelbrotService, times(1)).generateParams(any(SecureRandom.class));
         Files.deleteIfExists(tempFile);
     }
@@ -188,7 +187,7 @@ class ImageDecryptorImplTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecryptor.decryptImage(file);
+        BufferedImage result = imageDecryptor.decryptImage(file, peerAddress);
         assertNotNull(result);
         Files.deleteIfExists(tempFile);
     }
@@ -226,21 +225,21 @@ class ImageDecryptorImplTest {
         Files.write(tempFile, buffer.array());
         File file = tempFile.toFile();
 
-        BufferedImage result = imageDecryptor.decryptImage(file);
+        BufferedImage result = imageDecryptor.decryptImage(file, peerAddress);
         assertNotNull(result);
         Files.deleteIfExists(tempFile);
     }
 
     @Test
     void decryptImage_withNullFile_shouldThrow() {
-        assertThrows(NullPointerException.class, () -> imageDecryptor.decryptImage(null));
+        assertThrows(NullPointerException.class, () -> imageDecryptor.decryptImage(null, null));
     }
 
     @Test
     void decryptImage_withEmptyFile_shouldThrow() throws Exception {
         Path emptyFile = Files.createTempFile("empty", ".bin");
         File file = emptyFile.toFile();
-        assertThrows(Exception.class, () -> imageDecryptor.decryptImage(file));
+        assertThrows(Exception.class, () -> imageDecryptor.decryptImage(file, peerAddress));
         Files.deleteIfExists(emptyFile);
     }
 }

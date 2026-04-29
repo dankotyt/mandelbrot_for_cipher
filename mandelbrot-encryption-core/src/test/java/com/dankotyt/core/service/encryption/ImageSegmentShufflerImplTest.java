@@ -2,6 +2,7 @@ package com.dankotyt.core.service.encryption;
 
 import com.dankotyt.core.dto.segmentation.SegmentationResult;
 import com.dankotyt.core.service.encryption.impl.ImageSegmentShufflerImpl;
+import com.dankotyt.core.service.encryption.impl.SegmentSizeStrategyImpl;
 import org.junit.jupiter.api.Test;
 
 import java.awt.image.BufferedImage;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ImageSegmentShufflerImplTest {
 
-    private final ImageSegmentShufflerImpl shuffler = new ImageSegmentShufflerImpl();
+    private final ImageSegmentShufflerImpl shuffler = new ImageSegmentShufflerImpl(new SegmentSizeStrategyImpl());
 
     @Test
     void generateSegmentSize_withSmallImage_shouldReturn1() {

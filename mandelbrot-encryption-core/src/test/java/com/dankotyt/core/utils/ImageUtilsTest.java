@@ -1,7 +1,6 @@
 package com.dankotyt.core.utils;
 
 import com.dankotyt.core.dto.MandelbrotParams;
-import javafx.scene.image.Image;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,17 +46,6 @@ class ImageUtilsTest {
     @Test
     void hasMandelbrotImage_whenNotSet_shouldReturnFalse() {
         assertFalse(imageUtils.hasMandelbrotImage());
-    }
-
-    @Test
-    void convertToFxImage_shouldConvertBufferedImage() {
-        BufferedImage bufferedImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
-
-        Image fxImage = imageUtils.convertToFxImage(bufferedImage);
-
-        assertNotNull(fxImage);
-        assertEquals(100, fxImage.getWidth(), 0.01);
-        assertEquals(100, fxImage.getHeight(), 0.01);
     }
 
     @Test

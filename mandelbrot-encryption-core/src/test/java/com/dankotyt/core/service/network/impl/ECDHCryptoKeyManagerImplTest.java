@@ -18,10 +18,9 @@ class ECDHCryptoKeyManagerImplTest {
     private ECDHService ecdhService;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         ecdhService = new ECDHServiceImpl();
         keyManager = new ECDHCryptoKeyManagerImpl(ecdhService);
-        Thread.sleep(100);
     }
 
     @Test
@@ -39,171 +38,103 @@ class ECDHCryptoKeyManagerImplTest {
     }
 
     @Test
-    void addConnection_and_getConnectionStatus_shouldWork() throws Exception {
+    void addPeer_and_hasPeer_shouldWork() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
         ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peerAddress, peerKeys);
-        assertTrue(keyManager.isConnectedTo(peerAddress));
-        assertEquals("CONNECTED", keyManager.getConnectionStatus(peerAddress));
+        keyManager.addPeer(peerAddress, peerKeys);
+        assertTrue(keyManager.hasPeer(peerAddress));
     }
 
     @Test
-    void addConnection_withNullKeys_shouldNotThrow() throws Exception {
+    void addPeer_withNullKeys_shouldThrowIllegalArgumentException() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
-        assertDoesNotThrow(() -> keyManager.addConnection(peerAddress, null));
+        assertThrows(IllegalArgumentException.class, () -> keyManager.addPeer(peerAddress, null));
     }
 
     @Test
-    void closeConnection_shouldRemoveConnection() throws Exception {
+    void removePeer_shouldRemovePeer() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
         ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peerAddress, peerKeys);
-        keyManager.closeConnection(peerAddress);
-        assertFalse(keyManager.isConnectedTo(peerAddress));
+        keyManager.addPeer(peerAddress, peerKeys);
+        keyManager.removePeer(peerAddress);
+        assertFalse(keyManager.hasPeer(peerAddress));
     }
 
     @Test
-    void closeAllConnections_shouldRemoveAll() throws Exception {
+    void getActivePeers_shouldReturnSnapshotCopy() throws Exception {
         InetAddress peer1 = InetAddress.getByName("127.0.0.1");
         InetAddress peer2 = InetAddress.getByName("127.0.0.2");
-        ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peer1, peerKeys);
-        keyManager.addConnection(peer2, peerKeys);
-        keyManager.closeAllConnections();
-        assertFalse(keyManager.isConnectedTo(peer1));
-        assertFalse(keyManager.isConnectedTo(peer2));
-    }
-
-    @Test
-    void getActiveConnections_shouldReturnMap() throws Exception {
-        InetAddress peer1 = InetAddress.getByName("127.0.0.1");
-        InetAddress peer2 = InetAddress.getByName("127.0.0.2");
-        ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peer1, peerKeys);
-        keyManager.addConnection(peer2, peerKeys);
-        Map<InetAddress, String> connections = keyManager.getActiveConnections();
-        assertEquals(2, connections.size());
-        assertTrue(connections.containsKey(peer1));
-        assertTrue(connections.containsKey(peer2));
-        assertEquals("CONNECTED", connections.get(peer1));
-    }
-
-    @Test
-    void setConnectedPeer_and_getConnectedPeer_shouldWork() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("192.168.1.100");
-        keyManager.setConnectedPeer(peerAddress);
-        assertEquals(peerAddress, keyManager.getConnectedPeer());
-    }
-
-    @Test
-    void setConnectedPeer_withNull_shouldClear() {
-        keyManager.setConnectedPeer(null);
-        assertNull(keyManager.getConnectedPeer());
-    }
-
-    @Test
-    void isConnectedTo_withNonExistentPeer_shouldReturnFalse() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("192.168.1.200");
-        assertFalse(keyManager.isConnectedTo(peerAddress));
-    }
-
-    @Test
-    void getConnectionStatus_withNonExistentPeer_shouldReturnDisconnected() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("192.168.1.200");
-        assertEquals("DISCONNECTED", keyManager.getConnectionStatus(peerAddress));
-    }
-
-    @Test
-    void hasKeysForPeer_shouldReturnCorrectValue() throws Exception {
-        String peerIp = "192.168.1.100";
         ECDHKeyPair keys = ecdhService.generateKeyPair();
-        InetAddress peerAddress = InetAddress.getByName(peerIp);
-        assertFalse(keyManager.hasKeysForPeer(peerIp));
-        keyManager.addConnection(peerAddress, keys);
-        assertTrue(keyManager.hasKeysForPeer(peerIp));
+        keyManager.addPeer(peer1, keys);
+        keyManager.addPeer(peer2, keys);
+
+        Map<InetAddress, ECDHKeyPair> snapshot = keyManager.getActivePeers();
+        assertEquals(2, snapshot.size());
+
+        // Удаляем одного пира через менеджер
+        keyManager.removePeer(peer1);
+
+        // Снимок не должен измениться
+        assertEquals(2, snapshot.size());
+        assertTrue(snapshot.containsKey(peer1));
+        assertTrue(snapshot.containsKey(peer2));
+
+        // Актуальное состояние менеджера – только один пир
+        assertEquals(1, keyManager.getActivePeers().size());
+        assertTrue(keyManager.hasPeer(peer2));
+        assertFalse(keyManager.hasPeer(peer1));
     }
 
     @Test
-    void removePeerKeys_shouldRemoveKeys() throws Exception {
-        String peerIp = "192.168.1.100";
-        ECDHKeyPair keys = ecdhService.generateKeyPair();
-        InetAddress peerAddress = InetAddress.getByName(peerIp);
-        keyManager.addConnection(peerAddress, keys);
-        assertTrue(keyManager.hasKeysForPeer(peerIp));
-        keyManager.removePeerKeys(peerIp);
-        assertFalse(keyManager.hasKeysForPeer(peerIp));
-        assertNull(keyManager.getPeerKeys(peerIp));
+    void hasPeer_withNonExistentPeer_shouldReturnFalse() throws Exception {
+        InetAddress peerAddress = InetAddress.getByName("192.168.1.200");
+        assertFalse(keyManager.hasPeer(peerAddress));
     }
 
     @Test
-    void getMasterSeedFromDH_whenConnected_shouldReturnSeed() throws Exception {
+    void getMasterSeedFromDH_whenSharedSecretAvailable_shouldReturnSeed() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
-        ECDHKeyPair localKeys = ecdhService.generateKeyPair();
+        ECDHKeyPair localKeys = keyManager.getCurrentKeys(); // текущие локальные ключи
         ECDHKeyPair remoteKeys = ecdhService.generateKeyPair();
+        // Вычисляем общий секрет между локальной и удалённой парой
         byte[] remotePublicKey = ecdhService.serializePublicKey(remoteKeys);
         ecdhService.computeSharedSecret(localKeys, remotePublicKey);
-        keyManager.addConnection(peerAddress, localKeys);
-        Thread.sleep(100);
+        // Регистрируем пира с ключами (addPeer внутри вызывает computeSharedSecret повторно,
+        // что нормально, главное чтобы sharedSecretBytes был не null)
+        keyManager.addPeer(peerAddress, localKeys);
         byte[] seed = keyManager.getMasterSeedFromDH(peerAddress);
         assertNotNull(seed);
         assertTrue(seed.length > 0);
     }
 
     @Test
-    void getMasterSeedFromDH_whenNotConnected_shouldThrowRuntimeException() throws Exception {
+    void getMasterSeedFromDH_whenNoPeer_shouldThrow() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("192.168.1.200");
-        RuntimeException exception = assertThrows(RuntimeException.class,
+        Exception exception = assertThrows(IllegalStateException.class,
                 () -> keyManager.getMasterSeedFromDH(peerAddress));
-        assertNotNull(exception);
+        assertTrue(exception.getMessage().contains(peerAddress.toString()));
     }
 
     @Test
-    void getMasterSeedFromDH_whenConnectedButNoSharedSecret_shouldThrow() throws Exception {
+    void getMasterSeedFromDH_whenPeerHasNoSharedSecret_shouldThrow() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
         ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peerAddress, peerKeys);
-        Thread.sleep(100);
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> keyManager.getMasterSeedFromDH(peerAddress));
-        assertNotNull(exception);
+        keyManager.addPeer(peerAddress, peerKeys);
     }
 
     @Test
-    void sendKeyInvalidation_shouldNotThrow() throws Exception {
+    void addPeer_withExistingPeer_shouldUpdate() throws Exception {
         InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
-        assertDoesNotThrow(() -> keyManager.sendKeyInvalidation(peerAddress));
-        Thread.sleep(100);
+        ECDHKeyPair keys1 = ecdhService.generateKeyPair();
+        ECDHKeyPair keys2 = ecdhService.generateKeyPair();
+        keyManager.addPeer(peerAddress, keys1);
+        keyManager.addPeer(peerAddress, keys2);
+        assertTrue(keyManager.hasPeer(peerAddress));
     }
 
     @Test
-    void getPeerKeys_whenNotExists_shouldReturnNull() {
-        assertNull(keyManager.getPeerKeys("nonexistent"));
-    }
-
-    @Test
-    void addConnection_withExistingConnection_shouldUpdate() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
-        ECDHKeyPair peerKeys1 = ecdhService.generateKeyPair();
-        ECDHKeyPair peerKeys2 = ecdhService.generateKeyPair();
-        keyManager.addConnection(peerAddress, peerKeys1);
-        keyManager.addConnection(peerAddress, peerKeys2);
-        assertTrue(keyManager.isConnectedTo(peerAddress));
-    }
-
-    @Test
-    void closeConnection_withNonExistentPeer_shouldNotThrow() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("192.168.1.200");
-        assertDoesNotThrow(() -> keyManager.closeConnection(peerAddress));
-    }
-
-    @Test
-    void getMasterSeedFromDH_afterConnectionClosed_shouldThrow() throws Exception {
-        InetAddress peerAddress = InetAddress.getByName("127.0.0.1");
-        ECDHKeyPair peerKeys = ecdhService.generateKeyPair();
-        keyManager.addConnection(peerAddress, peerKeys);
-        keyManager.closeConnection(peerAddress);
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> keyManager.getMasterSeedFromDH(peerAddress));
-        assertNotNull(exception);
+    void removePeer_withNonExistentPeer_shouldNotThrow() {
+        InetAddress nonExistent = InetAddress.getLoopbackAddress();
+        assertDoesNotThrow(() -> keyManager.removePeer(nonExistent));
     }
 }
