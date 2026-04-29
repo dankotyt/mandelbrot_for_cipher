@@ -1,7 +1,7 @@
 package com.dankotyt.core.service.encryption;
 
 import com.dankotyt.core.dto.MandelbrotParams;
-import com.dankotyt.core.threading.MandelbrotThread;
+import com.dankotyt.core.service.encryption.impl.MandelbrotParamsGeneratorImpl;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
@@ -29,7 +28,7 @@ import java.util.concurrent.Future;
  */
 @Component
 @RequiredArgsConstructor
-public class MandelbrotService extends JPanel {
+public class MandelbrotService {
     private static final Logger logger = LoggerFactory.getLogger(MandelbrotService.class);
 
     @Getter @Setter
@@ -37,35 +36,17 @@ public class MandelbrotService extends JPanel {
     @Getter @Setter
     private int targetHeight;
 
-    private BufferedImage image;
+    private final MandelbrotParamsGenerator paramsGenerator;
 
-    /**
-     * Переопределяет метод paintComponent для отрисовки сгенерированного изображения множества Мандельброта.
-     *
-     * @param g Графический контекст для рисования.
-     */
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (image != null) {
-            g.drawImage(image, 0, 0, null);
-        }
+    public MandelbrotService() {
+        this(new MandelbrotParamsGeneratorImpl());
     }
 
     /**
-     * Генерирует параметры множества Мандельброта.
+     * Генерирует параметры фрактала на основе детерминированного SecureRandom.
      */
     public MandelbrotParams generateParams(SecureRandom prng) {
-        if (prng == null) {
-            throw new IllegalArgumentException("PRNG cannot be null");
-        }
-        double zoom = 10_000 + prng.nextInt(701) * 140;
-        double offsetX = -0.9998 + prng.nextDouble() * (0.45 + 0.9998);
-        double offsetY = prng.nextBoolean()
-                ? -0.7 + prng.nextDouble() * 0.6
-                : 0.1 + prng.nextDouble() * 0.6;
-        int maxIter = 250 + prng.nextInt(101) * 10;
-        return new MandelbrotParams(zoom, offsetX, offsetY, maxIter);
+        return paramsGenerator.generate(prng);
     }
 
     /**
@@ -123,8 +104,6 @@ public class MandelbrotService extends JPanel {
             throw new RuntimeException("Ошибка генерации фрактала", e);
         }
 
-        this.image = resultImage;
-        repaint();
         return resultImage;
     }
 

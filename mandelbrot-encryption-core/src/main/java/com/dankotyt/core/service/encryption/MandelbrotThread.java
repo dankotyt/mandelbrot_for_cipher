@@ -1,4 +1,4 @@
-package com.dankotyt.core.threading;
+package com.dankotyt.core.service.encryption;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -14,7 +14,7 @@ import java.util.logging.Logger;
  * что даёт плавные градиенты, характерные для художественных фракталов.
  * </p>
  */
-public class MandelbrotThread implements Runnable {
+class MandelbrotThread implements Runnable {
 
     private final int startX;
     private final int startY;
