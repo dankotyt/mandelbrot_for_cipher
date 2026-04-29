@@ -3,10 +3,7 @@ package com.dankotyt.core.config;
 import com.dankotyt.core.service.encryption.ImageDecryptor;
 import com.dankotyt.core.service.encryption.ImageEncryptor;
 import com.dankotyt.core.service.encryption.MandelbrotService;
-import com.dankotyt.core.service.encryption.impl.ECDHServiceImpl;
-import com.dankotyt.core.service.encryption.impl.ImageDecryptorImpl;
-import com.dankotyt.core.service.encryption.impl.ImageEncryptorImpl;
-import com.dankotyt.core.service.encryption.impl.ImageSegmentShufflerImpl;
+import com.dankotyt.core.service.encryption.impl.*;
 import com.dankotyt.core.service.network.CryptoKeyManager;
 import com.dankotyt.core.service.network.impl.ECDHCryptoKeyManagerImpl;
 import com.dankotyt.core.utils.ImageUtils;
@@ -73,7 +70,7 @@ public class EncryptionModule {
     public static ImageEncryptor createEncryptor() {
         return new ImageEncryptorImpl(
                 new MandelbrotService(),
-                new ImageSegmentShufflerImpl(),
+                new ImageSegmentShufflerImpl(new SegmentSizeStrategyImpl()),
                 new ImageUtils()
         );
     }
@@ -91,7 +88,7 @@ public class EncryptionModule {
     public static ImageDecryptor createDecryptor(CryptoKeyManager keyManager) {
         return new ImageDecryptorImpl(
                 new MandelbrotService(),
-                new ImageSegmentShufflerImpl(),
+                new ImageSegmentShufflerImpl(new SegmentSizeStrategyImpl()),
                 new ImageUtils(),
                 keyManager
         );

@@ -1,10 +1,7 @@
 package com.dankotyt.core.config;
 
 import com.dankotyt.core.service.encryption.*;
-import com.dankotyt.core.service.encryption.impl.ECDHServiceImpl;
-import com.dankotyt.core.service.encryption.impl.ImageDecryptorImpl;
-import com.dankotyt.core.service.encryption.impl.ImageEncryptorImpl;
-import com.dankotyt.core.service.encryption.impl.ImageSegmentShufflerImpl;
+import com.dankotyt.core.service.encryption.impl.*;
 import com.dankotyt.core.service.network.CryptoKeyManager;
 import com.dankotyt.core.service.network.impl.ECDHCryptoKeyManagerImpl;
 import com.dankotyt.core.utils.ImageUtils;
@@ -77,8 +74,20 @@ public class EncryptionAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public MandelbrotParamsGenerator mandelbrotParamsGenerator() {
+        return new MandelbrotParamsGeneratorImpl();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public SegmentShuffler segmentShuffler() {
-        return new ImageSegmentShufflerImpl();
+        return new ImageSegmentShufflerImpl(segmentSizeStrategy());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SegmentSizeStrategy segmentSizeStrategy() {
+        return new SegmentSizeStrategyImpl();
     }
 
     @Bean
