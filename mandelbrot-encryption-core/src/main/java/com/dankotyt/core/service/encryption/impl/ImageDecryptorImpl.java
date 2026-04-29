@@ -42,12 +42,13 @@ public class ImageDecryptorImpl implements ImageDecryptor {
      * </ol>
      *
      * @param encryptedFile файл с зашифрованными данными
-     * @return расшифрованное изображение
-     * @throws Exception если возникает ошибка при чтении файла или дешифровании
+     * @param peerAddress   IP-адрес пира, с которым был согласован общий секрет
+     * @return восстановленное изображение
+     * @throws Exception если произошла ошибка при чтении, дешифровании или отсутствует ключ для пира
      */
 
     @Override
-    public BufferedImage decryptImage(File encryptedFile) throws Exception {
+    public BufferedImage decryptImage(File encryptedFile, InetAddress peerAddress) throws Exception {
         byte[] fileData = Files.readAllBytes(encryptedFile.toPath());
         ByteBuffer buf = ByteBuffer.wrap(fileData);
 
@@ -76,8 +77,7 @@ public class ImageDecryptorImpl implements ImageDecryptor {
 
         BufferedImage encryptedImage = imageUtils.bytesToImage(imageBytes, fullWidth, fullHeight);
 
-        InetAddress peer = cryptoKeyManager.getConnectedPeer();
-        byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(InetAddress.getByName(peer.getHostAddress()));
+        byte[] sharedSecret = cryptoKeyManager.getMasterSeedFromDH(peerAddress);
 
         byte[] prk = HKDF.extract(salt, sharedSecret);
         byte[] keyFractalParams = HKDF.expand(prk, "fractal-params".getBytes(StandardCharsets.UTF_8), 32);
@@ -95,24 +95,19 @@ public class ImageDecryptorImpl implements ImageDecryptor {
         SecureRandom segPrng = SecureRandom.getInstance("SHA1PRNG");
         segPrng.setSeed(keySegmentation);
 
-        // Извлекаем область, которая подвергалась шифрованию
         BufferedImage encryptedArea = encryptedImage.getSubimage(startX, startY, areaWidth, areaHeight);
 
-        // Генерируем фрактал для размера области
         BufferedImage fractal = mandelbrotService.generateImage(
                 areaWidth, areaHeight,
                 params.zoom(), params.offsetX(), params.offsetY(), params.maxIter()
         );
 
-        // Обратная сегментация области
         BufferedImage unshuffledArea = segmentShuffler.unshuffle(
                 encryptedArea, areaWidth, areaHeight, segPrng
         );
 
-        // XOR области с фракталом
         BufferedImage decryptedArea = XOR.performXOR(unshuffledArea, fractal);
 
-        // Вставляем расшифрованную область обратно в полное изображение
         BufferedImage result = new BufferedImage(fullWidth, fullHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = result.createGraphics();
         g.drawImage(encryptedImage, 0, 0, null);
