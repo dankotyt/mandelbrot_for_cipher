@@ -1,8 +1,16 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
     id 'java-library'
     id 'org.springframework.boot' version '3.2.0' apply false
     id 'io.spring.dependency-management' version '1.1.4'
     id 'maven-publish'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom SpringBootPlugin.BOM_COORDINATES
+    }
 }
 
 java {
@@ -48,13 +56,12 @@ test {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
+        create('mavenJava', MavenPublication) {
             from components.java
-
             pom {
                 name = 'Mandelbrot Crypto Core'
                 description = 'Шифрование изображений через ECDH и фракталы Мандельброта'
-                url = 'https://github.com/dankotyt/image-crypto-core'
+                url = 'https://github.com/dankotyt/mandelbrot-encryption-core'
                 licenses {
                     license {
                         name = 'MIT License'
@@ -68,8 +75,8 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com/dankotyt/image-crypto-core.git'
-                    url = 'https://github.com/dankotyt/image-crypto-core'
+                    connection = 'scm:git:git://github.com/dankotyt/mandelbrot-encryption-core.git'
+                    url = 'https://github.com/dankotyt/mandelbrot-encryption-core'
                 }
             }
         }
