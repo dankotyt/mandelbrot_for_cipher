@@ -1,8 +1,8 @@
 package com.dankotyt.core.service.encryption.impl;
 
-import com.dankotyt.client.utils.ECDHCryptoParams;
 import com.dankotyt.core.model.ECDHKeyPair;
 import com.dankotyt.core.service.encryption.ECDHService;
+import com.dankotyt.core.service.encryption.util.ECDHCryptoParams;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
