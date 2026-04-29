@@ -1,6 +1,6 @@
 package com.dankotyt.core.service.encryption;
 
-import com.dankotyt.core.dto.segmentation.SegmentationResult;
+import com.dankotyt.core.dto.SegmentationResult;
 import com.dankotyt.core.service.encryption.impl.ImageSegmentShufflerImpl;
 import com.dankotyt.core.service.encryption.impl.SegmentSizeStrategyImpl;
 import org.junit.jupiter.api.Test;

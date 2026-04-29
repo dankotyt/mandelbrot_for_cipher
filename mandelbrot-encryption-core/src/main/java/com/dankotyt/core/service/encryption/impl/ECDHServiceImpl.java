@@ -11,12 +11,24 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Arrays;
 
+/**
+ * Реализация {@link ECDHService}, выполняющая операции на эллиптической кривой,
+ * включая генерацию ключей, сериализацию и вычисление общего секрета.
+ *
+ * @author dankotyt
+ * @since 1.1.0
+ */
 @Service
 @Slf4j
 public class ECDHServiceImpl implements ECDHService {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
+    /**
+     * Генерирует новую пару ключей ECDH со случайным приватным ключом.
+     *
+     * @return новый экземпляр {@link ECDHKeyPair}
+     */
     @Override
     public ECDHKeyPair generateKeyPair() {
         BigInteger privateKey = generatePrivateKey();
@@ -24,6 +36,11 @@ public class ECDHServiceImpl implements ECDHService {
         return new ECDHKeyPair(privateKey, publicKey, Instant.now());
     }
 
+    /**
+     * Генерирует приватный ключ.
+     *
+     * @return новый экземпляр {@link BigInteger}
+     */
     private BigInteger generatePrivateKey() {
         BigInteger privateKey;
         do {
@@ -32,11 +49,23 @@ public class ECDHServiceImpl implements ECDHService {
         return privateKey;
     }
 
+    /**
+     * Сериализует публичный ключ (точку кривой) из переданного объекта ключевой пары.
+     *
+     * @param keyPair пара ключей, содержащая публичную точку
+     * @return байтовый массив в формате: [длина X][X][длина Y][Y]
+     */
     @Override
     public byte[] serializePublicKey(ECDHKeyPair keyPair) {
         return serializePublicKey(keyPair.getPublicKey());
     }
 
+    /**
+     * Сериализует публичный ключ, представленный массивом из двух BigInteger [x, y].
+     *
+     * @param publicKey точка [x, y]
+     * @return байтовый массив (длина X + X + длина Y + Y)
+     */
     @Override
     public byte[] serializePublicKey(BigInteger[] publicKey) {
         byte[] xBytes = publicKey[0].toByteArray();
@@ -51,6 +80,12 @@ public class ECDHServiceImpl implements ECDHService {
         return result;
     }
 
+    /**
+     * Десериализует публичный ключ из байтового представления.
+     *
+     * @param bytes массив в формате [длина X][X][длина Y][Y]
+     * @return массив BigInteger [x, y]
+     */
     @Override
     public BigInteger[] deserializePublicKey(byte[] bytes) {
         int xLength = bytesToInt(bytes, 0);
@@ -62,6 +97,13 @@ public class ECDHServiceImpl implements ECDHService {
         return new BigInteger[]{x, y};
     }
 
+    /**
+     * Вычисляет общий секрет, используя локальную приватную часть и публичный ключ удалённой стороны.
+     * Результат сохраняется непосредственно в локальный объект ключевой пары.
+     *
+     * @param localKeys           локальная пара ключей (в неё будет записан общий секрет)
+     * @param otherPublicKeyBytes сериализованный публичный ключ пира
+     */
     @Override
     public void computeSharedSecret(ECDHKeyPair localKeys, byte[] otherPublicKeyBytes) {
         BigInteger[] otherPublicKey = deserializePublicKey(otherPublicKeyBytes);
@@ -70,8 +112,14 @@ public class ECDHServiceImpl implements ECDHService {
         localKeys.setSharedSecretBytes(sharedSecretToBytes(sharedSecret));
     }
 
-    // ==================== Эллиптическая арифметика ====================
-
+    /**
+     * Скалярное умножение точки кривой (x1,y1) на скаляр k (метод удвоения-сложения).
+     *
+     * @param x1 x-координата точки.
+     * @param y1 y-координата точки.
+     * @param k  скаляр (множитель).
+     * @return результирующая точка [x, y].
+     */
     private BigInteger[] scalarMultiply(BigInteger x1, BigInteger y1, BigInteger k) {
         BigInteger x = BigInteger.ZERO;
         BigInteger y = BigInteger.ZERO;
@@ -96,6 +144,13 @@ public class ECDHServiceImpl implements ECDHService {
         return new BigInteger[]{x, y};
     }
 
+    /**
+     * Удвоение точки эллиптической кривой.
+     *
+     * @param x x-координата.
+     * @param y y-координата.
+     * @return удвоенная точка [x3, y3].
+     */
     private BigInteger[] pointDouble(BigInteger x, BigInteger y) {
         if (y.equals(BigInteger.ZERO)) {
             return new BigInteger[]{BigInteger.ZERO, BigInteger.ZERO};
@@ -111,6 +166,13 @@ public class ECDHServiceImpl implements ECDHService {
         return new BigInteger[]{x3, y3};
     }
 
+    /**
+     * Сложение двух различных точек эллиптической кривой. При совпадении вызывает {@link #pointDouble}.
+     *
+     * @param x1,y1 координаты первой точки.
+     * @param x2,y2 координаты второй точки.
+     * @return сумма точек [x3, y3].
+     */
     private BigInteger[] pointAdd(BigInteger x1, BigInteger y1, BigInteger x2, BigInteger y2) {
         if (x1.equals(x2) && y1.equals(y2)) {
             return pointDouble(x1, y1);
@@ -126,6 +188,12 @@ public class ECDHServiceImpl implements ECDHService {
         return new BigInteger[]{x3, y3};
     }
 
+    /**
+     * Преобразует общий секрет (точку [x, y]) в байтовый массив простым конкатенированием координат.
+     *
+     * @param sharedSecret точка [x, y].
+     * @return байтовый массив (xBytes + yBytes).
+     */
     private byte[] sharedSecretToBytes(BigInteger[] sharedSecret) {
         byte[] xBytes = sharedSecret[0].toByteArray();
         byte[] yBytes = sharedSecret[1].toByteArray();
@@ -135,6 +203,12 @@ public class ECDHServiceImpl implements ECDHService {
         return result;
     }
 
+    /**
+     * Преобразует int в 4-байтовый массив (big-endian).
+     *
+     * @param value целое число.
+     * @return 4-байтовый массив.
+     */
     private byte[] intToBytes(int value) {
         return new byte[]{
                 (byte) (value >>> 24),
@@ -144,6 +218,13 @@ public class ECDHServiceImpl implements ECDHService {
         };
     }
 
+    /**
+     * Восстанавливает int из 4 байтов начиная с offset (big-endian).
+     *
+     * @param bytes  массив байтов.
+     * @param offset смещение.
+     * @return прочитанное значение int.
+     */
     private int bytesToInt(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xFF) << 24) |
                 ((bytes[offset + 1] & 0xFF) << 16) |

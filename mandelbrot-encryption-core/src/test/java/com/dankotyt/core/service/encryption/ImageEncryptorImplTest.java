@@ -1,8 +1,8 @@
 package com.dankotyt.core.service.encryption;
 
 import com.dankotyt.core.dto.MandelbrotParams;
-import com.dankotyt.core.dto.encryption.EncryptedData;
-import com.dankotyt.core.dto.segmentation.SegmentationResult;
+import com.dankotyt.core.dto.EncryptedData;
+import com.dankotyt.core.dto.SegmentationResult;
 import com.dankotyt.core.service.encryption.impl.ImageEncryptorImpl;
 import com.dankotyt.core.utils.ImageUtils;
 import org.junit.jupiter.api.BeforeEach;

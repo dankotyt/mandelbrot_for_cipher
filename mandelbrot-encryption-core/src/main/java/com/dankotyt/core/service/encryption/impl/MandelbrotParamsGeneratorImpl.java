@@ -4,6 +4,15 @@ import com.dankotyt.core.dto.MandelbrotParams;
 import com.dankotyt.core.service.encryption.MandelbrotParamsGenerator;
 import java.security.SecureRandom;
 
+/**
+ * Реализация {@link MandelbrotParamsGenerator} с настраиваемыми диапазонами
+ * для генерации случайных параметров фрактала Мандельброта.
+ * Предоставляет конструктор по умолчанию с оптимальными значениями и
+ * конструктор для полной кастомизации всех границ.
+ *
+ * @author dankotyt
+ * @since 1.1.0
+ */
 public class MandelbrotParamsGeneratorImpl implements MandelbrotParamsGenerator {
     private final double zoomMin;
     private final double zoomMax;
@@ -29,6 +38,9 @@ public class MandelbrotParamsGeneratorImpl implements MandelbrotParamsGenerator 
     private static final int DEFAULT_ITER_STEP = 10;
     private static final int DEFAULT_ITER_MAX_STEPS = 100;
 
+    /**
+     * Создаёт генератор с параметрами по умолчанию, обеспечивающими разнообразные фракталы.
+     */
     public MandelbrotParamsGeneratorImpl() {
         this.zoomMin = DEFAULT_ZOOM_MIN;
         this.zoomMax = DEFAULT_ZOOM_MAX;
@@ -43,6 +55,21 @@ public class MandelbrotParamsGeneratorImpl implements MandelbrotParamsGenerator 
         this.iterMaxSteps = DEFAULT_ITER_MAX_STEPS;
     }
 
+    /**
+     * Создаёт генератор с заданными границами для всех параметров.
+     *
+     * @param zoomMin       минимальное значение увеличения
+     * @param zoomMax       максимальное значение увеличения
+     * @param offsetXMin    минимальное смещение по X
+     * @param offsetXMax    максимальное смещение по X
+     * @param offsetYNegMin минимальный Y в отрицательной области
+     * @param offsetYNegMax максимальный Y в отрицательной области
+     * @param offsetYPosMin минимальный Y в положительной области
+     * @param offsetYPosMax максимальный Y в положительной области
+     * @param iterBase      базовое количество итераций
+     * @param iterStep      шаг увеличения итераций
+     * @param iterMaxSteps  максимальное число шагов (итоговый максимум = iterBase + iterMaxSteps*iterStep)
+     */
     public MandelbrotParamsGeneratorImpl(double zoomMin, double zoomMax,
                                          double offsetXMin, double offsetXMax,
                                          double offsetYNegMin, double offsetYNegMax,
@@ -61,6 +88,13 @@ public class MandelbrotParamsGeneratorImpl implements MandelbrotParamsGenerator 
         this.iterMaxSteps = iterMaxSteps;
     }
 
+    /**
+     * Генерирует случайные параметры фрактала на основе предоставленного {@link SecureRandom}.
+     *
+     * @param prng криптографически стойкий генератор случайных чисел
+     * @return новый экземпляр {@link MandelbrotParams}
+     * @throws IllegalArgumentException если prng равен null
+     */
     @Override
     public MandelbrotParams generate(SecureRandom prng) {
         if (prng == null) {

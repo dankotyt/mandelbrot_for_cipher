@@ -1,54 +1,40 @@
 plugins {
-    id 'java'
-    id 'application'
-    id 'org.beryx.jlink' version '3.1.1'
-    id 'org.springframework.boot' version '3.2.0'
+    id 'java-library'
+    id 'org.springframework.boot' version '3.2.0' apply false
     id 'io.spring.dependency-management' version '1.1.4'
+    id 'maven-publish'
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
+group = 'com.dankotyt'
 version = '1.1.0'
+description = 'Библиотека шифрования изображений на основе ECDH и фракталов Мандельброта'
 
 repositories {
     mavenCentral()
-    maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
-    //===Spring зависимости=======================
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    implementation 'org.springframework.boot:spring-boot-starter'
-    //=======================
-
-    //===Другие зависимости============
-    implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
-    implementation 'org.bitcoinj:bitcoinj-core:0.17-alpha2'
-    implementation 'io.github.resilience4j:resilience4j-spring-boot2:2.2.0'
-    implementation 'io.github.resilience4j:resilience4j-ratelimiter:2.2.0'
-    implementation 'io.github.resilience4j:resilience4j-framework-common:2.2.0'
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.81'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    api 'org.springframework:spring-context'
+    api 'org.slf4j:slf4j-api:2.0.7'
 
     compileOnly 'org.projectlombok:lombok'
-
     annotationProcessor 'org.projectlombok:lombok'
-    //===Тесты=====================
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
-
-    // Mockito для моков
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
-
-    // Для работы с временными файлами в тестах
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
 }
 
 test {
@@ -60,92 +46,32 @@ test {
     }
 }
 
-configurations {
-    configureEach {
-        exclude group: 'org.xerial', module: 'sqlite-jdbc'
-        exclude group: 'org.bitcoinj', module: 'bitcoinj-leveldb'
-    }
-}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
 
-application {
-    mainClass = 'com.dankotyt.Launcher';
-}
-
-jlink {
-    options = ['--strip-debug', '--no-header-files', '--no-man-pages']
-
-    launcher {
-        name = 'Mandelbrot For Cipher'
-    }
-
-    jpackage {
-        def semver = project.version.toString()
-        def m = (semver =~ /(\d+)\.(\d+)\.(\d+)/)
-        appVersion = m ? "${m[0][1]}.${m[0][2]}.${m[0][3]}" : "1.1.0"
-
-        vendor = 'dankotyt'
-        description = 'Mandelbrot For Cipher Application'
-        skipInstaller = false
-
-        installerOutputDir = layout.buildDirectory.dir('dist').get().asFile
-
-        if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
-            installerType = 'exe'
-            def iconFile = file('src/main/resources/icon.ico')
-            if (iconFile.exists()) {
-                imageOptions += ['--icon', iconFile.absolutePath]
-                installerOptions += ['--icon', iconFile.absolutePath]
-            }
-            installerOptions += [
-                    '--win-per-user-install',
-                    '--win-dir-chooser',
-                    '--win-menu',
-                    '--win-shortcut'
-            ]
-        }
-
-        imageOptions += ['--verbose']
-    }
-}
-
-tasks.register('fatJar', Jar) {
-    archiveFileName = "mandelbrot_for_cipher-${version}-all.jar"
-    destinationDirectory = layout.buildDirectory.dir('libs')
-
-    manifest {
-        attributes(
-                'Main-Class': 'com.cipher.Launcher',
-                'Implementation-Version': version
-        )
-    }
-
-    from {
-        configurations.runtimeClasspath.collect {
-            it.isDirectory() ? it : zipTree(it).matching {
-                exclude 'META-INF/*.SF'
-                exclude 'META-INF/*.DSA'
-                exclude 'META-INF/*.RSA'
+            pom {
+                name = 'Mandelbrot Crypto Core'
+                description = 'Шифрование изображений через ECDH и фракталы Мандельброта'
+                url = 'https://github.com/dankotyt/image-crypto-core'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'dankotyt'
+                        name = 'Danil Kotlyarov'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/dankotyt/image-crypto-core.git'
+                    url = 'https://github.com/dankotyt/image-crypto-core'
+                }
             }
         }
     }
-    from sourceSets.main.output
-
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
-tasks.register('zip', Zip) {
-    dependsOn fatJar
-    from layout.buildDirectory.dir('libs')
-    from 'README.md'
-    from 'LICENSE'
-    archiveFileName = "mandelbrot_for_cipher-${version}.zip"
-    destinationDirectory = layout.buildDirectory.dir('dist')
-}
-
-// Для запуска в IDE через Gradle
-tasks.named('run') {
-    jvmArgs = [
-            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-            '--add-opens', 'java.base/java.util=ALL-UNNAMED'
-    ]
 }

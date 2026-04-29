@@ -38,7 +38,7 @@ import com.dankotyt.core.utils.ImageUtils;
  * </p>
  *
  * @author dankotyt
- * @since 1.1.1
+ * @since 1.1.0
  */
 public class EncryptionModule {
 

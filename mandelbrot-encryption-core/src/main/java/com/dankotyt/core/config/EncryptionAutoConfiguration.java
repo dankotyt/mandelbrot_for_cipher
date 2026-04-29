@@ -54,7 +54,7 @@ import org.springframework.context.annotation.Configuration;
  * </p>
  *
  * @author dankotyt
- * @since 1.1.1
+ * @since 1.1.0
  * @see EncryptionModule (альтернатива без Spring)
  */
 @Configuration

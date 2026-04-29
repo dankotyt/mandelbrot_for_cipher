@@ -1,6 +1,6 @@
 package com.dankotyt.core.service.encryption.impl;
 
-import com.dankotyt.core.dto.segmentation.SegmentationResult;
+import com.dankotyt.core.dto.SegmentationResult;
 import com.dankotyt.core.service.encryption.SegmentShuffler;
 import com.dankotyt.core.service.encryption.SegmentSizeStrategy;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +15,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Реализация {@link SegmentShuffler}, которая выполняет псевдослучайное перемешивание
+ * квадратных сегментов изображения с дополнением до нужного размера.
+ * Стратегия размера сегмента может быть настроена через {@link SegmentSizeStrategy}.
+ *
+ * @author dankotyt
+ * @since 1.1.0
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -168,7 +176,13 @@ public class ImageSegmentShufflerImpl implements SegmentShuffler {
     }
 
     /**
-     * Генерирует размер сегмента в зависимости от размера изображения
+     * Вычисляет размер сегмента на основе максимального измерения изображения.
+     * Может использоваться для быстрой оценки, но в новой архитектуре рекомендуется
+     * применять {@link SegmentSizeStrategy}.
+     *
+     * @param imageWidth  ширина изображения
+     * @param imageHeight высота изображения
+     * @return размер сегмента (1, 4 или 16) согласно встроенным порогам
      */
     public int generateSegmentSize(int imageWidth, int imageHeight) {
         int maxDimension = Math.max(imageWidth, imageHeight);
@@ -190,6 +204,13 @@ public class ImageSegmentShufflerImpl implements SegmentShuffler {
         }
     }
 
+    /**
+     * Возвращает список индексов от 0 до size-1, случайно перемешанный с помощью {@link #shuffleList}.
+     *
+     * @param size количество индексов.
+     * @param prng генератор.
+     * @return перемешанный список индексов.
+     */
     private List<Integer> getShuffledIndices(int size, SecureRandom prng) {
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < size; i++) indices.add(i);

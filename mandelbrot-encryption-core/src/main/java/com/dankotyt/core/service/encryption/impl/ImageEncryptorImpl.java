@@ -1,7 +1,7 @@
 package com.dankotyt.core.service.encryption.impl;
 
 import com.dankotyt.core.dto.MandelbrotParams;
-import com.dankotyt.core.dto.encryption.EncryptedData;
+import com.dankotyt.core.dto.EncryptedData;
 import com.dankotyt.core.service.encryption.ImageEncryptor;
 import com.dankotyt.core.service.encryption.MandelbrotService;
 import com.dankotyt.core.service.encryption.SegmentShuffler;
@@ -20,6 +20,13 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
+/**
+ * Реализация {@link ImageEncryptor}, выполняющая шифрование изображений с использованием
+ * фрактала Мандельброта, операции XOR и сегментного перемешивания.
+ *
+ * @author dankotyt
+ * @since 1.1.0
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -140,6 +147,17 @@ public class ImageEncryptorImpl implements ImageEncryptor {
         return encryptPart(originalImage, sx, sy, areaWidth, areaHeight);
     }
 
+    /**
+     * Выполняет частичное шифрование заданной прямоугольной области изображения.
+     * Координаты и размеры области передаются непосредственно как целые числа.
+     *
+     * @param originalImage оригинальное изображение
+     * @param sx            X-координата левого верхнего угла области
+     * @param sy            Y-координата левого верхнего угла области
+     * @param areaWidth     ширина области
+     * @param areaHeight    высота области
+     * @return зашифрованные данные с метаданными области и полного изображения
+     */
     @Override
     public EncryptedData encryptPart(BufferedImage originalImage, int sx, int sy, int areaWidth, int areaHeight) {
         int origWidth = originalImage.getWidth();
