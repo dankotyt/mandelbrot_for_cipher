@@ -8,14 +8,16 @@ import com.dankotyt.core.service.encryption.SegmentShuffler;
 import com.dankotyt.core.service.encryption.util.HKDF;
 import com.dankotyt.core.service.encryption.util.XOR;
 import com.dankotyt.core.utils.ImageUtils;
-import javafx.geometry.Rectangle2D;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 @Component
@@ -34,14 +36,23 @@ public class ImageEncryptorImpl implements ImageEncryptor {
     private BufferedImage fractal;
 
     /**
-     * Подготавливает сессию шифрования на основе общего секрета.
-     * Все криптографические материалы хранятся внутри ImageEncryptor.
+     * Подготавливает сессию шифрования на основе общего секрета, полученного по протоколу ECDH.
+     * <p>
+     * Генерирует случайную соль, извлекает псевдослучайный ключ (PRK) с помощью HKDF-extract
+     * и вырабатывает два производных ключа: для параметров фрактала и для сегментации.
+     * Создаёт два детерминированных {@link SecureRandom} на основе этих ключей.
+     * Счётчик попыток сбрасывается в 0, текущий фрактал обнуляется.
+     * </p>
      *
-     * @param sharedSecret общий секрет от DH
-     * @throws Exception если ошибка инициализации
+     * @param sharedSecret общий секрет, полученный путём вычисления скалярного произведения ECDH.
+     *                     Не должен быть {@code null}. Длина может варьироваться в зависимости
+     *                     от реализации кривой.
+     * @throws NoSuchAlgorithmException если алгоритм HMAC-SHA256 недоступен в текущей JRE.
+     * @throws InvalidKeyException      если соль не может быть использована в качестве ключа HMAC
+     * @throws IllegalArgumentException если {@code sharedSecret == null}.
      */
     @Override
-    public void prepareSession(byte[] sharedSecret) throws Exception {
+    public void prepareSession(byte[] sharedSecret) throws InvalidKeyException, NoSuchAlgorithmException {
         if (sharedSecret == null) {
             throw new IllegalArgumentException("Shared secret cannot be null");
         }
@@ -122,13 +133,17 @@ public class ImageEncryptorImpl implements ImageEncryptor {
      */
     @Override
     public EncryptedData encryptPart(BufferedImage originalImage, Rectangle2D selectedArea) {
-        int origWidth = originalImage.getWidth();
-        int origHeight = originalImage.getHeight();
-
         int sx = (int) selectedArea.getMinX();
         int sy = (int) selectedArea.getMinY();
         int areaWidth = (int) selectedArea.getWidth();
         int areaHeight = (int) selectedArea.getHeight();
+        return encryptPart(originalImage, sx, sy, areaWidth, areaHeight);
+    }
+
+    @Override
+    public EncryptedData encryptPart(BufferedImage originalImage, int sx, int sy, int areaWidth, int areaHeight) {
+        int origWidth = originalImage.getWidth();
+        int origHeight = originalImage.getHeight();
 
         if (fractal == null || fractal.getWidth() != areaWidth || fractal.getHeight() != areaHeight) {
             log.warn("Фрактал отсутствует или не соответствует размеру области, генерируем заново");
