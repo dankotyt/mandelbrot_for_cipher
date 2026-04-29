@@ -2,6 +2,7 @@ package com.dankotyt.core.service.encryption.impl;
 
 import com.dankotyt.core.dto.segmentation.SegmentationResult;
 import com.dankotyt.core.service.encryption.SegmentShuffler;
+import com.dankotyt.core.service.encryption.SegmentSizeStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class ImageSegmentShufflerImpl implements SegmentShuffler {
+
+    private final SegmentSizeStrategy sizeStrategy;
 
     /**
      * Создает список сегментов изображения заданного размера
@@ -62,7 +65,7 @@ public class ImageSegmentShufflerImpl implements SegmentShuffler {
         if (prng == null) {
             throw new IllegalArgumentException("PRNG cannot be null");
         }
-        int segmentSize = generateSegmentSize(image.getWidth(), image.getHeight());
+        int segmentSize = sizeStrategy.determineSegmentSize(image.getWidth(), image.getHeight());
         log.info("Segment size used: {}", segmentSize);
         BufferedImage paddedImage = padImageToSegmentSize(image, segmentSize);
         List<Rectangle> segments = createSegments(paddedImage, segmentSize);
@@ -104,7 +107,7 @@ public class ImageSegmentShufflerImpl implements SegmentShuffler {
         if (prng == null) {
             throw new IllegalArgumentException("PRNG cannot be null");
         }
-        int segmentSize = generateSegmentSize(originalWidth, originalHeight);
+        int segmentSize = sizeStrategy.determineSegmentSize(originalWidth, originalHeight);
         log.info("Segment size used: {}", segmentSize);
         List<Rectangle> segments = createSegments(shuffledImage, segmentSize);
         List<Integer> indices = getShuffledIndices(segments.size(), prng);
