@@ -1,8 +1,6 @@
 package com.dankotyt.core.utils;
 
 import com.dankotyt.core.dto.MandelbrotParams;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.image.Image;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,10 +37,6 @@ public class ImageUtils {
 
     public boolean hasMandelbrotImage() {
         return mandelbrotImage != null;
-    }
-
-    public Image convertToFxImage(BufferedImage bufferedImage) {
-        return SwingFXUtils.toFXImage(bufferedImage, null);
     }
 
     public static BufferedImage convertToARGB(BufferedImage image) {
